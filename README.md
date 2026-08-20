@@ -2,7 +2,7 @@
 Deliberately inject connector failures, latency, bad responses, expired auth and malformed data to test whether agents recover safely
 
 
-Buold a first runnable Agent Chaos Monkey MVP.
+Build a first runnable Agent Chaos Monkey MVP.
 
 The repo contains a React/Vite frontend and an ASP.NET Core .NET 8 backend. The UI lets you configure an agent endpoint, enter a scenario, select injected failures, run the experiment, and see a resilience score, latency/status, Claude findings, recommended fixes, and the raw agent response.
 
