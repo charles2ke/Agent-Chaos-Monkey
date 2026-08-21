@@ -3,6 +3,8 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Set to "/<repo-name>/" when publishing to GitHub Pages project sites.
+  base: process.env.VITE_BASE_PATH ?? '/',
   plugins: [react()],
   server: {
     port: 5173,
