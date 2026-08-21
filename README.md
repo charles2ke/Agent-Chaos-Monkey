@@ -50,6 +50,17 @@ Then open http://localhost:5173. The UI is styled after the Preview tab of an ag
 new GitHub harness experience of Copilot Studio: a chat preview pane with the connector
 trace inline, plus a chaos configuration rail.
 
+Published demo:
+
+The UI is automatically published to GitHub Pages on every push to main by
+.github/workflows/pages.yml (enable Pages with "GitHub Actions" as the source in
+Settings → Pages). Pages only serves static files, so that build sets
+VITE_STATIC_DEMO=true and the chaos engine, the built-in demo agent and the
+deterministic judge all run in the browser (frontend/src/staticDemo.ts), mirroring the
+backend behaviour. Testing a real agent endpoint still requires running the .NET API
+locally. The build also honours VITE_BASE_PATH, which the workflow sets to the repository
+name so the project site resolves its assets.
+
 The evaluator model is fully configurable through the Llm section of
 backend/ChaosMonkey.Api/appsettings.json or environment variables:
 

@@ -94,14 +94,25 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
+/** True for the statically published build (GitHub Pages), which has no backend. */
+const staticDemo = import.meta.env.VITE_STATIC_DEMO === 'true'
+
 export const api = {
-  chaosModes: () => request<ChaosModeInfo[]>('/api/chaos-modes'),
-  evaluator: () => request<EvaluatorInfo>('/api/evaluator'),
-  runExperiment: (payload: ExperimentRequest) =>
-    request<ExperimentResult>('/api/experiments', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
+  chaosModes: async () =>
+    staticDemo
+      ? (await import('./staticDemo')).staticChaosModes
+      : request<ChaosModeInfo[]>('/api/chaos-modes'),
+  evaluator: async () =>
+    staticDemo
+      ? (await import('./staticDemo')).staticEvaluator
+      : request<EvaluatorInfo>('/api/evaluator'),
+  runExperiment: async (payload: ExperimentRequest) =>
+    staticDemo
+      ? (await import('./staticDemo')).runStaticExperiment(payload)
+      : request<ExperimentResult>('/api/experiments', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        }),
 }
 
 /** Pulls the user-visible reply out of a JSON agent response. */
