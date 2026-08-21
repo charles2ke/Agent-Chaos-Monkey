@@ -38,11 +38,10 @@ jobs:
           # No backend on Pages: run the demo agent, chaos engine and judge in the browser.
           VITE_STATIC_DEMO: 'true'
 
-      - uses: actions/configure-pages@v5
-        with:
-          # Turn Pages on automatically so the first deployment does not fail.
-          enablement: true
-
+      # actions/configure-pages is not used: the workflow GITHUB_TOKEN cannot
+      # create or read the Pages site, and the base path is set explicitly
+      # above. Enable Pages once in Settings > Pages with source
+      # "GitHub Actions".
       - uses: actions/upload-pages-artifact@v3
         with:
           path: frontend/dist
