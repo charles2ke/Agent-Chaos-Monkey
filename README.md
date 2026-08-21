@@ -7,7 +7,7 @@ Build a first runnable Agent Chaos Monkey MVP.
 The repo contains a React/Vite frontend and an ASP.NET Core .NET 8 backend. The UI lets you configure an agent endpoint, enter a scenario, select injected failures, run the experiment, and see a resilience score, latency/status, Claude findings, recommended fixes, and the raw agent response.
 
 The backend currently supports six chaos modes: latency spikes, HTTP 500 failures, empty responses, malformed responses, 429 throttling, and 401 authentication failures. 
-It integrates directly with Anthropic's Messages API using claude-opus-5 and high effort for the resilience judge. Anthropic currently documents claude-opus-5 as the API model name and supports the output_config.effort control used here. 
+The resilience judge runs on any configurable LLM: the backend speaks both the Anthropic Messages API and the OpenAI-compatible Chat Completions API, so a hosted or a local model can be plugged in. If no credentials are configured, a deterministic rule-based judge is used instead. 
 
 The architecture is:
 
@@ -27,7 +27,7 @@ ASP.NET Core Chaos API
    ├──────────────► Target Copilot Studio agent
    │
    ▼
-Claude Opus 5 Evaluator
+Configurable LLM Evaluator
    │
    ▼
 Resilience Report
@@ -36,17 +36,44 @@ There is also a built-in /api/demo-agent, so you can demo the hack without conne
 
 To run it locally:
 
-# Backend
+# Backend (http://localhost:5249)
 cd backend/ChaosMonkey.Api
-export ANTHROPIC_API_KEY="your-key"
+export ANTHROPIC_API_KEY="your-key"   # optional; without it the deterministic judge is used
 dotnet run
 
-# Frontend
+# Frontend (http://localhost:5173)
 cd frontend
 npm install
 npm run dev
 
-Then open http://localhost:5173.
+Then open http://localhost:5173. The UI is styled after the Preview tab of an agent in the
+new GitHub harness experience of Copilot Studio: a chat preview pane with the connector
+trace inline, plus a chaos configuration rail.
+
+The evaluator model is fully configurable through the Llm section of
+backend/ChaosMonkey.Api/appsettings.json or environment variables:
+
+Llm__Provider   anthropic | openai (any OpenAI-compatible gateway: Azure OpenAI, Ollama, vLLM)
+Llm__Model      the model name, e.g. claude-opus-4-1-20250805 or gpt-4.1
+Llm__ApiKey     falls back to ANTHROPIC_API_KEY / OPENAI_API_KEY
+Llm__BaseUrl    optional override, e.g. http://localhost:11434/v1 for a local model
+
+When no credentials are present, a deterministic rule-based judge scores the run instead,
+so the demo always works offline.
+
+Tests:
+
+cd backend && dotnet test          # chaos engine, evaluator and parsing unit tests
+cd frontend && npm run lint && npm run build
+cd frontend && npm run test:e2e    # Playwright UI tests (boots both servers)
+
+API surface:
+
+GET  /api/health          liveness
+GET  /api/chaos-modes     catalogue of injectable failures
+GET  /api/evaluator       configured provider/model and whether credentials are present
+POST /api/experiments     run an experiment and return the resilience report
+POST /api/demo-agent      the built-in deliberately imperfect agent
 
 One important architectural distinction: this first version injects failures around the agent HTTP interaction. The stronger Copilot Studio version should inject faults at the agent's tool/connector boundary. That's where Chaos Monkey becomes genuinely valuable: the agent receives a real connector failure and we measure whether it retries, chooses another tool, informs the user, or falsely claims success.
 

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="ChaosMonkey.Api/ChaosMonkey.Api.csproj" />
+  <Project Path="ChaosMonkey.Tests/ChaosMonkey.Tests.csproj" />
+</Solution>
