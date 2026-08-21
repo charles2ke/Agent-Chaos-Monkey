@@ -39,6 +39,9 @@ jobs:
           VITE_STATIC_DEMO: 'true'
 
       - uses: actions/configure-pages@v5
+        with:
+          # Turn Pages on automatically so the first deployment does not fail.
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -1,8 +1,14 @@
 import type { EvaluatorInfo } from '../api'
+import { tabs } from '../tabs'
+import type { TabId } from '../tabs'
 
-const tabs = ['Instructions', 'Knowledge', 'Tools', 'Preview', 'Activity', 'Settings']
+interface TopBarProps {
+  evaluator: EvaluatorInfo | null
+  activeTab: TabId
+  onSelectTab: (tab: TabId) => void
+}
 
-export function TopBar({ evaluator }: { evaluator: EvaluatorInfo | null }) {
+export function TopBar({ evaluator, activeTab, onSelectTab }: TopBarProps) {
   return (
     <header className="topbar">
       <div className="topbar__row">
@@ -35,9 +41,9 @@ export function TopBar({ evaluator }: { evaluator: EvaluatorInfo | null }) {
           <button
             key={tab}
             type="button"
-            className={`tabs__tab ${tab === 'Preview' ? 'tabs__tab--active' : ''}`}
-            aria-current={tab === 'Preview' ? 'page' : undefined}
-            disabled={tab !== 'Preview'}
+            className={`tabs__tab ${tab === activeTab ? 'tabs__tab--active' : ''}`}
+            aria-current={tab === activeTab ? 'page' : undefined}
+            onClick={() => onSelectTab(tab)}
           >
             {tab}
           </button>
