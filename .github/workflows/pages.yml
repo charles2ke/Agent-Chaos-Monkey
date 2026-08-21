@@ -53,5 +53,20 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # actions/deploy-pages fails with an opaque 404 when no Pages site exists,
+      # and the workflow GITHUB_TOKEN is not allowed to create one. Probe first
+      # so the run reports actionable guidance instead of failing.
+      - id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api "repos/${{ github.repository }}/pages" --silent 2>/dev/null; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::GitHub Pages is not enabled. Enable it in Settings > Pages with \"GitHub Actions\" as the source, then re-run this workflow. The built site is available as the github-pages artifact of this run."
+          fi
+
       - id: deployment
+        if: steps.pages.outputs.enabled == 'true'
         uses: actions/deploy-pages@v4
