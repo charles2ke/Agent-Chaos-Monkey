@@ -46,15 +46,21 @@ cd frontend
 npm install
 npm run dev
 
-Then open http://localhost:5173. The UI is styled after the Preview tab of an agent in the
-new GitHub harness experience of Copilot Studio: a chat preview pane with the connector
-trace inline, plus a chaos configuration rail.
+Then open http://localhost:5173. The UI is styled after an agent in the new GitHub harness
+experience of Copilot Studio, and every tab is a real page:
+
+Instructions   the resilience contract every experiment is scored against
+Knowledge      the injectable chaos catalogue and the configured judge
+Tools          the connector / tool boundary chaos is injected at
+Preview        chat preview pane with the connector trace and resilience report
+Activity       history of the experiments run in this session
+Settings       agent endpoint and token, injected latency, evaluator model
 
 Published demo:
 
 The UI is automatically published to GitHub Pages on every push to main by
-.github/workflows/pages.yml (enable Pages with "GitHub Actions" as the source in
-Settings → Pages). Pages only serves static files, so that build sets
+.github/workflows/pages.yml (the workflow enables Pages with "GitHub Actions" as the
+source on first run). All tabs ship in that build. Pages only serves static files, so that build sets
 VITE_STATIC_DEMO=true and the chaos engine, the built-in demo agent and the
 deterministic judge all run in the browser (frontend/src/staticDemo.ts), mirroring the
 backend behaviour. Testing a real agent endpoint still requires running the .NET API

@@ -36,4 +36,25 @@ test.describe('static GitHub Pages build', () => {
 
     await page.screenshot({ path: `${screenshots}/02-static-control-run.png`, fullPage: true })
   })
+
+  test('all tabs are published in the static build', async ({ page }) => {
+    await page.goto('./')
+
+    await page.getByRole('button', { name: 'Instructions' }).click()
+    await expect(page.getByText('Never fabricate tool success')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Knowledge' }).click()
+    await expect(page.getByRole('heading', { name: 'Chaos catalogue' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Tools' }).click()
+    await expect(page.getByRole('radio', { name: /MCP\.FileSearch/ })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Settings' }).click()
+    await expect(page.getByRole('heading', { name: 'Resilience judge' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Activity' }).click()
+    await expect(page.getByText('No runs yet.')).toBeVisible()
+
+    await page.screenshot({ path: `${screenshots}/03-static-tabs.png`, fullPage: true })
+  })
 })

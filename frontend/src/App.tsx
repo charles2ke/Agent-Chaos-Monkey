@@ -1,14 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, extractReply } from './api'
 import type { ChaosModeId, ChaosModeInfo, EvaluatorInfo, ExperimentResult } from './api'
+import { ActivityPage } from './components/ActivityPage'
 import { ChaosPanel } from './components/ChaosPanel'
+import { InstructionsPage } from './components/InstructionsPage'
+import { KnowledgePage } from './components/KnowledgePage'
 import { PreviewPane } from './components/PreviewPane'
 import type { PreviewTurn } from './components/PreviewPane'
+import { SettingsPage } from './components/SettingsPage'
+import { ToolsPage } from './components/ToolsPage'
 import { TopBar } from './components/TopBar'
+import type { TabId } from './tabs'
 
 const defaultScenario = 'Create a support ticket for my broken laptop'
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState<TabId>('Preview')
   const [modes, setModes] = useState<ChaosModeInfo[]>([])
   const [evaluator, setEvaluator] = useState<EvaluatorInfo | null>(null)
   const [selectedModes, setSelectedModes] = useState<ChaosModeId[]>(['ExpiredAuth'])
@@ -19,6 +26,7 @@ export default function App() {
   const [evaluatorModel, setEvaluatorModel] = useState('')
   const [scenario, setScenario] = useState(defaultScenario)
   const [turns, setTurns] = useState<PreviewTurn[]>([])
+  const [history, setHistory] = useState<ExperimentResult[]>([])
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -71,6 +79,7 @@ export default function App() {
           result,
         },
       ])
+      setHistory((current) => [result, ...current])
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'The experiment failed.'
       setError(message)
@@ -82,38 +91,64 @@ export default function App() {
 
   return (
     <div className="app">
-      <TopBar evaluator={evaluator} />
-      <main className="workspace">
-        <ChaosPanel
-          modes={modes}
-          selectedModes={selectedModes}
-          onToggleMode={toggleMode}
-          connectorName={connectorName}
-          onConnectorNameChange={setConnectorName}
-          agentEndpoint={agentEndpoint}
-          onAgentEndpointChange={setAgentEndpoint}
-          agentApiKey={agentApiKey}
-          onAgentApiKeyChange={setAgentApiKey}
-          latencyMs={latencyMs}
-          onLatencyChange={setLatencyMs}
-          evaluatorModel={evaluatorModel}
-          onEvaluatorModelChange={setEvaluatorModel}
-          evaluator={evaluator}
-        />
-        <PreviewPane
-          targetLabel={targetLabel}
-          turns={turns}
-          running={running}
-          scenario={scenario}
-          onScenarioChange={setScenario}
-          onRun={runExperiment}
-          onClear={() => {
-            setTurns([])
-            setError(null)
-          }}
-          error={error}
-        />
-      </main>
+      <TopBar evaluator={evaluator} activeTab={activeTab} onSelectTab={setActiveTab} />
+      {activeTab === 'Preview' ? (
+        <main className="workspace">
+          <ChaosPanel
+            modes={modes}
+            selectedModes={selectedModes}
+            onToggleMode={toggleMode}
+            connectorName={connectorName}
+            onConnectorNameChange={setConnectorName}
+            agentEndpoint={agentEndpoint}
+            onAgentEndpointChange={setAgentEndpoint}
+            agentApiKey={agentApiKey}
+            onAgentApiKeyChange={setAgentApiKey}
+            latencyMs={latencyMs}
+            onLatencyChange={setLatencyMs}
+            evaluatorModel={evaluatorModel}
+            onEvaluatorModelChange={setEvaluatorModel}
+            evaluator={evaluator}
+          />
+          <PreviewPane
+            targetLabel={targetLabel}
+            turns={turns}
+            running={running}
+            scenario={scenario}
+            onScenarioChange={setScenario}
+            onRun={runExperiment}
+            onClear={() => {
+              setTurns([])
+              setError(null)
+            }}
+            error={error}
+          />
+        </main>
+      ) : (
+        <main className="workspace workspace--single">
+          {activeTab === 'Instructions' && <InstructionsPage />}
+          {activeTab === 'Knowledge' && <KnowledgePage modes={modes} evaluator={evaluator} />}
+          {activeTab === 'Tools' && (
+            <ToolsPage connectorName={connectorName} onConnectorNameChange={setConnectorName} />
+          )}
+          {activeTab === 'Activity' && (
+            <ActivityPage history={history} onClear={() => setHistory([])} />
+          )}
+          {activeTab === 'Settings' && (
+            <SettingsPage
+              agentEndpoint={agentEndpoint}
+              onAgentEndpointChange={setAgentEndpoint}
+              agentApiKey={agentApiKey}
+              onAgentApiKeyChange={setAgentApiKey}
+              latencyMs={latencyMs}
+              onLatencyChange={setLatencyMs}
+              evaluatorModel={evaluatorModel}
+              onEvaluatorModelChange={setEvaluatorModel}
+              evaluator={evaluator}
+            />
+          )}
+        </main>
+      )}
     </div>
   )
 }
