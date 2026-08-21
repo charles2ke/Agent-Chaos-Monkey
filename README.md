@@ -59,8 +59,9 @@ Settings       agent endpoint and token, injected latency, evaluator model
 Published demo:
 
 The UI is automatically published to GitHub Pages on every push to main by
-.github/workflows/pages.yml (the workflow enables Pages with "GitHub Actions" as the
-source on first run). All tabs ship in that build. Pages only serves static files, so that build sets
+.github/workflows/pages.yml. Pages must be enabled once in Settings > Pages with
+"GitHub Actions" as the source; the workflow cannot enable it, because the workflow
+GITHUB_TOKEN is not allowed to create a Pages site. All tabs ship in that build. Pages only serves static files, so that build sets
 VITE_STATIC_DEMO=true and the chaos engine, the built-in demo agent and the
 deterministic judge all run in the browser (frontend/src/staticDemo.ts), mirroring the
 backend behaviour. Testing a real agent endpoint still requires running the .NET API
