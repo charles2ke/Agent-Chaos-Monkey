@@ -59,6 +59,10 @@ Settings       agent endpoint and token, injected latency, evaluator model
 
 Published demo: https://charles2ke.github.io/Agent-Chaos-Monkey/
 
+If that URL shows "404 - There isn't a GitHub Pages site here", Pages has not been
+enabled yet: open Settings > Pages, set Source to "GitHub Actions", and re-run the
+"Deploy frontend to GitHub Pages" workflow.
+
 The UI is automatically published to that URL on every push to main by
 .github/workflows/pages.yml. Pages must be enabled once in Settings > Pages with
 "GitHub Actions" as the source; the workflow cannot enable it, because the workflow
