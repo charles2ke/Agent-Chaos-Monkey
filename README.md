@@ -1,6 +1,7 @@
 # Agent-Chaos-Monkey
 Deliberately inject connector failures, latency, bad responses, expired auth and malformed data to test whether agents recover safely
 
+Live demo: https://charles2ke.github.io/Agent-Chaos-Monkey/
 
 Build a first runnable Agent Chaos Monkey MVP.
 
@@ -56,9 +57,9 @@ Preview        chat preview pane with the connector trace and resilience report
 Activity       history of the experiments run in this session
 Settings       agent endpoint and token, injected latency, evaluator model
 
-Published demo:
+Published demo: https://charles2ke.github.io/Agent-Chaos-Monkey/
 
-The UI is automatically published to GitHub Pages on every push to main by
+The UI is automatically published to that URL on every push to main by
 .github/workflows/pages.yml. Pages must be enabled once in Settings > Pages with
 "GitHub Actions" as the source; the workflow cannot enable it, because the workflow
 GITHUB_TOKEN is not allowed to create a Pages site. Until Pages is enabled the deploy job
