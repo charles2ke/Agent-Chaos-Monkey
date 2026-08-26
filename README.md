@@ -59,16 +59,14 @@ Settings       agent endpoint and token, injected latency, evaluator model
 
 Published demo: https://charles2ke.github.io/Agent-Chaos-Monkey/
 
-If that URL shows "404 - There isn't a GitHub Pages site here", Pages has not been
-enabled yet: open Settings > Pages, set Source to "GitHub Actions", and re-run the
-"Deploy frontend to GitHub Pages" workflow.
+Pages is enabled with "GitHub Actions" as the source, and the UI is automatically
+published to that URL on every push to main by .github/workflows/pages.yml. The workflow
+can be re-run manually (workflow_dispatch) to refresh the site. The deploy job still
+probes for the Pages site first, so if the setting is ever turned off the run reports
+actionable guidance instead of failing with an opaque 404, and the built site remains
+available as the github-pages artifact of the run.
 
-The UI is automatically published to that URL on every push to main by
-.github/workflows/pages.yml. Pages must be enabled once in Settings > Pages with
-"GitHub Actions" as the source; the workflow cannot enable it, because the workflow
-GITHUB_TOKEN is not allowed to create a Pages site. Until Pages is enabled the deploy job
-skips the deployment with a warning instead of failing, and the built site is still
-available as the github-pages artifact of the run. All tabs ship in that build. Pages only serves static files, so that build sets
+All tabs ship in that build. Pages only serves static files, so that build sets
 VITE_STATIC_DEMO=true and the chaos engine, the built-in demo agent and the
 deterministic judge all run in the browser (frontend/src/staticDemo.ts), mirroring the
 backend behaviour. Testing a real agent endpoint still requires running the .NET API
