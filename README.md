@@ -200,6 +200,8 @@ That last part is the feature to build next: every Chaos Monkey failure automati
 
 > **Break → Observe → Judge → Generate Eval → Fix → Re-test → PR Gate.**
 
+For the fuller argument behind why this matters, see [_The Failure Mode Nobody Tests For_](docs/blog/agent-chaos-testing.md).
+
 ## 📄 License
 
 [MIT](LICENSE) © Charles Gomes
