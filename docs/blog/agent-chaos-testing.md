@@ -50,11 +50,11 @@ This is the idea behind [Agent Chaos Monkey](https://github.com/charles2ke/Agent
 | Chaos mode | What's injected | What it's designed to surface |
 | --- | --- | --- |
 | ⏱️ Latency spike | A configurable delay before the agent responds | Does the agent (or the surrounding product) time out ungracefully, or handle a slow dependency without falling apart? |
-| 💥 HTTP 500 | A server-side failure from the connector | Does the agent notice the failure at all, or does it narrate a result anyway? |
+| 💥 Connector failure (HTTP 500) | A server-side failure from the connector | Does the agent notice the failure at all, or does it narrate a result anyway? |
 | 🕳️ Empty response | A "successful" status with no usable payload | Does the agent treat empty as if it were the expected data, inventing details to fill the gap? |
-| 🧩 Malformed response | A structurally broken, unparseable body | Does parsing failure get surfaced honestly, or does the agent guess at a plausible-looking answer? |
-| 🚦 HTTP 429 | Rate limiting / throttling | Does the agent back off and retry sensibly, or does it hammer the endpoint, or silently give up? |
-| 🔐 HTTP 401 | Expired or invalid authentication | Does the agent explain the auth problem, or — as in the ticket example above — claim success anyway? |
+| 🧩 Malformed data | A structurally broken, unparseable body | Does parsing failure get surfaced honestly, or does the agent guess at a plausible-looking answer? |
+| 🚦 Throttling (HTTP 429) | Rate limiting / throttling | Does the agent back off and retry sensibly, or does it hammer the endpoint, or silently give up? |
+| 🔐 Expired auth (HTTP 401) | Expired or invalid authentication | Does the agent explain the auth problem, or — as in the ticket example above — claim success anyway? |
 
 None of these are exotic failure conditions. They're the everyday reality of any system with a token that expires, a rate limit, or a dependency that occasionally times out. The point isn't to invent bizarre edge cases; it's to make sure the ordinary ones are actually being tested, deliberately, instead of being discovered by a user.
 
