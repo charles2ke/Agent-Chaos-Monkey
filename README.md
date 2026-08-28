@@ -17,6 +17,16 @@
 
 ---
 
+## Why this exists
+
+AI agents can fabricate success after tool failures, allowing silently broken
+workflows to ship. There is no standard way to test whether an agent recognizes
+those failures and recovers safely.
+
+[![Agent Chaos Monkey demo screenshot coming soon](https://img.shields.io/badge/demo-screenshot%20coming%20soon-2ea44f)](https://charles2ke.github.io/Agent-Chaos-Monkey/)
+
+<!-- Add docs/images/demo.gif here after recording the UI walkthrough. -->
+
 ## ✨ What it does
 
 Agent Chaos Monkey is a runnable MVP for **resilience testing of AI agents**. Point it at an agent endpoint, describe a scenario, pick the failures to inject, and run the experiment. You get back:
