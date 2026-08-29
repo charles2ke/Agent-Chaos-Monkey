@@ -971,6 +971,9 @@ body {
 }
 
 .composer__input {
+  flex: 1;
+  min-width: 0;
+  width: auto;
   border: none;
   background: none;
   padding: 4px 0;
