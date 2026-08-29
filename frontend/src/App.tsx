@@ -8,6 +8,7 @@ import { KnowledgePage } from './components/KnowledgePage'
 import { PreviewPane } from './components/PreviewPane'
 import type { PreviewTurn } from './components/PreviewPane'
 import { SettingsPage } from './components/SettingsPage'
+import { SideNav } from './components/SideNav'
 import { ToolsPage } from './components/ToolsPage'
 import { TopBar } from './components/TopBar'
 import type { TabId } from './tabs'
@@ -91,51 +92,17 @@ export default function App() {
 
   return (
     <div className="app">
-      <TopBar evaluator={evaluator} activeTab={activeTab} onSelectTab={setActiveTab} />
-      {activeTab === 'Preview' ? (
-        <main className="workspace">
-          <ChaosPanel
-            modes={modes}
-            selectedModes={selectedModes}
-            onToggleMode={toggleMode}
-            connectorName={connectorName}
-            onConnectorNameChange={setConnectorName}
-            agentEndpoint={agentEndpoint}
-            onAgentEndpointChange={setAgentEndpoint}
-            agentApiKey={agentApiKey}
-            onAgentApiKeyChange={setAgentApiKey}
-            latencyMs={latencyMs}
-            onLatencyChange={setLatencyMs}
-            evaluatorModel={evaluatorModel}
-            onEvaluatorModelChange={setEvaluatorModel}
-            evaluator={evaluator}
-          />
-          <PreviewPane
-            targetLabel={targetLabel}
-            turns={turns}
-            running={running}
-            scenario={scenario}
-            onScenarioChange={setScenario}
-            onRun={runExperiment}
-            onClear={() => {
-              setTurns([])
-              setError(null)
-            }}
-            error={error}
-          />
-        </main>
-      ) : (
-        <main className="workspace workspace--single">
-          {activeTab === 'Instructions' && <InstructionsPage />}
-          {activeTab === 'Knowledge' && <KnowledgePage modes={modes} evaluator={evaluator} />}
-          {activeTab === 'Tools' && (
-            <ToolsPage connectorName={connectorName} onConnectorNameChange={setConnectorName} />
-          )}
-          {activeTab === 'Activity' && (
-            <ActivityPage history={history} onClear={() => setHistory([])} />
-          )}
-          {activeTab === 'Settings' && (
-            <SettingsPage
+      <SideNav evaluator={evaluator} activeTab={activeTab} onSelectTab={setActiveTab} />
+      <div className="shell">
+        <TopBar evaluator={evaluator} activeTab={activeTab} targetLabel={targetLabel} />
+        {activeTab === 'Preview' ? (
+          <main className="workspace">
+            <ChaosPanel
+              modes={modes}
+              selectedModes={selectedModes}
+              onToggleMode={toggleMode}
+              connectorName={connectorName}
+              onConnectorNameChange={setConnectorName}
               agentEndpoint={agentEndpoint}
               onAgentEndpointChange={setAgentEndpoint}
               agentApiKey={agentApiKey}
@@ -146,9 +113,48 @@ export default function App() {
               onEvaluatorModelChange={setEvaluatorModel}
               evaluator={evaluator}
             />
-          )}
-        </main>
-      )}
+            <PreviewPane
+              targetLabel={targetLabel}
+              turns={turns}
+              running={running}
+              scenario={scenario}
+              onScenarioChange={setScenario}
+              onRun={runExperiment}
+              onClear={() => {
+                setTurns([])
+                setError(null)
+              }}
+              error={error}
+              connectorName={connectorName}
+              selectedModes={selectedModes}
+            />
+          </main>
+        ) : (
+          <main className="workspace workspace--single">
+            {activeTab === 'Instructions' && <InstructionsPage />}
+            {activeTab === 'Knowledge' && <KnowledgePage modes={modes} evaluator={evaluator} />}
+            {activeTab === 'Tools' && (
+              <ToolsPage connectorName={connectorName} onConnectorNameChange={setConnectorName} />
+            )}
+            {activeTab === 'Activity' && (
+              <ActivityPage history={history} onClear={() => setHistory([])} />
+            )}
+            {activeTab === 'Settings' && (
+              <SettingsPage
+                agentEndpoint={agentEndpoint}
+                onAgentEndpointChange={setAgentEndpoint}
+                agentApiKey={agentApiKey}
+                onAgentApiKeyChange={setAgentApiKey}
+                latencyMs={latencyMs}
+                onLatencyChange={setLatencyMs}
+                evaluatorModel={evaluatorModel}
+                onEvaluatorModelChange={setEvaluatorModel}
+                evaluator={evaluator}
+              />
+            )}
+          </main>
+        )}
+      </div>
     </div>
   )
 }
