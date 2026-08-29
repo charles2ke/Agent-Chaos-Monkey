@@ -962,6 +962,8 @@ body {
 
 .composer__box:focus-within {
   border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .composer__caret {
