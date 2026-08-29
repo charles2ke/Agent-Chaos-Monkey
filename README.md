@@ -23,9 +23,12 @@ AI agents can fabricate success after tool failures, allowing silently broken
 workflows to ship. There is no standard way to test whether an agent recognizes
 those failures and recovers safely.
 
-[![Agent Chaos Monkey demo screenshot coming soon](https://img.shields.io/badge/demo-screenshot%20coming%20soon-2ea44f)](https://charles2ke.github.io/Agent-Chaos-Monkey/)
-
-<!-- Add docs/images/demo.gif here after recording the UI walkthrough. -->
+<p align="center">
+  <a href="https://charles2ke.github.io/Agent-Chaos-Monkey/">
+    <img src="docs/images/preview-empty.png" alt="Agent Chaos Monkey preview pane before a run" width="49%">
+    <img src="docs/images/resilience-report.png" alt="Agent Chaos Monkey resilience report after injecting an expired-auth failure" width="49%">
+  </a>
+</p>
 
 ## ✨ What it does
 
