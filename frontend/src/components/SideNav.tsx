@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react'
 import type { EvaluatorInfo } from '../api'
 import { tabs } from '../tabs'
 import type { TabId } from '../tabs'
@@ -17,7 +18,7 @@ const tabIcons = {
   Preview: PreviewIcon,
   Activity: ActivityIcon,
   Settings: SettingsIcon,
-} satisfies Record<TabId, (props: { className?: string }) => React.ReactElement>
+} satisfies Record<TabId, (props: { className?: string }) => ReactElement>
 
 interface SideNavProps {
   evaluator: EvaluatorInfo | null

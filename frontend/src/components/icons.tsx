@@ -1,8 +1,10 @@
+import type { ReactNode } from 'react'
+
 interface IconProps {
   className?: string
 }
 
-function Icon({ className, children }: IconProps & { children: React.ReactNode }) {
+function Icon({ className, children }: IconProps & { children: ReactNode }) {
   return (
     <svg
       className={className}
