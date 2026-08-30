@@ -85,6 +85,25 @@ The UI is styled after an agent in the new GitHub harness experience of Copilot 
 | **Activity** | History of the experiments run in this session |
 | **Settings** | Agent endpoint and token, injected latency, evaluator model |
 
+<details>
+<summary><strong>Screenshots of every tab</strong></summary>
+
+<p align="center">
+  <img src="docs/images/tab-instructions.png" alt="Instructions tab listing the resilience contract the agent is scored against" width="49%">
+  <img src="docs/images/tab-knowledge.png" alt="Knowledge tab showing the injectable chaos catalogue and the configured judge" width="49%">
+</p>
+<p align="center">
+  <img src="docs/images/tab-tools.png" alt="Tools tab for picking the connector boundary chaos is injected at" width="49%">
+  <img src="docs/images/tab-activity.png" alt="Activity tab listing the experiments run in this session with their scores" width="49%">
+</p>
+<p align="center">
+  <img src="docs/images/tab-settings.png" alt="Settings tab with the agent endpoint, injected latency and evaluator model" width="49%">
+</p>
+
+Every image is a Playwright screenshot, refreshed by `npm run test:e2e`.
+
+</details>
+
 ## 🏗️ Architecture
 
 ```text

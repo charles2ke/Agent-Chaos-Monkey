@@ -1,4 +1,5 @@
 import type { ChaosModeId, ExperimentResult } from '../api'
+import { AlertIcon, SendIcon, SparkleIcon } from './icons'
 import { ReportCard } from './ReportCard'
 
 export type PreviewTurn =
@@ -35,9 +36,9 @@ export function PreviewPane(props: PreviewPaneProps) {
       <div className="session__thread" role="log" aria-live="polite">
         {props.turns.length === 0 && (
           <div className="banner">
-            <pre className="banner__art" aria-hidden="true">
-              {'  ╭──────────────────────────╮\n  │  🐒  chaos-monkey  cli   │\n  ╰──────────────────────────╯'}
-            </pre>
+            <span className="banner__mark" aria-hidden="true">
+              🐒
+            </span>
             <h3>Test how the agent behaves when things break</h3>
             <p>
               Pick the failures to inject on the left, then send a scenario. Chaos Monkey replays it
@@ -45,13 +46,13 @@ export function PreviewPane(props: PreviewPaneProps) {
             </p>
             <ul className="banner__hints">
               <li>
-                <code>enter</code> run the scenario
+                <kbd>Enter</kbd> run the scenario
               </li>
               <li>
-                <code>shift + enter</code> new line
+                <kbd>Shift</kbd> + <kbd>Enter</kbd> new line
               </li>
               <li>
-                <code>clear session</code> reset the transcript
+                <kbd>Clear session</kbd> reset the transcript
               </li>
             </ul>
           </div>
@@ -60,38 +61,38 @@ export function PreviewPane(props: PreviewPaneProps) {
         {props.turns.map((turn, index) => {
           if (turn.kind === 'user') {
             return (
-              <article key={index} className="line line--user">
-                <span className="line__marker" aria-hidden="true">
-                  &gt;
+              <article key={index} className="turn turn--user">
+                <span className="turn__avatar" aria-hidden="true">
+                  You
                 </span>
-                <div className="line__text">{turn.text}</div>
+                <div className="turn__bubble">{turn.text}</div>
               </article>
             )
           }
 
           if (turn.kind === 'error') {
             return (
-              <article key={index} className="line line--error">
-                <span className="line__marker" aria-hidden="true">
-                  ✗
+              <article key={index} className="turn turn--error">
+                <span className="turn__avatar" aria-hidden="true">
+                  <AlertIcon />
                 </span>
-                <div className="line__text">{turn.text}</div>
+                <div className="turn__body">
+                  <div className="turn__text">{turn.text}</div>
+                </div>
               </article>
             )
           }
 
           return (
-            <article key={index} className="line line--agent">
-              <span className="line__marker" aria-hidden="true">
-                ⏺
+            <article key={index} className="turn turn--agent">
+              <span className="turn__avatar" aria-hidden="true">
+                <SparkleIcon />
               </span>
-              <div className="line__body">
+              <div className="turn__body">
                 <ul className="steps">
                   {turn.result.injections.map((injection, injectionIndex) => (
                     <li key={injectionIndex} className="steps__item">
-                      <span className="steps__glyph" aria-hidden="true">
-                        ⎿
-                      </span>
+                      <span className="steps__glyph" aria-hidden="true" />
                       <span className="steps__label">
                         {injection.connector}
                         {injection.statusCode !== null && ` → HTTP ${injection.statusCode}`}
@@ -101,9 +102,7 @@ export function PreviewPane(props: PreviewPaneProps) {
                     </li>
                   ))}
                   <li className="steps__item">
-                    <span className="steps__glyph" aria-hidden="true">
-                      ⎿
-                    </span>
+                    <span className="steps__glyph" aria-hidden="true" />
                     <span className="steps__label">
                       Agent responded in {turn.result.agent.durationMs} ms
                       {turn.result.agent.statusCode !== null &&
@@ -111,7 +110,7 @@ export function PreviewPane(props: PreviewPaneProps) {
                     </span>
                   </li>
                 </ul>
-                <div className="line__text">{turn.text || '(empty response)'}</div>
+                <div className="turn__text">{turn.text || '(empty response)'}</div>
                 <ReportCard result={turn.result} />
               </div>
             </article>
@@ -119,12 +118,14 @@ export function PreviewPane(props: PreviewPaneProps) {
         })}
 
         {props.running && (
-          <article className="line line--agent">
-            <span className="line__marker line__marker--spin" aria-hidden="true">
-              ◐
+          <article className="turn turn--agent">
+            <span className="turn__avatar turn__avatar--busy" aria-hidden="true">
+              <SparkleIcon />
             </span>
-            <div className="line__text line__text--muted">
-              Injecting chaos and judging the response…
+            <div className="turn__body">
+              <div className="turn__text turn__text--muted">
+                Injecting chaos and judging the response…
+              </div>
             </div>
           </article>
         )}
@@ -134,9 +135,6 @@ export function PreviewPane(props: PreviewPaneProps) {
 
       <div className="composer">
         <div className="composer__box">
-          <span className="composer__caret" aria-hidden="true">
-            &gt;
-          </span>
           <textarea
             className="composer__input"
             rows={2}
@@ -152,10 +150,11 @@ export function PreviewPane(props: PreviewPaneProps) {
           />
           <button
             type="button"
-            className="button button--primary"
+            className="button button--primary composer__send"
             onClick={props.onRun}
             disabled={props.running || !props.scenario.trim()}
           >
+            <SendIcon />
             {props.running ? 'Running…' : 'Run chaos'}
           </button>
         </div>
@@ -167,7 +166,7 @@ export function PreviewPane(props: PreviewPaneProps) {
               : 'control run · no chaos'}
           </span>
           <span className="composer__statusItem composer__statusItem--hint">
-            enter to run · shift + enter for a new line
+            Enter to run · Shift + Enter for a new line
           </span>
         </div>
       </div>
