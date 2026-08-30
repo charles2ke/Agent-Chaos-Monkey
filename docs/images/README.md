@@ -3,8 +3,11 @@
 - `preview-empty.png` — the Preview tab's conversation before a run.
 - `resilience-report.png` — a resilience report after injecting an expired-auth
   (HTTP 401) failure.
+- `tab-instructions.png`, `tab-knowledge.png`, `tab-tools.png`,
+  `tab-activity.png`, `tab-settings.png` — the remaining tabs, embedded in the
+  root README's UI section.
 
-Both are copied from the Playwright screenshots in
+All are copied from the Playwright screenshots in
 `frontend/e2e/screenshots`. Refresh them here after any UI change that alters
 these views (see the root README for how they're embedded).
 
