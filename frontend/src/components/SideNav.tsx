@@ -1,15 +1,23 @@
 import type { EvaluatorInfo } from '../api'
 import { tabs } from '../tabs'
 import type { TabId } from '../tabs'
+import {
+  ActivityIcon,
+  InstructionsIcon,
+  KnowledgeIcon,
+  PreviewIcon,
+  SettingsIcon,
+  ToolsIcon,
+} from './icons'
 
-const glyphs: Record<TabId, string> = {
-  Instructions: '§',
-  Knowledge: '❑',
-  Tools: '⚒',
-  Preview: '›_',
-  Activity: '≡',
-  Settings: '⚙',
-}
+const tabIcons = {
+  Instructions: InstructionsIcon,
+  Knowledge: KnowledgeIcon,
+  Tools: ToolsIcon,
+  Preview: PreviewIcon,
+  Activity: ActivityIcon,
+  Settings: SettingsIcon,
+} satisfies Record<TabId, (props: { className?: string }) => React.ReactElement>
 
 interface SideNavProps {
   evaluator: EvaluatorInfo | null
@@ -25,30 +33,29 @@ export function SideNav({ evaluator, activeTab, onSelectTab }: SideNavProps) {
           🐒
         </span>
         <div className="rail__identity">
-          <div className="rail__path">
-            <span className="rail__scope">agents/</span>
-            <strong>chaos-monkey</strong>
-          </div>
-          <span className="rail__version">harness v0.1 · draft</span>
+          <strong className="rail__name">Chaos Monkey</strong>
+          <span className="rail__version">Agent harness · v0.1</span>
         </div>
+        <span className="badge badge--draft">Draft</span>
       </div>
 
       <ul className="rail__list">
-        {tabs.map((tab) => (
-          <li key={tab}>
-            <button
-              type="button"
-              className={`rail__item ${tab === activeTab ? 'rail__item--active' : ''}`}
-              aria-current={tab === activeTab ? 'page' : undefined}
-              onClick={() => onSelectTab(tab)}
-            >
-              <span className="rail__glyph" aria-hidden="true">
-                {glyphs[tab]}
-              </span>
-              {tab}
-            </button>
-          </li>
-        ))}
+        {tabs.map((tab) => {
+          const TabIcon = tabIcons[tab]
+          return (
+            <li key={tab}>
+              <button
+                type="button"
+                className={`rail__item ${tab === activeTab ? 'rail__item--active' : ''}`}
+                aria-current={tab === activeTab ? 'page' : undefined}
+                onClick={() => onSelectTab(tab)}
+              >
+                <TabIcon className="rail__glyph" />
+                {tab}
+              </button>
+            </li>
+          )
+        })}
       </ul>
 
       <div className="rail__status">

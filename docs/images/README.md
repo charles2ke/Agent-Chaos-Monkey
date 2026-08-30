@@ -1,6 +1,6 @@
 # Demo assets
 
-- `preview-empty.png` — the Preview tab's CLI transcript before a run.
+- `preview-empty.png` — the Preview tab's conversation before a run.
 - `resilience-report.png` — a resilience report after injecting an expired-auth
   (HTTP 401) failure.
 

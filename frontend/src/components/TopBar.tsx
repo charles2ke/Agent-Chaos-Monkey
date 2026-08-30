@@ -1,5 +1,6 @@
 import type { EvaluatorInfo } from '../api'
 import type { TabId } from '../tabs'
+import { SparkleIcon } from './icons'
 
 interface TopBarProps {
   evaluator: EvaluatorInfo | null
@@ -9,17 +10,25 @@ interface TopBarProps {
 
 export function TopBar({ evaluator, activeTab, targetLabel }: TopBarProps) {
   return (
-    <header className="commandbar">
-      <div className="commandbar__crumbs">
-        <span className="commandbar__prompt" aria-hidden="true">
-          $
+    <header className="topbar">
+      <div className="topbar__crumbs">
+        <span className="topbar__scope">agents</span>
+        <span className="topbar__separator" aria-hidden="true">
+          /
         </span>
-        <span className="commandbar__command">chaos-monkey {activeTab.toLowerCase()}</span>
-        <span className="commandbar__flag">--target</span>
-        <span className="commandbar__value">{targetLabel}</span>
+        <span className="topbar__scope">chaos-monkey</span>
+        <span className="topbar__separator" aria-hidden="true">
+          /
+        </span>
+        <span className="topbar__current">{activeTab}</span>
       </div>
-      <div className="commandbar__meta">
+      <div className="topbar__meta">
+        <span className="chip chip--target" title={targetLabel}>
+          <span className="chip__label">Target</span>
+          {targetLabel}
+        </span>
         <span className="chip">
+          <SparkleIcon className="chip__icon" />
           {evaluator ? evaluator.model : 'no judge'}
           {evaluator && !evaluator.configured ? ' · heuristic' : ''}
         </span>
