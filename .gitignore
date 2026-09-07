@@ -9,6 +9,7 @@ dist/
 .vite/
 playwright-report/
 test-results/
+.walkthrough/
 
 # Local config
 .env

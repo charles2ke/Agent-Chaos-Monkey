@@ -72,6 +72,17 @@ npm run dev
 
 Then open <http://localhost:5173>.
 
+## 🎬 Video walkthrough
+
+A narrated 75-second tour of every screen:
+**[docs/videos/walkthrough.mp4](docs/videos/walkthrough.mp4)**
+
+Regenerate it after UI changes with `cd frontend && npm run record:walkthrough`
+(needs `ffmpeg` and `espeak-ng`). The script drives the static demo build with
+Playwright, generates the voiceover from the narration script in
+[`frontend/scripts/record-walkthrough.mjs`](frontend/scripts/record-walkthrough.mjs)
+and fails if the result would run longer than two minutes.
+
 ## 🧭 The UI
 
 The UI is styled after an agent in the new GitHub harness experience of Copilot Studio, and every tab is a real page:
@@ -160,6 +171,7 @@ cd backend && dotnet test                 # chaos engine, evaluator and parsing 
 cd frontend && npm run lint && npm run build
 cd frontend && npm run test:e2e           # Playwright UI tests (boots both servers)
 cd frontend && npm run test:e2e:static    # Playwright against the static Pages build
+cd frontend && npm run record:walkthrough # re-records docs/videos/walkthrough.mp4
 ```
 
 ## 🌐 Published demo
