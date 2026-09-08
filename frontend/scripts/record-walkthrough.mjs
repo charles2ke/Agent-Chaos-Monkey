@@ -23,6 +23,7 @@ const voice = process.env.WALKTHROUGH_VOICE ?? 'en-us+f3'
 const wordsPerMinute = process.env.WALKTHROUGH_WPM ?? '165'
 const gapSeconds = 0.6
 const leadSeconds = 1
+const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
 /** Each step narrates one screen; `run` performs the UI actions while the line is spoken. */
 const steps = [
@@ -105,12 +106,12 @@ async function startPreviewServer() {
   )
   if (inUse) throw new Error('Port 4173 is already in use; stop the other server first.')
 
-  await run('npm', ['run', 'build'], {
+  await run(npmCommand, ['run', 'build'], {
     cwd: frontendDir,
     env: { ...process.env, VITE_STATIC_DEMO: 'true', VITE_BASE_PATH: '/Agent-Chaos-Monkey/' },
   })
 
-  const server = spawn('npm', ['run', 'preview', '--', '--port', '4173', '--strictPort'], {
+  const server = spawn(npmCommand, ['run', 'preview', '--', '--port', '4173', '--strictPort'], {
     cwd: frontendDir,
     stdio: 'ignore',
     detached: true,
