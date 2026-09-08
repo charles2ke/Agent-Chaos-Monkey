@@ -28,7 +28,7 @@ const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 /** Each step narrates one screen; `run` performs the UI actions while the line is spoken. */
 const steps = [
   {
-    text: 'Agent Chaos Monkey injects connector failures into A I agents, then measures whether they recover safely.',
+    text: 'Agent Chaos Monkey injects connector failures into AI agents, then measures whether they recover safely.',
     run: async (page) => {
       await page.goto(baseUrl)
       await page.getByRole('button', { name: 'Preview' }).click()
@@ -134,6 +134,11 @@ async function startPreviewServer() {
 }
 
 function stopServer(server) {
+  if (process.platform === 'win32') {
+    spawn('taskkill', ['/pid', String(server.pid), '/T', '/F'], { stdio: 'ignore' }).unref()
+    return
+  }
+
   // vite runs as a child of npm, so signal the whole process group.
   try {
     process.kill(-server.pid, 'SIGTERM')
