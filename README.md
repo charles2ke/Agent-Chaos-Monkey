@@ -54,7 +54,7 @@ There is a built-in `/api/demo-agent`, so you can demo everything without wiring
 
 ## 🚀 Quick start
 
-> **Prerequisites:** [.NET 8 SDK](https://dotnet.microsoft.com/download) and [Node.js 20+](https://nodejs.org).
+> **Prerequisites:** [.NET 8 SDK](https://dotnet.microsoft.com/download) and [Node.js 20.19+ or 22.12+](https://nodejs.org) (required by Vite 8).
 
 ```bash
 # Backend → http://localhost:5249
@@ -139,6 +139,22 @@ Configurable LLM Evaluator
    ▼
 Resilience Report
 ```
+
+### Dependencies
+
+All packages are kept on their latest stable releases.
+
+| Area | Package | Version |
+| --- | --- | --- |
+| Backend | .NET target framework | `net8.0` |
+| Backend | Microsoft.NET.Test.Sdk | `18.10.0` |
+| Backend | xunit / xunit.runner.visualstudio | `2.9.3` / `4.0.0` |
+| Backend | coverlet.collector | `10.0.1` |
+| Frontend | react / react-dom | `19.3.0` |
+| Frontend | vite / @vitejs/plugin-react | `8.3.0` / `6.1.1` |
+| Frontend | typescript | `7.0.2` |
+| Frontend | oxlint | `1.82.0` |
+| Frontend | @playwright/test | `1.63.0` |
 
 ### API surface
 
