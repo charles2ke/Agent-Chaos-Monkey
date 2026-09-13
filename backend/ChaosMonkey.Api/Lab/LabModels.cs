@@ -125,7 +125,7 @@ public static class LabValidation
     }
 
     public static bool SafeUrl(string? value) => Uri.TryCreate(value, UriKind.Absolute, out var u) &&
-        u.Scheme is "https" or "http" && string.IsNullOrEmpty(u.UserInfo) &&
+        (u.Scheme == "https" || (u.Scheme == "http" && u.IsLoopback)) && string.IsNullOrEmpty(u.UserInfo) &&
         string.IsNullOrEmpty(u.Query) && string.IsNullOrEmpty(u.Fragment);
     private static bool Identifier(string? value) => !string.IsNullOrWhiteSpace(value) && value.Length <= 100 &&
         value.All(c => char.IsLetterOrDigit(c) || c is '_' or '-' or '.');
