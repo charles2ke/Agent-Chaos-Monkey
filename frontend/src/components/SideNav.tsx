@@ -16,6 +16,7 @@ const tabIcons = {
   Knowledge: KnowledgeIcon,
   Tools: ToolsIcon,
   Preview: PreviewIcon,
+  Laboratory: ToolsIcon,
   Activity: ActivityIcon,
   Settings: SettingsIcon,
 } satisfies Record<TabId, (props: { className?: string }) => ReactElement>

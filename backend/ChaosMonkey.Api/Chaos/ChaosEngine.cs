@@ -15,8 +15,8 @@ public sealed record ChaosPlan(
 
 /// <summary>
 /// Translates the requested chaos modes into a concrete, deterministic connector fault.
-/// The plan is handed to the agent under test so that it observes a real connector failure
-/// rather than a synthetic one produced after the fact.
+/// This legacy endpoint supplies a simulated fixture, not an intercepted connector call.
+/// Actual boundary timing and fault lifecycle evidence are available in the laboratory API.
 /// </summary>
 public sealed class ChaosEngine
 {
@@ -41,7 +41,7 @@ public sealed class ChaosEngine
         {
             latencyMs = Math.Clamp(request.LatencyMs, 0, MaxLatencyMs);
             injections.Add(new InjectionRecord(connector, nameof(ChaosMode.Latency), null, latencyMs,
-                $"Delayed the {connector} response by {latencyMs} ms."));
+                $"Simulated latency configuration of {latencyMs} ms for {connector}; legacy fixture does not delay a tool call."));
         }
 
         var status = 200;
@@ -78,7 +78,7 @@ public sealed class ChaosEngine
                 _ => (200, string.Empty, "Connector returned HTTP 200 with an empty body.")
             };
 
-            injections.Add(new InjectionRecord(connector, mode.ToString(), status, 0, error!));
+            injections.Add(new InjectionRecord(connector, mode.ToString(), status, 0, "Simulated fixture: " + error));
             break;
         }
 

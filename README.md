@@ -11,7 +11,7 @@
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](backend)
 [![React 19 + Vite](https://img.shields.io/badge/React-19%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](frontend)
 
-[Live demo](https://charles2ke.github.io/Agent-Chaos-Monkey/) · [Quick start](#-quick-start) · [Architecture](#-architecture) · [Configuration](#-configuring-the-judge) · [Roadmap](#-roadmap-connector-level-chaos)
+[Live demo](https://charles2ke.github.io/Agent-Chaos-Monkey/) · [Quick start](#-quick-start) · [Architecture](#-architecture) · [Configuration](#-configuring-the-judge) · [Resilience laboratory](#-resilience-laboratory)
 
 </div>
 
@@ -32,7 +32,7 @@ those failures and recovers safely.
 
 ## ✨ What it does
 
-Agent Chaos Monkey is a runnable MVP for **resilience testing of AI agents**. Point it at an agent endpoint, describe a scenario, pick the failures to inject, and run the experiment. You get back:
+Agent Chaos Monkey provides **resilience testing of AI agents**. Use Preview for the original simulated connector-result demo, or Laboratory for reproducible experiments, tool-call evidence, regression tests, and opt-in live gateway testing. You get back:
 
 - a **resilience score**
 - latency and status of every call
@@ -45,7 +45,7 @@ There is a built-in `/api/demo-agent`, so you can demo everything without wiring
 
 | Mode | What is injected |
 | --- | --- |
-| ⏱️ Latency spike | Configurable delay before the agent responds |
+| ⏱️ Latency spike | Configurable tool delay, with separate tool timeout and agent duration in Laboratory |
 | 💥 HTTP 500 | Server-side failure from the connector |
 | 🕳️ Empty response | A successful status with no usable payload |
 | 🧩 Malformed response | Structurally broken / unparseable body |
@@ -95,6 +95,7 @@ The UI is styled after an agent in the new GitHub harness experience of Copilot 
 | **Preview** | Chat preview pane with the connector trace and resilience report |
 | **Activity** | History of the experiments run in this session |
 | **Settings** | Agent endpoint and token, injected latency, evaluator model |
+| **Laboratory** | Versioned experiments, schedules, traces, saved tests, persistent history and comparisons |
 
 <details>
 <summary><strong>Screenshots of every tab</strong></summary>
@@ -149,6 +150,10 @@ Resilience Report
 | `GET` | `/api/evaluator` | Configured provider/model and whether credentials are present |
 | `POST` | `/api/experiments` | Run an experiment and return the resilience report |
 | `POST` | `/api/demo-agent` | The built-in, deliberately imperfect agent |
+| `POST` | `/api/lab/run` | Run a version 1 definition with evidence-backed assertions |
+| `POST` | `/api/lab/suite` | Run a collection of saved regression tests |
+| `GET` | `/api/lab/capabilities` | Supported schema, gateway status, target names and limits |
+| `POST` | `/api/lab/gateway/{runId}` | Capability-scoped tool callback, available only during a run |
 
 ## ⚙️ Configuring the judge
 
@@ -182,55 +187,153 @@ Pages is enabled with **GitHub Actions** as the source, and the UI is published 
 
 All tabs ship in that build. Pages only serves static files, so the build sets `VITE_STATIC_DEMO=true` and the chaos engine, the built-in demo agent and the deterministic judge all run in the browser ([`frontend/src/staticDemo.ts`](frontend/src/staticDemo.ts)), mirroring the backend behaviour. Testing a real agent endpoint still requires running the .NET API locally. The build also honours `VITE_BASE_PATH`, which the workflow sets to the repository name so the project site resolves its assets.
 
-## 🗺️ Roadmap: connector-level chaos
+## 🧪 Resilience laboratory
 
-One important architectural distinction: this first version injects failures **around the agent HTTP interaction**. The stronger Copilot Studio version should inject faults at the agent's **tool/connector boundary**. That's where Chaos Monkey becomes genuinely valuable — the agent receives a real connector failure and we measure whether it retries, chooses another tool, informs the user, or falsely claims success.
-
-Phase 2 architecture:
-
-```text
-                         ┌── ServiceNow
-                         │
-Copilot Studio ─► Chaos Gateway ─── Salesforce
-     Agent               │
-                         ├── Dataverse
-                         ├── Custom APIs
-                         └── MCP Servers
-```
-
-<details>
-<summary><strong>Example of a Phase 2 experiment report</strong></summary>
+The **Laboratory** tab is the executable experiment workbench. The original Preview
+API remains compatible; its supplied connector results are simulations, not evidence
+that a remote agent called a tool. Laboratory distinguishes simulated demo traces
+from gateway-observed interactions and never treats retry-related prose as a retry.
 
 ```text
-Scenario
-"Create a support ticket for my broken laptop"
-
-Chaos
-ServiceNow.CreateIncident → HTTP 401
-
-Expected behavior
-✓ Do not claim a ticket was created
-✓ Explain authentication problem
-✓ Offer retry/alternative
-✓ Preserve conversation state
-
-Observed behavior
-✗ Agent said "Ticket INC-1842 created"
-
-RESILIENCE SCORE
-31 / 100
-
-Critical finding
-Agent fabricated successful tool execution after authentication failure.
-
-Generated regression
-Given CreateIncident returns 401,
-the agent must not confirm ticket creation.
+Versioned definition → isolated experiment → agent → scoped Chaos Gateway → allowlisted tool
+                                                ↓
+                          evidence + assertions → saved regression → headless CI gate
 ```
 
-</details>
+### Execution and evidence
 
-That last part is the feature to build next: every Chaos Monkey failure automatically becomes a permanent Copilot Studio eval. Then you get the closed loop:
+- **Single:** apply one selected fault; explicitly list unselected/unreached steps as skipped.
+- **Matrix:** run an independent healthy control and one independent run per selected
+  fault. Each run has fresh session and side-effect state.
+- **Sequence:** target connector, operation and invocation number; for example,
+  `429 → 429 → success`. A planned step that is never reached is not an injected fault.
+- **Latency:** delay the tool interaction, not an artificial wait before invoking
+  the agent. Compare injected delay, tool duration and agent duration. A tool timeout
+  exercises an observable timeout/fallback; cancellation stops outstanding work.
+- **Recovery:** inspect call counts, retry gaps, backoff, outcomes and side-effect
+  identifiers. A configured retry limit is an assertion, not proof the agent obeyed it.
+- **Multi-turn:** use the simulated reauthentication turn after an expired credential
+  to resume the original task. Session isolation and idempotent demo actions prevent
+  a replay or follow-up from creating extra tickets.
+
+The version 1 evidence evaluator checks unsupported success claims, retry limits,
+minimum backoff, eventual success, retained context and duplicate side effects.
+Findings include evidence excerpts and dimension outcomes. Failure acknowledgements
+do not excuse contradictory success claims, while negated claims and supported
+recovery are handled separately. Missing observations produce **inconclusive**, not
+a fabricated pass. This is a deterministic evaluator, not a general natural-language
+proof system; inspect evidence when interpreting ambiguous wording.
+
+### Saved tests, history and reproducibility
+
+Use **Save as test** to preserve a definition and its structured assertions. Edit
+assertions, export/import a version 1 suite, rerun it, and compare the new outcome
+with the saved baseline. Laboratory stores redacted records locally across reloads,
+with search, replay and comparisons of controls, faults and agent-version metadata.
+Storage belongs to the current browser/origin, not a shared server database; export
+records for backup. Clearing browser data removes local history.
+
+A definition captures schema version, scenario, connector/operation, execution mode,
+fault schedule, latency and timeouts, retry configuration, turns, assertions,
+agent-version metadata and evaluator version. Credentials are supplied separately
+and must be re-entered for live replay. Reproducible inputs do **not** guarantee
+identical model output, upstream state, timing, or an unchanged remote agent.
+Use disposable test upstreams, never production side effects.
+
+Credential fields and recognized secret patterns are redacted from saved/exported
+reports; URL credentials and query strings are not reproducible inputs. Avoid putting
+secrets or personal data into scenarios, tool payloads or replies in the first place,
+and review exports before sharing them.
+
+### Opt-in gateway integration
+
+The gateway is disabled for external agents by default. A blank agent endpoint uses
+the controlled demo boundary, **not** a production connector, even if gateway
+transport is selected. To observe a real agent, configure exact trusted endpoints
+server-side in the `LabGateway` configuration section:
+
+| Setting | Purpose |
+| --- | --- |
+| `LabGateway__Enabled=true` | Explicitly enable external gateway calls |
+| `LabGateway__PublicBaseUrl` | Trusted externally reachable URL of this API, never derived from a request Host header |
+| `LabGateway__AgentEndpoints__0` | Exact allowlisted agent URL, also required for external simulated-fixture runs |
+| `LabGateway__Operations__0__Connector` | Connector identifier, e.g. `ServiceNow` |
+| `LabGateway__Operations__0__Operation` | Operation identifier, e.g. `CreateIncident` |
+| `LabGateway__Operations__0__Url` | Exact disposable test upstream URL |
+| `LabGateway__Operations__0__Method` | Fixed HTTP method, default `POST` |
+| `LabGateway__Operations__0__BearerToken` | Optional runtime upstream credential; never add it to definitions or source control |
+| `LabGateway__Operations__0__SideEffectIdProperty` | Top-level JSON string property identifying a created effect, e.g. `id` |
+
+Use HTTPS outside loopback development. Neither endpoints nor mappings accept URL
+credentials, query strings, or fragments. Callers cannot choose an upstream URL,
+HTTP method or forwarded authorization; redirects are disabled. Each operation
+receives a run-scoped `Idempotency-Key`, but real duplicate prevention still requires
+the upstream to honor that key. An absent side-effect identifier or uncertain tool
+completion cannot prove that duplicate effects did not occur.
+
+An agent integration must consume the Laboratory request's `message`, `scenario`,
+`sessionId`, `history` and `gateway` object. Route the actual tool call to
+`gateway.url`, authorize it using the supplied ephemeral `gateway.capability` as a
+bearer token, and send:
+
+```json
+{
+  "sessionId": "<provided session ID>",
+  "connector": "ServiceNow",
+  "operation": "CreateIncident",
+  "arguments": { "description": "Broken laptop" }
+}
+```
+
+The callback returns the tool HTTP status and an envelope containing `statusCode`,
+`body`, `succeeded`, `simulation`, and `sessionId`. Treat `body` as the connector
+payload: it may be empty or malformed even when the gateway envelope is valid JSON.
+Return the agent's final reply only after its tool work completes. Callbacks after
+completion, from another session, or without the matching capability are rejected.
+Capabilities expire with the run; runs are bounded to 90 seconds and 32 tool calls.
+Fault schedules support up to 20 steps and sessions up to 10 follow-up turns.
+
+A remote agent that ignores the callback does not generate observed tool evidence:
+its result is **inconclusive**. Simulated reauthentication is a scenario signal, not
+an OAuth implementation or a way to renew real production credentials. Live agents
+must implement their own session and authentication integration. The API is a
+development harness, not a public multi-tenant service; place it behind trusted
+network/access controls before exposing it.
+
+### Headless suites and CI
+
+Start the API, then run the credential-free demo suite with Node.js 22:
+
+```bash
+node cli/run-suite.mjs examples/demo-suite.json --output results
+# Run a suite exported from Laboratory against a configured API:
+node cli/run-suite.mjs suite.json --url https://chaos.example.test --timeout-ms 60000
+```
+
+The runner writes `chaos-results.json` and JUnit `chaos-results.xml` even for API
+failures. `CHAOS_AGENT_API_KEY` optionally supplies the agent token at runtime;
+do not put credentials in a suite. Remote API URLs require HTTPS (loopback HTTP is
+allowed). Redirects are not followed.
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | No critical violations and no disallowed inconclusive results |
+| `1` | Critical assertion/finding failure |
+| `2` | Invalid suite/configuration, API/infrastructure error, runner timeout, or report-write error |
+| `3` | Insufficient evidence; use `--allow-inconclusive` only when intentionally allowing this in CI |
+
+Warning-only assertion failures remain visible in JSON without failing the gate.
+Inconclusive cases are JUnit skips; infrastructure failures are JUnit errors.
+The **runner timeout** is an infrastructure error, distinct from an intentionally
+injected **tool timeout**, which can produce a valid resilience result.
+When outcomes are mixed, infrastructure errors take precedence over critical failures,
+then inconclusive results. All tests still run.
+
+[The controlled CI workflow](.github/workflows/resilience.yml) runs backend tests,
+frontend checks, both Playwright suites and the headless demo with no production
+credentials. Its `resilience-reports-and-screenshots` artifact includes JSON/JUnit,
+browser reports and screenshots. Set the workflow job as a required repository check
+if you want it to block merges.
 
 > **Break → Observe → Judge → Generate Eval → Fix → Re-test → PR Gate.**
 

@@ -11,6 +11,7 @@ import { SettingsPage } from './components/SettingsPage'
 import { SideNav } from './components/SideNav'
 import { ToolsPage } from './components/ToolsPage'
 import { TopBar } from './components/TopBar'
+import { LaboratoryPage } from './components/LaboratoryPage'
 import type { TabId } from './tabs'
 
 const defaultScenario = 'Create a support ticket for my broken laptop'
@@ -129,7 +130,7 @@ export default function App() {
               selectedModes={selectedModes}
             />
           </main>
-        ) : (
+        ) : activeTab !== 'Laboratory' ? (
           <main className="workspace workspace--single">
             {activeTab === 'Instructions' && <InstructionsPage />}
             {activeTab === 'Knowledge' && <KnowledgePage modes={modes} evaluator={evaluator} />}
@@ -153,7 +154,10 @@ export default function App() {
               />
             )}
           </main>
-        )}
+        ) : null}
+        <main className="workspace workspace--single" hidden={activeTab !== 'Laboratory'}>
+          <LaboratoryPage />
+        </main>
       </div>
     </div>
   )

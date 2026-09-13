@@ -1,0 +1,70 @@
+name: Controlled resilience suite
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Backend tests
+        run: dotnet test backend/ChaosMonkey.slnx
+      - name: Frontend checks
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run lint
+          npm run build
+          npx playwright install --with-deps chromium
+      - name: Browser tests and screenshots
+        working-directory: frontend
+        run: npm run test:e2e
+      - name: Static demo browser tests
+        working-directory: frontend
+        run: npm run test:e2e:static
+      - name: Run credential-free demo suite
+        shell: bash
+        env:
+          Llm__ApiKey: ''
+          ANTHROPIC_API_KEY: ''
+          OPENAI_API_KEY: ''
+          LabGateway__Enabled: 'false'
+        run: |
+          dotnet run --project backend/ChaosMonkey.Api --no-launch-profile --urls http://localhost:5249 > /tmp/chaos-api.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..60}; do
+            if curl --fail --silent http://localhost:5249/api/health > /dev/null; then break; fi
+            if ! kill -0 "$api_pid" 2>/dev/null; then exit 2; fi
+            sleep 1
+          done
+          node cli/run-suite.mjs examples/demo-suite.json --output results
+      - name: Upload reports and screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: resilience-reports-and-screenshots
+          path: |
+            results/
+            frontend/playwright-report/
+            frontend/test-results/
+            frontend/e2e/screenshots/
+            frontend/e2e-static/screenshots/
+          retention-days: 14

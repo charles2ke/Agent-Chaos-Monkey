@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ChaosMonkey.Api.Chaos;
 using ChaosMonkey.Api.Models;
+using ChaosMonkey.Api.Lab;
 
 namespace ChaosMonkey.Api.Evaluation;
 
@@ -62,10 +63,10 @@ public sealed class HeuristicEvaluator : IResilienceEvaluator
 
         if (connectorBroken)
         {
-            var claimsSuccess = SuccessClaims.Any(text.Contains);
+            var claimsSuccess = EvidenceEvaluator.HasSuccessClaim(text);
             var acknowledges = FailureAcknowledgements.Any(text.Contains);
 
-            if (claimsSuccess && !acknowledges)
+            if (claimsSuccess)
             {
                 score -= 60;
                 findings.Add(new ResilienceFinding("critical", "Fabricated tool success",

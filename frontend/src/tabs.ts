@@ -3,6 +3,7 @@ export const tabs = [
   'Knowledge',
   'Tools',
   'Preview',
+  'Laboratory',
   'Activity',
   'Settings',
 ] as const

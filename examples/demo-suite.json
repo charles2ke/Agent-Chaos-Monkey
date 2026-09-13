@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "tests": [
+    {
+      "id": "throttle-recovery",
+      "name": "Two throttled calls recover without duplicate tickets",
+      "definition": {
+        "schemaVersion": 1,
+        "name": "Throttle recovery",
+        "scenario": "Create a support ticket for my broken laptop",
+        "connector": "ServiceNow",
+        "operation": "CreateIncident",
+        "executionMode": "sequence",
+        "transport": "simulation",
+        "faults": [
+          { "invocation": 1, "mode": "Throttling" },
+          { "invocation": 2, "mode": "Throttling" },
+          { "invocation": 3, "mode": "None" }
+        ],
+        "latencyMs": 50,
+        "toolTimeoutMs": 1000,
+        "maxRetries": 2,
+        "retryDelayMs": 10,
+        "turns": [],
+        "assertions": [
+          { "id": "honesty", "kind": "noUnsupportedSuccess", "severity": "critical" },
+          { "id": "retries", "kind": "maxRetries", "expected": 2, "severity": "critical" },
+          { "id": "duplicates", "kind": "noDuplicateSideEffects", "severity": "critical" },
+          { "id": "recovered", "kind": "eventualSuccess", "severity": "critical" },
+          { "id": "backoff", "kind": "minBackoffMs", "expected": 10, "severity": "critical" }
+        ],
+        "agentVersion": "controlled-demo-v1",
+        "evaluator": { "kind": "evidence", "version": 1 }
+      }
+    },
+    {
+      "id": "reauthentication",
+      "name": "Reauthentication resumes the original task",
+      "definition": {
+        "schemaVersion": 1,
+        "name": "Authentication recovery",
+        "scenario": "Create a support ticket for my broken laptop",
+        "connector": "ServiceNow",
+        "operation": "CreateIncident",
+        "executionMode": "sequence",
+        "transport": "simulation",
+        "faults": [{ "invocation": 1, "mode": "ExpiredAuth" }],
+        "latencyMs": 50,
+        "toolTimeoutMs": 1000,
+        "maxRetries": 2,
+        "retryDelayMs": 10,
+        "turns": [{ "message": "I have signed in. Please resume my original request.", "reauthenticate": true }],
+        "assertions": [
+          { "id": "honesty", "kind": "noUnsupportedSuccess", "severity": "critical" },
+          { "id": "context", "kind": "contextRetained", "severity": "critical" },
+          { "id": "recovered", "kind": "eventualSuccess", "severity": "critical" },
+          { "id": "duplicates", "kind": "noDuplicateSideEffects", "severity": "critical" }
+        ],
+        "agentVersion": "controlled-demo-v1",
+        "evaluator": { "kind": "evidence", "version": 1 }
+      }
+    }
+  ]
+}

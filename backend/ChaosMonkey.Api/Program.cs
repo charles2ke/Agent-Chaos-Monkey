@@ -4,6 +4,7 @@ using ChaosMonkey.Api.Chaos;
 using ChaosMonkey.Api.Evaluation;
 using ChaosMonkey.Api.Experiments;
 using ChaosMonkey.Api.Models;
+using ChaosMonkey.Api.Lab;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,6 +24,20 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddHttpClient(AgentInvoker.HttpClientName,
     client => client.Timeout = TimeSpan.FromMinutes(3));
 builder.Services.AddHttpClient(LlmEvaluator.HttpClientName);
+builder.Services.Configure<LabGatewayOptions>(builder.Configuration.GetSection("LabGateway"));
+foreach (var name in new[] { LabGateway.HttpClientName, LabRunner.AgentClientName })
+{
+    builder.Services.AddHttpClient(name, client => client.Timeout = TimeSpan.FromSeconds(90))
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            AllowAutoRedirect = false,
+            UseCookies = false,
+            UseDefaultCredentials = false,
+            UseProxy = false
+        });
+}
+builder.Services.AddSingleton<LabGateway>();
+builder.Services.AddSingleton<LabRunner>();
 
 builder.Services.AddSingleton<ChaosEngine>();
 builder.Services.AddSingleton<DemoAgent>();
@@ -41,6 +56,7 @@ builder.Services.AddCors(options => options.AddPolicy(corsPolicy, policy => poli
 var app = builder.Build();
 
 app.UseCors(corsPolicy);
+app.MapLab();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
 

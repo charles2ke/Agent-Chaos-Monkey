@@ -15,3 +15,6 @@ test-results/
 .env
 .env.local
 appsettings.Local.json
+
+# Headless suite output
+/results/
