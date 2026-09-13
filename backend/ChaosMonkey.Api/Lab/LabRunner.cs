@@ -54,7 +54,6 @@ public sealed class LabRunner(LabGateway gateway, IHttpClientFactory clients)
         var responses = new List<string>();
         var responded = true;
         var clock = Stopwatch.StartNew();
-        var callCount = 0;
         var failure = "";
         try
         {
@@ -68,7 +67,7 @@ public sealed class LabRunner(LabGateway gateway, IHttpClientFactory clients)
                 session.Token.ThrowIfCancellationRequested();
                 if (session.IsDemo)
                 {
-                    if (turn.Reauthenticate) { authPending = false; session.Reauthenticated = true; }
+                    if (turn.Reauthenticate) authPending = false;
                     if (completed)
                         lastResponse = "Already completed. The original supplied information and existing result are retained; no duplicate action was performed.";
                     else if (authPending)
@@ -79,7 +78,6 @@ public sealed class LabRunner(LabGateway gateway, IHttpClientFactory clients)
                         {
                             var args = JsonSerializer.SerializeToElement(new { scenario = d.Scenario, messages = turns.Select(t => t.Message).Append(turn.Message) });
                             var result = await session.CallAsync(new(session.SessionId, d.Connector, d.Operation, args), session.Token);
-                            callCount++;
                             if (result.Succeeded)
                             {
                                 completed = true;
@@ -95,7 +93,7 @@ public sealed class LabRunner(LabGateway gateway, IHttpClientFactory clients)
                             if (result.StatusCode is 429 or 500 or 502 or 504 && retriesUsed < d.MaxRetries)
                             {
                                 retriesUsed++;
-                                await Task.Delay(d.RetryDelayMs, session.Token);
+                                await DelayAtLeastAsync(d.RetryDelayMs, session.Token);
                                 continue;
                             }
                             lastResponse = $"The operation could not be completed (tool HTTP {result.StatusCode}). No success is confirmed. You may retry or contact support.";
@@ -110,7 +108,6 @@ public sealed class LabRunner(LabGateway gateway, IHttpClientFactory clients)
                     {
                         var result = await session.CallAsync(new(session.SessionId, d.Connector, d.Operation,
                             JsonSerializer.SerializeToElement(new { scenario = d.Scenario })), session.Token);
-                        callCount++;
                         connector = new { name = d.Connector, operation = d.Operation, statusCode = result.StatusCode, body = result.Body, simulation = true };
                     }
                     var callback = d.Transport == "gateway" ? new
@@ -120,6 +117,7 @@ public sealed class LabRunner(LabGateway gateway, IHttpClientFactory clients)
                         sessionId = session.SessionId,
                         connector = d.Connector,
                         operation = d.Operation,
+                        allowedTargets = session.AllowedTargets,
                         method = "POST",
                         authorization = "Bearer",
                         expiresInSeconds = 90,
@@ -194,6 +192,13 @@ public sealed class LabRunner(LabGateway gateway, IHttpClientFactory clients)
             session.Simulation, outcome, outcome == "inconclusive" ? null : outcome == "pass" ? 100 : 0,
             string.Join("\n", responses), clock.ElapsedMilliseconds, trace.Sum(t => t.InjectedDelayMs),
             faults, trace, assertions, findings.ToArray(), turns.ToArray(), dimensions,
-            trace.Length == 0 || (!session.IsDemo && d.Transport == "simulation") ? null : trace.Length - 1);
+            trace.Length == 0 || (!session.IsDemo && d.Transport == "simulation") ? null : EvidenceEvaluator.RetryCount(trace));
+    }
+
+    private static async Task DelayAtLeastAsync(int milliseconds, CancellationToken token)
+    {
+        var clock = Stopwatch.StartNew();
+        while (clock.Elapsed.TotalMilliseconds < milliseconds)
+            await Task.Delay(Math.Max(1, (int)Math.Ceiling(milliseconds - clock.Elapsed.TotalMilliseconds)), token);
     }
 }

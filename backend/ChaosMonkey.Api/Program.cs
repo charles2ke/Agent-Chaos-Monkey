@@ -24,20 +24,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddHttpClient(AgentInvoker.HttpClientName,
     client => client.Timeout = TimeSpan.FromMinutes(3));
 builder.Services.AddHttpClient(LlmEvaluator.HttpClientName);
-builder.Services.Configure<LabGatewayOptions>(builder.Configuration.GetSection("LabGateway"));
-foreach (var name in new[] { LabGateway.HttpClientName, LabRunner.AgentClientName })
-{
-    builder.Services.AddHttpClient(name, client => client.Timeout = TimeSpan.FromSeconds(90))
-        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-        {
-            AllowAutoRedirect = false,
-            UseCookies = false,
-            UseDefaultCredentials = false,
-            UseProxy = false
-        });
-}
-builder.Services.AddSingleton<LabGateway>();
-builder.Services.AddSingleton<LabRunner>();
+builder.Services.AddLab(builder.Configuration);
 
 builder.Services.AddSingleton<ChaosEngine>();
 builder.Services.AddSingleton<DemoAgent>();

@@ -27,6 +27,7 @@ public sealed class LabGateway(IHttpClientFactory clients, IOptions<LabGatewayOp
 {
     public const string HttpClientName = "lab-boundary";
     private readonly ConcurrentDictionary<string, BoundarySession> _sessions = new();
+    private readonly SemaphoreSlim _capacity = new(64, 64);
     public LabGatewayOptions Options => options.Value;
 
     public string[] ConfigurationErrors(ExperimentDefinition definition)
@@ -37,20 +38,29 @@ public sealed class LabGateway(IHttpClientFactory clients, IOptions<LabGatewayOp
         if (definition.Transport != "gateway") return [];
         if (!Options.Enabled) return ["External gateway transport is disabled."];
         if (!LabValidation.SafeUrl(Options.PublicBaseUrl)) return ["A trusted LabGateway:PublicBaseUrl is required."];
-        var targets = Options.Operations.Where(o => o.Connector == definition.Connector && o.Operation == definition.Operation).ToArray();
-        if (targets.Length != 1 || !LabValidation.SafeUrl(targets[0].Url) ||
-            targets[0].Method is not ("POST" or "GET" or "PUT" or "PATCH" or "DELETE"))
-            return ["Exactly one valid server-side connector/operation mapping is required."];
+        var requestedTargets = definition.Faults.Select(f => (Connector: f.Connector ?? definition.Connector, Operation: f.Operation ?? definition.Operation))
+            .Append((definition.Connector, definition.Operation)).Distinct();
+        foreach (var requested in requestedTargets)
+        {
+            var targets = Options.Operations.Where(o => o.Connector == requested.Connector && o.Operation == requested.Operation).ToArray();
+            if (targets.Length != 1 || !LabValidation.SafeUrl(targets[0].Url) ||
+                targets[0].Method is not ("POST" or "GET" or "PUT" or "PATCH" or "DELETE"))
+                return ["Exactly one valid server-side mapping is required for every declared connector/operation target."];
+        }
         return [];
     }
 
     public BoundarySession Open(ExperimentDefinition definition, FaultStep[] active, FaultStep[] skipped,
         string? apiKey, CancellationToken cancellationToken)
     {
-        if (_sessions.Count >= 64) throw new InvalidOperationException("Too many active laboratory runs.");
-        var session = new BoundarySession(definition, active, skipped, apiKey, Options, clients, cancellationToken);
-        if (!_sessions.TryAdd(session.Id, session)) throw new InvalidOperationException("Unable to create run.");
-        return session;
+        if (!_capacity.Wait(0)) throw new InvalidOperationException("Too many active laboratory runs.");
+        try
+        {
+            var session = new BoundarySession(definition, active, skipped, apiKey, Options, clients, cancellationToken);
+            if (!_sessions.TryAdd(session.Id, session)) throw new InvalidOperationException("Unable to create run.");
+            return session;
+        }
+        catch { _capacity.Release(); throw; }
     }
 
     public BoundarySession? Authenticate(string id, string? token)
@@ -62,8 +72,9 @@ public sealed class LabGateway(IHttpClientFactory clients, IOptions<LabGatewayOp
 
     public async Task CloseAsync(BoundarySession session)
     {
-        _sessions.TryRemove(session.Id, out _);
-        await session.CloseAsync();
+        if (!_sessions.TryRemove(session.Id, out _)) return;
+        try { await session.CloseAsync(); }
+        finally { _capacity.Release(); }
     }
 }
 
@@ -72,26 +83,28 @@ public sealed class BoundarySession
     private readonly ExperimentDefinition _definition;
     private readonly FaultStep[] _active;
     private readonly IHttpClientFactory _clients;
-    private readonly UpstreamOperation? _upstream;
+    private readonly UpstreamOperation[] _upstreams;
+    private readonly HashSet<(string Connector, string Operation)> _targets;
     private readonly CancellationTokenSource _lifetime;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly List<ToolCall> _trace = [];
     private readonly List<FaultEvidence> _faults = [];
     private readonly Dictionary<string, string> _effects = [];
-    private long? _lastCompleted;
+    private readonly Dictionary<(string Connector, string Operation), long> _lastCompleted = [];
+    private readonly Dictionary<(string Connector, string Operation), int> _targetInvocations = [];
+    private readonly Dictionary<(string Connector, string Operation), string> _logicalOperations = [];
     private volatile bool _closed;
     private int _invocation;
     public string Id { get; } = Guid.NewGuid().ToString("n");
     public string SessionId { get; } = Guid.NewGuid().ToString("n");
     public string Capability { get; } = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-    public string LogicalOperationId { get; } = Guid.NewGuid().ToString("n");
     public bool IsActive => !_closed && !_lifetime.IsCancellationRequested;
     public bool IsDemo => string.IsNullOrEmpty(_definition.AgentEndpoint);
     public bool Simulation => IsDemo || _definition.Transport == "simulation";
     public LabRedactor Redactor { get; }
     public CancellationToken Token => _lifetime.Token;
-    public bool Reauthenticated { get; set; }
     public int CompletedCallCount => _trace.Count;
+    public object[] AllowedTargets => _targets.Select(t => (object)new { connector = t.Connector, operation = t.Operation }).ToArray();
 
     public BoundarySession(ExperimentDefinition definition, FaultStep[] active, FaultStep[] skipped,
         string? apiKey, LabGatewayOptions options, IHttpClientFactory clients, CancellationToken cancellationToken)
@@ -99,14 +112,15 @@ public sealed class BoundarySession
         _definition = definition;
         _active = active;
         _clients = clients;
-        _upstream = options.Operations.FirstOrDefault(o => o.Connector == definition.Connector && o.Operation == definition.Operation);
+        _upstreams = options.Operations;
+        _targets = active.Select(f => (f.Connector ?? definition.Connector, f.Operation ?? definition.Operation))
+            .Append((definition.Connector, definition.Operation)).ToHashSet();
         _lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _lifetime.CancelAfter(TimeSpan.FromSeconds(90));
         Redactor = new LabRedactor(options.Operations.Select(o => o.BearerToken).Append(apiKey).Append(Capability));
-        _faults.AddRange(active.Select(f => new FaultEvidence(f.Invocation, f.Mode, "planned",
+        _faults.AddRange(active.Select(f => Evidence(f, "planned",
             $"Scheduled for {f.Connector ?? definition.Connector}.{f.Operation ?? definition.Operation} invocation {f.Invocation}.")));
-        _faults.AddRange(skipped.Select(f => new FaultEvidence(f.Invocation, f.Mode, "skipped",
-            "Not selected: single execution applies only the first fault.")));
+        _faults.AddRange(skipped.Select(f => Evidence(f, "skipped", "Not selected: single execution applies only the first fault.")));
     }
 
     public async Task<BoundaryResponse> CallAsync(GatewayCall call, CancellationToken cancellationToken)
@@ -116,22 +130,28 @@ public sealed class BoundarySession
         try
         {
             if (!IsActive) throw new InvalidOperationException("Run has ended.");
-            if (call.SessionId != SessionId || call.Connector != _definition.Connector || call.Operation != _definition.Operation)
+            var target = (call.Connector, call.Operation);
+            if (call.SessionId != SessionId || !_targets.Contains(target))
                 throw new ArgumentException("Session or connector/operation does not match this capability.");
             if (_invocation >= 32) throw new InvalidOperationException("Run call limit reached.");
             if (call.Arguments.ValueKind != JsonValueKind.Object || call.Arguments.GetRawText().Length > 16384)
                 throw new ArgumentException("Arguments must be a JSON object of at most 16384 characters.");
             var invocation = ++_invocation;
+            var targetInvocation = _targetInvocations.GetValueOrDefault(target) + 1;
+            _targetInvocations[target] = targetInvocation;
+            if (!_logicalOperations.TryGetValue(target, out var logicalOperation))
+                _logicalOperations[target] = logicalOperation = Guid.NewGuid().ToString("n");
+            var upstream = _upstreams.FirstOrDefault(o => o.Connector == call.Connector && o.Operation == call.Operation);
             var start = DateTimeOffset.UtcNow;
             var clock = Stopwatch.StartNew();
-            var retryDelay = _lastCompleted.HasValue ? (long)Stopwatch.GetElapsedTime(_lastCompleted.Value).TotalMilliseconds : 0;
+            var retryDelay = _lastCompleted.TryGetValue(target, out var lastCompleted) ? (long)Stopwatch.GetElapsedTime(lastCompleted).TotalMilliseconds : 0;
             long delay = 0;
             int? status = null;
             string? effect = null;
             var succeeded = false;
-            var observable = Simulation || _upstream?.SideEffectIdProperty is not null;
+            var observable = Simulation || upstream?.SideEffectIdProperty is not null;
             var detail = "";
-            var fault = _active.FirstOrDefault(f => f.Invocation == invocation &&
+            var fault = _active.FirstOrDefault(f => f.Invocation == targetInvocation &&
                 (f.Connector ?? _definition.Connector) == call.Connector &&
                 (f.Operation ?? _definition.Operation) == call.Operation);
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(linked.Token);
@@ -140,7 +160,7 @@ public sealed class BoundarySession
             try
             {
                 if (fault is not null)
-                    _faults.Add(new(invocation, fault.Mode, "injected", "Applied at the tool-call boundary."));
+                    _faults.Add(Evidence(fault, "injected", "Applied at the tool-call boundary."));
                 if (fault?.Mode == "Latency")
                 {
                     var wait = Stopwatch.StartNew();
@@ -149,17 +169,20 @@ public sealed class BoundarySession
                 }
                 BoundaryResponse response;
                 if (fault is not null && fault.Mode is not ("None" or "Latency"))
+                {
                     response = FaultResponse(fault.Mode);
+                    observable = true;
+                }
                 else if (Simulation)
                 {
-                    if (!_effects.TryGetValue(LogicalOperationId, out effect))
-                        _effects[LogicalOperationId] = effect = "DEMO-" + Id[..8];
+                    if (!_effects.TryGetValue(logicalOperation, out effect))
+                        _effects[logicalOperation] = effect = "DEMO-" + logicalOperation[..8];
                     response = new(200, JsonSerializer.Serialize(new { status = "ok", id = effect }), true);
                 }
                 else
                 {
-                    response = await ForwardAsync(call.Arguments, timeout.Token);
-                    if (response.Succeeded && _upstream?.SideEffectIdProperty is { } property)
+                    response = await ForwardAsync(upstream, logicalOperation, call.Arguments, timeout.Token);
+                    if (response.Succeeded && upstream?.SideEffectIdProperty is { } property)
                     {
                         using var body = JsonDocument.Parse(response.Body);
                         if (body.RootElement.ValueKind == JsonValueKind.Object &&
@@ -189,31 +212,31 @@ public sealed class BoundarySession
             finally
             {
                 if (fault is not null && delivered)
-                    _faults.Add(new(invocation, fault.Mode, "observed", "Fault-affected response delivered to tool caller."));
+                    _faults.Add(Evidence(fault, "observed", "Fault-affected response delivered to tool caller."));
                 _trace.Add(new(invocation, call.Connector, call.Operation, status, start, clock.ElapsedMilliseconds,
                     delay, retryDelay, effect, detail)
                 {
                     Succeeded = succeeded, SideEffectsObservable = observable && delivered,
-                    SessionId = SessionId, LogicalOperationId = LogicalOperationId,
+                    SessionId = SessionId, LogicalOperationId = logicalOperation, TargetInvocation = targetInvocation,
                     EvidenceSource = Simulation ? "controlled-simulation" : "gateway",
-                    ContextRetained = IsDemo && call.Arguments.TryGetProperty("scenario", out var scenario)
+                    ContextRetained = IsDemo && call.Arguments.TryGetProperty("scenario", out var scenario) && scenario.ValueKind == JsonValueKind.String
                         ? scenario.GetString() == _definition.Scenario : null
                 });
-                _lastCompleted = Stopwatch.GetTimestamp();
+                _lastCompleted[target] = Stopwatch.GetTimestamp();
             }
         }
         finally { _gate.Release(); }
     }
 
-    private async Task<BoundaryResponse> ForwardAsync(JsonElement arguments, CancellationToken token)
+    private async Task<BoundaryResponse> ForwardAsync(UpstreamOperation? upstream, string logicalOperation, JsonElement arguments, CancellationToken token)
     {
-        if (_upstream is null) throw new InvalidOperationException("No upstream mapping.");
-        using var request = new HttpRequestMessage(new HttpMethod(_upstream.Method), _upstream.Url);
-        if (_upstream.Method != "GET")
+        if (upstream is null) throw new InvalidOperationException("No upstream mapping.");
+        using var request = new HttpRequestMessage(new HttpMethod(upstream.Method), upstream.Url);
+        if (upstream.Method != "GET")
             request.Content = new StringContent(Redactor.Clean(arguments.GetRawText()), Encoding.UTF8, "application/json");
-        request.Headers.TryAddWithoutValidation("Idempotency-Key", LogicalOperationId);
-        if (!string.IsNullOrEmpty(_upstream.BearerToken))
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _upstream.BearerToken);
+        request.Headers.TryAddWithoutValidation("Idempotency-Key", logicalOperation);
+        if (!string.IsNullOrEmpty(upstream.BearerToken))
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", upstream.BearerToken);
         using var client = _clients.CreateClient(LabGateway.HttpClientName);
         using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
         var body = await ReadBoundedAsync(response.Content, token);
@@ -268,12 +291,16 @@ public sealed class BoundarySession
         try
         {
             foreach (var fault in _active.Where(f => !_faults.Any(e => e.Invocation == f.Invocation &&
-                e.Mode == f.Mode && e.State == "injected")))
-                _faults.Add(new(fault.Invocation, fault.Mode, "skipped", "Target invocation was not reached or target did not match."));
+                e.Mode == f.Mode && e.State == "injected" && e.Connector == (f.Connector ?? _definition.Connector) &&
+                e.Operation == (f.Operation ?? _definition.Operation))))
+                _faults.Add(Evidence(fault, "skipped", "Target invocation was not reached or target did not match."));
         }
         finally { _gate.Release(); }
     }
 
     public ToolCall[] Trace => _closed ? _trace.ToArray() : throw new InvalidOperationException("Close before reading evidence.");
     public FaultEvidence[] Faults => _closed ? _faults.ToArray() : throw new InvalidOperationException("Close before reading evidence.");
+    private FaultEvidence Evidence(FaultStep f, string state, string detail) =>
+        new(f.Invocation, f.Mode, state, detail)
+        { Connector = f.Connector ?? _definition.Connector, Operation = f.Operation ?? _definition.Operation };
 }

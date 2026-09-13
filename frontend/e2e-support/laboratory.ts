@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { defaultDefinition } from '../src/lab'
+import { defaultDefinition, validateDefinition, validateHistory, validateTests } from '../src/lab'
 
 export function laboratoryTests(staticBuild: boolean) {
   const screenshots = staticBuild ? 'e2e-static/screenshots' : 'e2e/screenshots'
@@ -12,7 +12,7 @@ export function laboratoryTests(staticBuild: boolean) {
     await expect(page.getByText('SIMULATED · deterministic reference agent')).toBeVisible()
     await page.getByLabel('Execution mode').selectOption('matrix')
     await page.getByRole('button', { name: 'Add fault', exact: true }).click()
-    await page.getByLabel('Fault 2', { exact: true }).selectOption('Latency')
+    await page.getByRole('combobox', { name: 'Fault 2', exact: true }).selectOption('Latency')
     await page.getByLabel('Invocation 2', { exact: true }).fill('1')
     await page.getByLabel('Injected latency (ms)', { exact: true }).fill('300')
     await page.getByLabel('Tool timeout (ms)', { exact: true }).fill('100')
@@ -45,10 +45,10 @@ export function laboratoryTests(staticBuild: boolean) {
     await page.getByLabel('Agent version', { exact: true }).fill('demo-v2')
     await page.getByRole('button', { name: 'Update saved test', exact: true }).click()
     await saved.getByRole('button', { name: 'Rerun test', exact: true }).click()
-    await expect(saved.getByText(/Resolved/)).toBeVisible()
+    await expect(saved.getByText(/Baseline: fail · Resolved/)).toBeVisible()
     await page.reload()
     await page.getByRole('button', { name: 'Laboratory', exact: true }).click()
-    await expect(saved.getByText(/Resolved/)).toBeVisible()
+    await expect(saved.getByText(/Baseline: fail · Resolved/)).toBeVisible()
     await expect(page.getByLabel('Agent version', { exact: true })).toHaveValue('demo-v2')
     await page.getByLabel('Search laboratory history').fill('Auth recovery')
     await expect(page.getByRole('button', { name: 'Replay configuration' })).toHaveCount(2)
@@ -66,7 +66,7 @@ export function laboratoryTests(staticBuild: boolean) {
     await page.getByText('Agent connection & live boundary', { exact: true }).click()
     const secret = 'short-private-key'
     await page.getByLabel('Agent API key (memory only)').fill(secret)
-    await page.getByLabel('Scenario', { exact: true }).fill(`Create ticket token=embedded-secret ${secret} ******example.com/path?api_key=query-secret#fragment`)
+    await page.getByRole('textbox', { name: 'Scenario', exact: true }).fill(`Create ticket token=embedded-secret ${secret} https://example.com/path?api_key=query-secret#fragment`)
     await page.getByLabel('Agent endpoint', { exact: true }).fill('https://example.com/agent?token=url-secret')
     await page.getByRole('button', { name: 'Run laboratory experiment' }).click()
     await page.getByRole('button', { name: 'Save as test', exact: true }).click()
@@ -85,11 +85,14 @@ export function laboratoryTests(staticBuild: boolean) {
     expect(JSON.stringify(suite)).not.toContain(secret)
     await page.getByLabel('Import suite', { exact: true }).setInputFiles({ name: 'suite.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(suite)) })
     await expect(page.getByText('Imported 1 tests. Imports never execute automatically.')).toBeVisible()
+    const credentialUrl = new URL('https://example.com')
+    credentialUrl.username = 'fake-user'
+    credentialUrl.password = 'fake-password'
     for (const bad of [
       { schemaVersion: 2, tests: [] },
       { schemaVersion: 1, tests: [{ id: 'bad', name: 'bad', definition: { ...defaultDefinition, agentApiKey: 'forbidden' } }] },
       { schemaVersion: 1, tests: [{ id: 'bad', name: 'bad', definition: { ...defaultDefinition, latencyMs: -1 } }] },
-      { schemaVersion: 1, tests: [{ id: 'bad', name: 'bad', definition: { ...defaultDefinition, agentEndpoint: '******example.com' } }] },
+      { schemaVersion: 1, tests: [{ id: 'bad', name: 'bad', definition: { ...defaultDefinition, agentEndpoint: credentialUrl.href } }] },
     ]) {
       await page.getByLabel('Import suite', { exact: true }).setInputFiles({ name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(bad)) })
       await expect(page.getByRole('alert')).toContainText('Import rejected:')
@@ -102,6 +105,10 @@ export function laboratoryTests(staticBuild: boolean) {
     await page.getByRole('button', { name: 'Clear laboratory history' }).click()
     await page.getByLabel('Import history', { exact: true }).setInputFiles({ name: 'history.json', mimeType: 'application/json', buffer: Buffer.concat(historyChunks) })
     await expect(page.getByText(/Imported 1 history summaries/)).toBeVisible()
+    const state = JSON.parse(await page.evaluate(() => localStorage.getItem('chaos-monkey.laboratory.v1') ?? '{}'))
+    validateDefinition(state.definition)
+    validateTests({ schemaVersion: 1, tests: state.tests })
+    validateHistory({ schemaVersion: 1, history: state.history })
     await page.reload()
     await page.getByRole('button', { name: 'Laboratory', exact: true }).click()
     await page.getByText('Agent connection & live boundary', { exact: true }).click()

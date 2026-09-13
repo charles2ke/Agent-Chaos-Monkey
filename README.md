@@ -185,7 +185,7 @@ cd frontend && npm run record:walkthrough # re-records docs/videos/walkthrough.m
 
 Pages is enabled with **GitHub Actions** as the source, and the UI is published to that URL on every push to `main` by [`.github/workflows/pages.yml`](.github/workflows/pages.yml). The workflow can also be re-run manually (`workflow_dispatch`) to refresh the site. The deploy job probes for the Pages site first, so if the setting is ever turned off the run reports actionable guidance instead of failing with an opaque 404 — and the built site remains available as the `github-pages` artifact of the run.
 
-All tabs ship in that build. Pages only serves static files, so the build sets `VITE_STATIC_DEMO=true` and the chaos engine, the built-in demo agent and the deterministic judge all run in the browser ([`frontend/src/staticDemo.ts`](frontend/src/staticDemo.ts)), mirroring the backend behaviour. Testing a real agent endpoint still requires running the .NET API locally. The build also honours `VITE_BASE_PATH`, which the workflow sets to the repository name so the project site resolves its assets.
+All tabs ship in that build. Pages only serves static files, so the build sets `VITE_STATIC_DEMO=true`. Preview runs in [`frontend/src/staticDemo.ts`](frontend/src/staticDemo.ts); Laboratory uses a deterministic browser simulation with explicitly **virtual** timing. Neither observes real connector calls. Testing a real agent endpoint or measuring actual tool waits requires the .NET API. The build also honours `VITE_BASE_PATH`, which the workflow sets to the repository name so the project site resolves its assets.
 
 ## 🧪 Resilience laboratory
 

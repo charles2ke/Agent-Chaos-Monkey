@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { assertionKinds, defaultDefinition, faultModes, parseImport, readStorage, redact, safeDefinition, safeTests, storageKey, summarize, validateDefinition, validateHistory, validateTests } from '../lab'
+import { assertionKinds, defaultDefinition, faultModes, parseImport, readStorage, redact, safeDefinition, safeIdentifier, safeTests, storageKey, summarize, validateDefinition, validateHistory, validateResult, validateTests } from '../lab'
 import type { Assertion, ExperimentDefinition, LabResult, SavedTest, TestStatus } from '../lab'
 import { simulateLab } from '../labSimulation'
 import './laboratory.css'
@@ -39,8 +39,8 @@ export function LaboratoryPage() {
     try {
       const safe = safeDefinition(validateDefinition(definition), [apiKey])
       localStorage.setItem(storageKey, JSON.stringify({ schemaVersion: 1, definition: safe,
-        tests: safeTests(tests, [apiKey]), history: history.map(h => ({ ...h, id: redact(h.id, [apiKey]), definition: safeDefinition(h.definition, [apiKey]) })),
-        statuses: Object.fromEntries(tests.filter(t => testStatuses[t.id]).map(t => [redact(t.id, [apiKey]), testStatuses[t.id]])) }))
+        tests: safeTests(tests, [apiKey]), history: history.map(h => ({ ...h, id: safeIdentifier(h.id, [apiKey]), definition: safeDefinition(h.definition, [apiKey]) })),
+        statuses: Object.fromEntries(tests.filter(t => testStatuses[t.id]).map(t => [safeIdentifier(t.id, [apiKey]), testStatuses[t.id]])) }))
     } catch (caught) {
       if (caught instanceof DOMException) queueMicrotask(() => setWarning('Browser storage unavailable or quota exceeded. Your work remains in memory; export it now.'))
       // Incomplete edits are kept in memory until the definition is valid.
@@ -70,8 +70,9 @@ export function LaboratoryPage() {
             body: JSON.stringify({ definition: validated, ...(apiKey ? { agentApiKey: apiKey } : {}) }),
           })
           if (!response.ok) throw new Error(`Gateway request failed (HTTP ${response.status}). Check endpoint configuration and backend logs.`)
-          next = await response.json() as LabResult
-          if (!next || !Array.isArray(next.runs) || !['pass', 'fail', 'inconclusive'].includes(next.outcome)) throw new Error('Invalid gateway response')
+          const body = await response.text()
+          if (body.length > 2_000_000) throw new Error('Gateway report exceeds the safe display limit')
+          next = validateResult(JSON.parse(body))
         } finally { clearTimeout(timeout) }
       }
       setResult(next)
@@ -89,7 +90,7 @@ export function LaboratoryPage() {
     try {
       const valid = validateDefinition(definition)
       const previous = tests.find(t => t.id === selectedTest)
-      const saved: SavedTest = { id: selectedTest ?? crypto.randomUUID(), name: valid.name, definition: safeDefinition(valid, secrets),
+      const saved: SavedTest = { id: selectedTest ?? safeIdentifier(crypto.randomUUID()), name: valid.name, definition: safeDefinition(valid, secrets),
         ...(previous?.baselineOutcome && previous.definition.transport === valid.transport ? { baselineOutcome: previous.baselineOutcome } : result && JSON.stringify(result.definition) === JSON.stringify(valid) ? { baselineOutcome: result.outcome } : {}) }
       setTests(current => [saved, ...current.filter(t => t.id !== saved.id)].slice(0, 100))
       if (previous && JSON.stringify(previous.definition) !== JSON.stringify(saved.definition)) setTestStatuses(current => Object.fromEntries(Object.entries(current).filter(([id]) => id !== saved.id)))
@@ -109,7 +110,7 @@ export function LaboratoryPage() {
         setTestStatuses(current => Object.fromEntries(Object.entries(current).filter(([id]) => !imported.some(t => t.id === id))))
         setNotice(`Imported ${imported.length} tests. Imports never execute automatically.`)
       } else {
-        const imported = validateHistory(value).map(h => ({ ...h, id: redact(h.id, secrets), definition: safeDefinition(h.definition, secrets) }))
+        const imported = validateHistory(value).map(h => ({ ...h, id: safeIdentifier(h.id, secrets), definition: safeDefinition(h.definition, secrets) }))
         setHistory(current => [...imported, ...current.filter(h => !imported.some(i => i.id === h.id))].slice(0, 100))
         setNotice(`Imported ${imported.length} history summaries. Imported outcomes are unverified; replay to collect fresh evidence.`)
       }

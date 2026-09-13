@@ -35,7 +35,11 @@ public sealed record LabSuiteRequest(SavedTest[] Tests);
 public sealed record LabSuiteResult(LabResult[] Results, string Outcome);
 public sealed record LabResult(string Id, DateTimeOffset StartedAt, ExperimentDefinition Definition,
     string Outcome, LabRun[] Runs);
-public sealed record FaultEvidence(int Invocation, string Mode, string State, string Detail);
+public sealed record FaultEvidence(int Invocation, string Mode, string State, string Detail)
+{
+    public string Connector { get; init; } = "";
+    public string Operation { get; init; } = "";
+}
 public sealed record ToolCall(int Invocation, string Connector, string Operation, int? StatusCode,
     DateTimeOffset StartedAt, long DurationMs, long InjectedDelayMs, long RetryDelayMs,
     string? SideEffectId, string Detail)
@@ -46,6 +50,7 @@ public sealed record ToolCall(int Invocation, string Connector, string Operation
     public string LogicalOperationId { get; init; } = "";
     public string EvidenceSource { get; init; } = "";
     public bool? ContextRetained { get; init; }
+    public int TargetInvocation { get; init; }
 }
 public sealed record AssertionResult(string Id, string Outcome, string Severity, string Detail, string[] Evidence);
 public sealed record LabFinding(string Severity, string Title, string Detail, string[] Evidence);

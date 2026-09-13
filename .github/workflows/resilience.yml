@@ -35,9 +35,13 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Browser tests and screenshots
         working-directory: frontend
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/live
         run: npm run test:e2e
       - name: Static demo browser tests
         working-directory: frontend
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/static
         run: npm run test:e2e:static
       - name: Run credential-free demo suite
         shell: bash

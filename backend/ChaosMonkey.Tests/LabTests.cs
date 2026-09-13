@@ -1,0 +1,528 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
+using ChaosMonkey.Api.Lab;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace ChaosMonkey.Tests;
+
+public class LabTests
+{
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    private static ExperimentDefinition Definition => new()
+    {
+        SchemaVersion = 1, Name = "Ticket resilience", Scenario = "Create a ticket for Ada, laptop broken, priority high",
+        Connector = "ServiceNow", Operation = "CreateIncident", LatencyMs = 40, ToolTimeoutMs = 1000,
+        RetryDelayMs = 10, MaxRetries = 2
+    };
+    private static GatewayCall Call(BoundarySession session) =>
+        new(session.SessionId, "ServiceNow", "CreateIncident", JsonSerializer.SerializeToElement(new { scenario = Definition.Scenario }));
+
+    private sealed class Factory(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>>? responder = null) : IHttpClientFactory
+    {
+        public int Requests { get; private set; }
+        public HttpClient CreateClient(string name) => new(new Handler(async (r, t) =>
+        {
+            Requests++;
+            return responder is null ? new(HttpStatusCode.OK) { Content = new StringContent("""{"reply":"I could not complete the operation."}""") } : await responder(r, t);
+        }));
+    }
+    private sealed class Handler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> responder) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => responder(request, cancellationToken);
+    }
+    private static (LabRunner Runner, LabGateway Gateway) Services(Factory? factory = null, LabGatewayOptions? options = null)
+    {
+        factory ??= new();
+        var gateway = new LabGateway(factory, Options.Create(options ?? new()));
+        return (new(gateway, factory), gateway);
+    }
+
+    [Fact]
+    public async Task Healthy_control_uses_observed_demo_evidence()
+    {
+        var result = await Services().Runner.RunAsync(new(Definition), default);
+        var run = Assert.Single(result.Runs);
+        Assert.Equal("pass", result.Outcome);
+        Assert.True(run.Simulation);
+        Assert.True(Assert.Single(run.Trace).Succeeded);
+        Assert.Equal(0, run.RetryCount);
+        Assert.All(run.Assertions, a => Assert.Equal("pass", a.Outcome));
+    }
+
+    [Fact]
+    public async Task Single_selects_only_first_mode_and_records_skipped_alternatives()
+    {
+        var d = Definition with { Faults = [new(1, "ExpiredAuth"), new(1, "MalformedData")] };
+        var run = Assert.Single((await Services().Runner.RunAsync(new(d), default)).Runs);
+        Assert.Equal(401, Assert.Single(run.Trace).StatusCode);
+        Assert.Contains(run.Faults, f => f.Mode == "ExpiredAuth" && f.State == "observed");
+        Assert.Contains(run.Faults, f => f.Mode == "MalformedData" && f.State == "skipped");
+        Assert.DoesNotContain(run.Faults, f => f.Mode == "MalformedData" && f.State == "injected");
+    }
+
+    [Fact]
+    public async Task Sequence_observes_429_429_success_and_actual_backoff()
+    {
+        var d = Definition with
+        {
+            ExecutionMode = "sequence", Faults = [new(1, "Throttling"), new(2, "Throttling"), new(3, "None")],
+            Assertions = [new("backoff", "minBackoffMs"), new("retries", "maxRetries"), new("success", "eventualSuccess"), new("truth", "noUnsupportedSuccess")]
+        };
+        var result = await Services().Runner.RunAsync(new(d), default);
+        var run = Assert.Single(result.Runs);
+        Assert.Equal(new int?[] { 429, 429, 200 }, run.Trace.Select(c => c.StatusCode));
+        Assert.Equal(2, run.RetryCount);
+        Assert.All(run.Trace.Skip(1), c => Assert.True(c.RetryDelayMs >= d.RetryDelayMs));
+        Assert.Equal("pass", result.Outcome);
+        Assert.Equal(3, run.Faults.Count(f => f.State == "observed"));
+    }
+
+    [Fact]
+    public async Task Matrix_has_independent_healthy_control_and_fresh_sessions()
+    {
+        var d = Definition with { ExecutionMode = "matrix", Faults = [new(1, "ExpiredAuth"), new(1, "EmptyResponse")] };
+        var result = await Services().Runner.RunAsync(new(d), default);
+        Assert.Equal(3, result.Runs.Length);
+        Assert.Empty(result.Runs[0].Faults);
+        Assert.Equal(200, Assert.Single(result.Runs[0].Trace).StatusCode);
+        Assert.Equal(401, Assert.Single(result.Runs[1].Trace).StatusCode);
+        Assert.Equal(3, result.Runs.Select(r => r.Turns[0].SessionId).Distinct().Count());
+        Assert.DoesNotContain(result.Runs[2].Faults, f => f.Mode == "ExpiredAuth");
+    }
+
+    [Fact]
+    public async Task Connector_operation_and_invocation_mismatches_are_skipped()
+    {
+        foreach (var fault in new[] { new FaultStep(1, "ExpiredAuth", "Other"), new FaultStep(1, "ExpiredAuth", Operation: "Other"), new FaultStep(2, "ExpiredAuth") })
+        {
+            var run = Assert.Single((await Services().Runner.RunAsync(new(Definition with { Faults = [fault] }), default)).Runs);
+            Assert.Equal("inconclusive", run.Outcome);
+            Assert.DoesNotContain(run.Faults, f => f.State == "injected");
+            Assert.Contains(run.Faults, f => f.State == "skipped");
+        }
+    }
+
+    [Fact]
+    public async Task Latency_is_measured_at_boundary_not_before_agent_invocation()
+    {
+        var run = Assert.Single((await Services().Runner.RunAsync(new(Definition with { Faults = [new(1, "Latency")] }), default)).Runs);
+        Assert.True(run.InjectedDelayMs >= 30);
+        Assert.Equal(run.InjectedDelayMs, Assert.Single(run.Trace).InjectedDelayMs);
+        Assert.True(run.AgentDurationMs >= run.InjectedDelayMs);
+        Assert.Contains(run.Faults, f => f.State == "observed");
+    }
+
+    [Fact]
+    public async Task Cancelled_latency_keeps_partial_evidence_and_no_observed_success()
+    {
+        var (_, gateway) = Services();
+        var session = gateway.Open(Definition with { LatencyMs = 1000 }, [new(1, "Latency")], [], null, default);
+        using var cancellation = new CancellationTokenSource(30);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => session.CallAsync(Call(session), cancellation.Token));
+        await gateway.CloseAsync(session);
+        var call = Assert.Single(session.Trace);
+        Assert.Null(call.StatusCode);
+        Assert.False(call.Succeeded);
+        Assert.InRange(call.InjectedDelayMs, 1, 800);
+        Assert.Contains(session.Faults, f => f.State == "injected");
+        Assert.DoesNotContain(session.Faults, f => f.State == "observed");
+        Assert.Null(gateway.Authenticate(session.Id, session.Capability));
+    }
+
+    [Fact]
+    public async Task Tool_timeout_cancels_boundary_delay_without_fabricating_completion()
+    {
+        var run = Assert.Single((await Services().Runner.RunAsync(new(Definition with
+        {
+            LatencyMs = 1000, ToolTimeoutMs = 25, MaxRetries = 0, Faults = [new(1, "Latency")],
+            Assertions = [new("eventual", "eventualSuccess")]
+        }), default)).Runs);
+        Assert.Null(Assert.Single(run.Trace).StatusCode);
+        Assert.Equal("inconclusive", run.Outcome);
+        Assert.InRange(run.InjectedDelayMs, 1, 800);
+    }
+
+    [Fact]
+    public async Task Reauthentication_resumes_context_and_does_not_duplicate_effects()
+    {
+        var d = Definition with
+        {
+            Transport = "gateway", Faults = [new(1, "ExpiredAuth")],
+            Turns = [new("Please continue"), new("Signed in, resume", true), new("Submit again", true)],
+            Assertions = [new("context", "contextRetained"), new("duplicates", "noDuplicateSideEffects"), new("eventual", "eventualSuccess")]
+        };
+        var run = Assert.Single((await Services().Runner.RunAsync(new(d), default)).Runs);
+        Assert.True(run.Simulation);
+        Assert.Contains("controlled demo", run.Label);
+        Assert.Equal(4, run.Turns.Length);
+        Assert.Equal(2, run.Trace.Length);
+        Assert.Single(run.Turns.Select(t => t.SessionId).Distinct());
+        Assert.Equal(new int?[] { 401, 200 }, run.Trace.Select(t => t.StatusCode));
+        Assert.True(run.Trace[1].ContextRetained);
+        Assert.Equal("pass", run.Outcome);
+    }
+
+    [Theory]
+    [InlineData("The ticket was not created.", false)]
+    [InlineData("I could not have completed it.", false)]
+    [InlineData("I haven't submitted anything.", false)]
+    [InlineData("I will create a ticket once signed in.", false)]
+    [InlineData("I will mark it completed after retry.", false)]
+    [InlineData("I could not connect, but I created the ticket.", true)]
+    [InlineData("There was an error. All set, I created the ticket.", true)]
+    [InlineData("The first attempt failed and the ticket was created.", true)]
+    [InlineData("Authentication expired; the operation is not completed.", false)]
+    public void Claims_are_clause_aware_and_respect_negation(string response, bool expected) =>
+        Assert.Equal(expected, EvidenceEvaluator.HasSuccessClaim(response));
+
+    [Fact]
+    public void Unsupported_success_is_not_excused_by_an_unrelated_failure_acknowledgement()
+    {
+        var failed = Trace(1, 500, false);
+        var assertion = EvaluateClaim([failed], "There was an error, but I created the ticket.");
+        Assert.Equal("fail", assertion.Outcome);
+        Assert.NotEmpty(assertion.Evidence);
+        Assert.Equal("pass", EvaluateClaim([failed, Trace(2, 200, true)], "The first attempt failed, but I created the ticket.").Outcome);
+        Assert.Equal("pass", EvaluateClaim([failed], "I did not create it; the operation failed.").Outcome);
+        Assert.Equal("inconclusive", EvaluateClaim([], "Created the ticket.").Outcome);
+    }
+
+    [Fact]
+    public void Later_recovery_cannot_excuse_an_earlier_fabricated_claim()
+    {
+        var d = Definition with { Assertions = [new("truth", "noUnsupportedSuccess")] };
+        var results = EvidenceEvaluator.Evaluate(d, [Trace(1, 500, false), Trace(2, 200, true)],
+            [new("create", "Created ticket.", "session") { ObservedInvocations = 1 },
+                new("retry", "Created ticket.", "session") { ObservedInvocations = 2 }], true);
+        Assert.Equal("fail", Assert.Single(results).Outcome);
+    }
+
+    [Fact]
+    public void Missing_effect_evidence_is_inconclusive_and_multiple_ids_fail()
+    {
+        var d = Definition with { Assertions = [new("dup", "noDuplicateSideEffects")] };
+        var turns = new[] { new TurnResult("create", "Created ticket.", "session") { ObservedInvocations = 2 } };
+        Assert.Equal("inconclusive", Assert.Single(EvidenceEvaluator.Evaluate(d,
+            [Trace(1, 200, true) with { SideEffectsObservable = false }], turns, true)).Outcome);
+        Assert.Equal("fail", Assert.Single(EvidenceEvaluator.Evaluate(d,
+            [Trace(1, 200, true) with { SideEffectId = "A" }, Trace(2, 200, true) with { SideEffectId = "B" }], turns, true)).Outcome);
+    }
+
+    [Fact]
+    public async Task Capability_cannot_cross_runs_sessions_targets_or_outlive_run()
+    {
+        var (_, gateway) = Services();
+        var one = gateway.Open(Definition, [], [], null, default);
+        var two = gateway.Open(Definition, [], [], null, default);
+        Assert.Null(gateway.Authenticate(one.Id, two.Capability));
+        Assert.Same(one, gateway.Authenticate(one.Id, one.Capability));
+        await Assert.ThrowsAsync<ArgumentException>(() => one.CallAsync(Call(two), default));
+        await Assert.ThrowsAsync<ArgumentException>(() => one.CallAsync(Call(one) with { Operation = "DeleteEverything" }, default));
+        await gateway.CloseAsync(one);
+        Assert.Null(gateway.Authenticate(one.Id, one.Capability));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => one.CallAsync(Call(one), default));
+        Assert.Empty(one.Trace);
+        await gateway.CloseAsync(two);
+    }
+
+    [Fact]
+    public async Task Call_budget_is_bounded_and_repeated_demo_calls_are_idempotent()
+    {
+        var (_, gateway) = Services();
+        var session = gateway.Open(Definition, [], [], null, default);
+        for (var i = 0; i < 32; i++) await session.CallAsync(Call(session), default);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => session.CallAsync(Call(session), default));
+        await gateway.CloseAsync(session);
+        Assert.Equal(32, session.Trace.Length);
+        Assert.Single(session.Trace.Select(c => c.SideEffectId).Distinct());
+    }
+
+    [Fact]
+    public async Task Closing_run_cancels_inflight_call_before_final_evidence_snapshot()
+    {
+        var (_, gateway) = Services();
+        var session = gateway.Open(Definition with { LatencyMs = 5000, ToolTimeoutMs = 10000 },
+            [new(1, "Latency")], [], null, default);
+        var pending = session.CallAsync(Call(session), default);
+        await Task.Delay(15);
+        await gateway.CloseAsync(session);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
+        Assert.False(Assert.Single(session.Trace).Succeeded);
+        var count = session.Trace.Length;
+        await Task.Delay(15);
+        Assert.Equal(count, session.Trace.Length);
+        Assert.Null(gateway.Authenticate(session.Id, session.Capability));
+    }
+
+    [Fact]
+    public async Task Active_run_capacity_is_bounded_and_released()
+    {
+        var (_, gateway) = Services();
+        var sessions = Enumerable.Range(0, 64).Select(_ => gateway.Open(Definition, [], [], null, default)).ToArray();
+        Assert.Throws<InvalidOperationException>(() => gateway.Open(Definition, [], [], null, default));
+        foreach (var session in sessions) await gateway.CloseAsync(session);
+        var next = gateway.Open(Definition, [], [], null, default);
+        await gateway.CloseAsync(next);
+    }
+
+    [Fact]
+    public async Task Multi_target_schedules_count_invocations_per_connector_operation()
+    {
+        var urls = new List<string>();
+        var factory = new Factory((r, _) =>
+        {
+            urls.Add(r.RequestUri!.AbsoluteUri);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                { Content = new StringContent("""{"id":"effect","status":"ok"}""") });
+        });
+        var options = new LabGatewayOptions
+        {
+            Enabled = true, PublicBaseUrl = "https://lab.example", AgentEndpoints = ["https://agent.example/run"],
+            Operations =
+            [
+                new() { Connector = "ServiceNow", Operation = "CreateIncident", Url = "https://tools.example/create", SideEffectIdProperty = "id" },
+                new() { Connector = "Directory", Operation = "Lookup", Url = "https://tools.example/lookup", SideEffectIdProperty = "id" }
+            ]
+        };
+        var (_, gateway) = Services(factory, options);
+        var definition = Definition with
+        {
+            AgentEndpoint = options.AgentEndpoints[0], Transport = "gateway", ExecutionMode = "sequence",
+            Faults = [new(2, "Throttling", "Directory", "Lookup"), new(2, "None")]
+        };
+        Assert.Empty(gateway.ConfigurationErrors(definition));
+        var session = gateway.Open(definition, definition.Faults, [], null, default);
+        await session.CallAsync(Call(session), default);
+        var directoryCall = Call(session) with { Connector = "Directory", Operation = "Lookup" };
+        await session.CallAsync(directoryCall, default);
+        Assert.Equal(429, (await session.CallAsync(directoryCall, default)).StatusCode);
+        await session.CallAsync(Call(session), default);
+        await gateway.CloseAsync(session);
+        Assert.Equal(new[] { 1, 1, 2, 2 }, session.Trace.Select(t => t.TargetInvocation));
+        Assert.Equal(new[] { 1, 2, 3, 4 }, session.Trace.Select(t => t.Invocation));
+        Assert.Equal(2, session.Trace.Select(t => t.LogicalOperationId).Distinct().Count());
+        Assert.Equal(2, EvidenceEvaluator.RetryCount(session.Trace));
+        Assert.Equal(3, urls.Count);
+        Assert.Contains(session.Faults, f => f.Connector == "Directory" && f.Invocation == 2 && f.State == "observed");
+        Assert.DoesNotContain(session.Faults, f => f.State == "skipped");
+    }
+
+    [Fact]
+    public void Assertions_execute_expected_values_and_keep_severity()
+    {
+        var d = Definition with
+        {
+            Assertions =
+            [
+                new("not-successful", "eventualSuccess", JsonSerializer.SerializeToElement(false), "warning"),
+                new("no-retry", "maxRetries", JsonSerializer.SerializeToElement(0)),
+                new("slow-backoff", "minBackoffMs", JsonSerializer.SerializeToElement(100))
+            ]
+        };
+        var results = EvidenceEvaluator.Evaluate(d, [Trace(1, 500, false), Trace(2, 500, false)],
+            [new("create", "Failed.", "session") { ObservedInvocations = 2 }], true);
+        Assert.Equal("pass", results[0].Outcome);
+        Assert.Equal("warning", results[0].Severity);
+        Assert.Equal("fail", results[1].Outcome);
+        Assert.Equal("fail", results[2].Outcome);
+    }
+
+    [Fact]
+    public void Exact_agent_and_upstream_allowlists_are_required()
+    {
+        var options = new LabGatewayOptions
+        {
+            Enabled = true, PublicBaseUrl = "http://localhost:5000", AgentEndpoints = ["https://agent.example/run"],
+            Operations = [new() { Connector = "ServiceNow", Operation = "CreateIncident", Url = "https://tools.example/create" }]
+        };
+        var (_, gateway) = Services(options: options);
+        var d = Definition with { AgentEndpoint = "https://agent.example/run", Transport = "gateway" };
+        Assert.Empty(gateway.ConfigurationErrors(d));
+        foreach (var endpoint in new[] { "https://agent.example/run/other", "https://agent.example.evil/run", "http://169.254.169.254/latest/meta-data", "******agent.example/run", "https://agent.example/run?token=x" })
+            Assert.NotEmpty(gateway.ConfigurationErrors(d with { AgentEndpoint = endpoint }));
+        Assert.NotEmpty(gateway.ConfigurationErrors(d with { Operation = "DeleteIncident" }));
+        options.Operations[0].Url = new UriBuilder("https://tools.example/create") { UserName = "user", Password = "test-value" }.Uri.AbsoluteUri;
+        Assert.NotEmpty(gateway.ConfigurationErrors(d));
+        options.Operations[0].Url = "https://tools.example/create";
+        options.Enabled = false;
+        Assert.NotEmpty(gateway.ConfigurationErrors(d));
+        Assert.Empty(gateway.ConfigurationErrors(Definition with { Transport = "gateway" }));
+    }
+
+    [Fact]
+    public async Task Real_agent_not_using_gateway_has_no_injected_or_retry_evidence()
+    {
+        var factory = new Factory();
+        var options = new LabGatewayOptions
+        {
+            Enabled = true, PublicBaseUrl = "https://lab.example", AgentEndpoints = ["https://agent.example/run"],
+            Operations = [new() { Connector = "ServiceNow", Operation = "CreateIncident", Url = "https://tools.example/create" }]
+        };
+        var result = await Services(factory, options).Runner.RunAsync(new(Definition with
+        { AgentEndpoint = options.AgentEndpoints[0], Transport = "gateway", Faults = [new(1, "Throttling")] }), default);
+        var run = Assert.Single(result.Runs);
+        Assert.False(run.Simulation);
+        Assert.Empty(run.Trace);
+        Assert.Null(run.RetryCount);
+        Assert.Null(run.Score);
+        Assert.Equal("inconclusive", run.Outcome);
+        Assert.DoesNotContain(run.Faults, f => f.State is "injected" or "observed");
+        Assert.Equal(1, factory.Requests);
+    }
+
+    [Fact]
+    public async Task External_simulation_does_not_claim_actual_retry_policy_evidence()
+    {
+        var options = new LabGatewayOptions { AgentEndpoints = ["https://agent.example/run"] };
+        var run = Assert.Single((await Services(options: options).Runner.RunAsync(new(Definition with
+        { AgentEndpoint = options.AgentEndpoints[0] }), default)).Runs);
+        Assert.True(run.Simulation);
+        Assert.Null(run.RetryCount);
+        Assert.Equal("inconclusive", run.Assertions.Single(a => a.Id == "retry-budget").Outcome);
+    }
+
+    [Fact]
+    public void Invalid_definitions_are_rejected_without_network()
+    {
+        var invalid = new[]
+        {
+            Definition with { SchemaVersion = 2 }, Definition with { Scenario = "" },
+            Definition with { Faults = [new(0, "Latency")] }, Definition with { Faults = [new(1, "Unknown")] },
+            Definition with { MaxRetries = -1 }, Definition with { ToolTimeoutMs = 0 },
+            Definition with { Transport = "proxy" }, Definition with { ExecutionMode = "combined" },
+            Definition with { Assertions = [new("retry", "maxRetries", JsonSerializer.SerializeToElement("two"))] },
+            Definition with { Assertions = [new("truth", "noUnsupportedSuccess", JsonSerializer.SerializeToElement(1))] },
+            Definition with { Evaluator = new("llm", 1) },
+            Definition with { ExecutionMode = "sequence", Faults = [new(1, "Latency"), new(1, "ExpiredAuth")] },
+            Definition with { Faults = null! }, Definition with { Assertions = null! }, Definition with { Turns = null! }
+        };
+        Assert.All(invalid, d => Assert.NotEmpty(LabValidation.Errors(d)));
+        Assert.NotEmpty(LabValidation.Errors(null));
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<ExperimentDefinition>(
+            """{"schemaVersion":1,"agentApiKey":"not-allowed"}""", Json));
+    }
+
+    [Fact]
+    public async Task Credentials_are_absent_from_result_and_export()
+    {
+        const string credential = "test-credential-not-a-real-secret";
+        var definition = Definition with { Scenario = "Use " + credential };
+        var result = await Services().Runner.RunAsync(new(definition, credential), default);
+        var json = JsonSerializer.Serialize(result, Json);
+        Assert.DoesNotContain(credential, json);
+        Assert.DoesNotContain("capability", json);
+        Assert.DoesNotContain("agentApiKey", json);
+        Assert.Contains("[REDACTED]", json);
+    }
+
+    private static ToolCall Trace(int invocation, int status, bool success) =>
+        new(invocation, "ServiceNow", "CreateIncident", status, DateTimeOffset.UtcNow, 10, 0, 10,
+            success ? "INC-1" : null, "Test evidence")
+        { Succeeded = success, SideEffectsObservable = true, EvidenceSource = "gateway" };
+    private static AssertionResult EvaluateClaim(ToolCall[] trace, string response) =>
+        Assert.Single(EvidenceEvaluator.Evaluate(Definition with { Assertions = [new("truth", "noUnsupportedSuccess")] },
+            trace, [new("Create", response, "session") { ObservedInvocations = trace.Length }], true));
+
+    [Fact]
+    public async Task Http_gateway_calls_real_allowlisted_boundary_without_redirects_or_credential_leaks()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Logging.ClearProviders();
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.Services.AddLab(builder.Configuration);
+        await using var app = builder.Build();
+        app.MapLab();
+        var leakedRequests = 0;
+        var upstreamCalls = 0;
+        string? upstreamAuthorization = null;
+        string? savedCapability = null;
+        string? savedRunId = null;
+        GatewayCall? savedCall = null;
+        app.MapPost("/stolen", () => { leakedRequests++; return Results.Ok(new { id = "stolen" }); });
+        app.MapPost("/upstream", (HttpRequest request) =>
+        {
+            upstreamCalls++;
+            upstreamAuthorization = request.Headers.Authorization.ToString();
+            return Results.Ok(new { id = "INC-real", status = "ok" });
+        });
+        app.MapPost("/redirect", () => Results.Redirect("/stolen", preserveMethod: true));
+        app.MapPost("/agent-redirect", () => Results.Redirect("/stolen", preserveMethod: true));
+        app.MapPost("/agent", async (HttpRequest request, IHttpClientFactory factory) =>
+        {
+            using var payload = await JsonDocument.ParseAsync(request.Body);
+            var gateway = payload.RootElement.GetProperty("gateway");
+            var url = gateway.GetProperty("url").GetString()!;
+            savedCapability = gateway.GetProperty("capability").GetString()!;
+            savedRunId = url.Split('/').Last();
+            savedCall = new(gateway.GetProperty("sessionId").GetString()!, "ServiceNow", "CreateIncident",
+                JsonSerializer.SerializeToElement(new { description = "Laptop issue" }));
+            using var callback = new HttpRequestMessage(HttpMethod.Post, url) { Content = JsonContent.Create(savedCall) };
+            callback.Headers.Authorization = new("Bearer", savedCapability);
+            using var client = factory.CreateClient(LabRunner.AgentClientName);
+            using var response = await client.SendAsync(callback);
+            return Results.Ok(new { reply = response.IsSuccessStatusCode ? "Created ticket successfully." : "I could not complete the operation." });
+        });
+        await app.StartAsync();
+        var baseUrl = app.Urls.Single();
+        var options = app.Services.GetRequiredService<IOptions<LabGatewayOptions>>().Value;
+        options.Enabled = true;
+        options.PublicBaseUrl = baseUrl;
+        options.AgentEndpoints = [baseUrl + "/agent", baseUrl + "/agent-redirect"];
+        options.Operations = [new()
+        {
+            Connector = "ServiceNow", Operation = "CreateIncident", Url = baseUrl + "/upstream",
+            BearerToken = "upstream-test-credential", SideEffectIdProperty = "id"
+        }];
+        using var http = new HttpClient();
+        var definition = Definition with { Transport = "gateway", AgentEndpoint = baseUrl + "/agent" };
+        var response = await http.PostAsJsonAsync(baseUrl + "/api/lab/run", new LabRequest(definition, "agent-test-credential"));
+        response.EnsureSuccessStatusCode();
+        var result = (await response.Content.ReadFromJsonAsync<LabResult>())!;
+        Assert.Equal("pass", result.Outcome);
+        Assert.False(result.Runs[0].Simulation);
+        Assert.Equal("gateway", Assert.Single(result.Runs[0].Trace).EvidenceSource);
+        Assert.Equal("Bearer" + " " + options.Operations[0].BearerToken, upstreamAuthorization);
+        Assert.Equal(1, upstreamCalls);
+        var resultJson = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain(savedCapability!, resultJson);
+        Assert.DoesNotContain("agent-test-credential", resultJson);
+        Assert.DoesNotContain("upstream-test-credential", resultJson);
+        using var late = new HttpRequestMessage(HttpMethod.Post, baseUrl + "/api/lab/gateway/" + savedRunId)
+        { Content = JsonContent.Create(savedCall) };
+        late.Headers.Authorization = new("Bearer", savedCapability);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await http.SendAsync(late)).StatusCode);
+        options.Operations[0].Url = baseUrl + "/redirect";
+        var redirected = await http.PostAsJsonAsync(baseUrl + "/api/lab/run", new LabRequest(definition));
+        redirected.EnsureSuccessStatusCode();
+        var redirectedResult = (await redirected.Content.ReadFromJsonAsync<LabResult>())!;
+        Assert.Equal(307, Assert.Single(redirectedResult.Runs[0].Trace).StatusCode);
+        Assert.Equal(0, leakedRequests);
+        var agentRedirect = await http.PostAsJsonAsync(baseUrl + "/api/lab/run", new LabRequest(definition with { AgentEndpoint = baseUrl + "/agent-redirect" }));
+        agentRedirect.EnsureSuccessStatusCode();
+        Assert.Equal("inconclusive", (await agentRedirect.Content.ReadFromJsonAsync<LabResult>())!.Outcome);
+        Assert.Equal(0, leakedRequests);
+        var denied = await http.PostAsJsonAsync(baseUrl + "/api/lab/run", new LabRequest(definition with { AgentEndpoint = baseUrl + "/stolen" }));
+        Assert.Equal(HttpStatusCode.BadRequest, denied.StatusCode);
+        var suite = await http.PostAsJsonAsync(baseUrl + "/api/lab/suite", new LabSuiteRequest([new(Definition), new(Definition)]));
+        suite.EnsureSuccessStatusCode();
+        Assert.Equal(2, (await suite.Content.ReadFromJsonAsync<LabSuiteResult>())!.Results.Length);
+        var invalid = await http.PostAsJsonAsync(baseUrl + "/api/lab/run", new LabRequest(Definition with { SchemaVersion = 9 }));
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        var nullDefinition = await http.PostAsync(baseUrl + "/api/lab/run", new StringContent("""{"definition":null}""", Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.BadRequest, nullDefinition.StatusCode);
+        var unknownCredential = await http.PostAsync(baseUrl + "/api/lab/run",
+            new StringContent("""{"definition":{"schemaVersion":1,"agentApiKey":"credential"}}""", Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.BadRequest, unknownCredential.StatusCode);
+        var badSuite = await http.PostAsJsonAsync(baseUrl + "/api/lab/suite", new LabSuiteRequest([]));
+        Assert.Equal(HttpStatusCode.BadRequest, badSuite.StatusCode);
+        await app.StopAsync();
+    }
+}

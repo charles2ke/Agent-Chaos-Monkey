@@ -67,6 +67,60 @@ function boolean(value: unknown): boolean {
   if (typeof value !== 'boolean') throw new Error('Expected boolean')
   return value
 }
+function outputText(value: unknown, max = 64000): string {
+  if (typeof value !== 'string' || value.length > max) throw new Error('Invalid response text')
+  return value
+}
+function measurement(value: unknown, max = 10_000_000): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > max) throw new Error('Invalid measurement')
+  return value
+}
+function timestamp(value: unknown): string {
+  const date = text(value, 40)
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(date) || !Number.isFinite(Date.parse(date))) throw new Error('Invalid timestamp')
+  return date
+}
+export function validateResult(value: unknown): LabResult {
+  const result = object(value, ['id', 'startedAt', 'definition', 'outcome', 'runs'])
+  const outcome = (v: unknown) => choice(v, ['pass', 'fail', 'inconclusive'])
+  return { id: text(result.id, 100), startedAt: timestamp(result.startedAt), definition: validateDefinition(result.definition),
+    outcome: outcome(result.outcome), runs: list(result.runs, 21).map(value => {
+      const r = object(value, ['id', 'label', 'simulation', 'outcome', 'score', 'agentResponse', 'agentDurationMs', 'injectedDelayMs', 'faults', 'trace', 'assertions', 'findings', 'turns', 'dimensions', 'retryCount'])
+      return {
+        id: text(r.id, 100), label: text(r.label, 200), simulation: boolean(r.simulation), outcome: outcome(r.outcome),
+        score: r.score === null ? null : measurement(r.score, 100), agentResponse: outputText(r.agentResponse),
+        agentDurationMs: measurement(r.agentDurationMs), injectedDelayMs: measurement(r.injectedDelayMs),
+        retryCount: r.retryCount === null ? null : number(r.retryCount, 1000),
+        faults: list(r.faults, 20).map(value => {
+          const f = object(value, ['invocation', 'mode', 'state', 'detail'])
+          return { invocation: number(f.invocation, 100, 1), mode: choice(f.mode, faultModes), state: choice(f.state, ['planned', 'injected', 'observed', 'skipped']), detail: outputText(f.detail) }
+        }),
+        trace: list(r.trace, 1000).map(value => {
+          const t = object(value, ['invocation', 'connector', 'operation', 'statusCode', 'startedAt', 'durationMs', 'injectedDelayMs', 'retryDelayMs', 'sideEffectId', 'detail'])
+          return { invocation: number(t.invocation, 1000, 1), connector: text(t.connector, 100), operation: text(t.operation, 100),
+            statusCode: t.statusCode === null ? null : number(t.statusCode, 599, 100), startedAt: timestamp(t.startedAt),
+            durationMs: measurement(t.durationMs), injectedDelayMs: measurement(t.injectedDelayMs), retryDelayMs: measurement(t.retryDelayMs),
+            sideEffectId: t.sideEffectId === null ? null : outputText(t.sideEffectId, 1000), detail: outputText(t.detail) }
+        }),
+        assertions: list(r.assertions, 30).map(value => {
+          const a = object(value, ['id', 'outcome', 'severity', 'detail', 'evidence'])
+          return { id: text(a.id, 100), outcome: outcome(a.outcome), severity: text(a.severity, 30), detail: outputText(a.detail), evidence: list(a.evidence, 1000).map(e => outputText(e)) }
+        }),
+        findings: list(r.findings, 100).map(value => {
+          const f = object(value, ['severity', 'title', 'detail', 'evidence'])
+          return { severity: text(f.severity, 30), title: text(f.title, 1000), detail: outputText(f.detail), evidence: list(f.evidence, 1000).map(e => outputText(e)) }
+        }),
+        turns: list(r.turns, 11).map(value => {
+          const t = object(value, ['message', 'response', 'sessionId'])
+          return { message: outputText(t.message), response: outputText(t.response), sessionId: outputText(t.sessionId, 1000) }
+        }),
+        dimensions: list(r.dimensions, 30).map(value => {
+          const d = object(value, ['name', 'outcome', 'detail'])
+          return { name: text(d.name, 100), outcome: outcome(d.outcome), detail: outputText(d.detail) }
+        }),
+      }
+    }) }
+}
 export function validateDefinition(value: unknown): ExperimentDefinition {
   const d = object(value, ['schemaVersion', 'name', 'scenario', 'connector', 'operation', 'executionMode', 'transport', 'faults', 'latencyMs', 'toolTimeoutMs', 'maxRetries', 'retryDelayMs', 'turns', 'assertions', 'agentEndpoint', 'agentVersion', 'evaluator'])
   if (d.schemaVersion !== 1) throw new Error('Unsupported definition version')
@@ -141,21 +195,26 @@ export function safeDefinition(d: ExperimentDefinition, secrets: string[] = []):
     agentEndpoint: d.agentEndpoint ? redact(d.agentEndpoint, secrets) : undefined,
     turns: d.turns.map(t => ({ ...t, message: redact(t.message, secrets) })),
     faults: d.faults.map(f => ({ ...f, connector: f.connector ? redact(f.connector, secrets) : undefined, operation: f.operation ? redact(f.operation, secrets) : undefined })),
-    assertions: d.assertions.map(a => ({ ...a, id: redact(a.id, secrets) })) }
+    assertions: d.assertions.map(a => ({ ...a, id: safeIdentifier(a.id, secrets) })) }
+}
+export function safeIdentifier(id: string, secrets: string[] = []): string {
+  if (redact(id, secrets) === id) return id
+  let hash = 2166136261
+  for (const character of id) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619)
+  return `redacted-id-${(hash >>> 0).toString(16)}`
 }
 export function safeTests(tests: SavedTest[], secrets: string[] = []): SavedTest[] {
-  return tests.map(t => ({ id: redact(t.id, secrets), name: redact(t.name, secrets), definition: safeDefinition(t.definition, secrets), ...(t.baselineOutcome ? { baselineOutcome: t.baselineOutcome } : {}) }))
+  return tests.map(t => ({ id: safeIdentifier(t.id, secrets), name: redact(t.name, secrets), definition: safeDefinition(t.definition, secrets), ...(t.baselineOutcome ? { baselineOutcome: t.baselineOutcome } : {}) }))
 }
 export function validateHistory(value: unknown): HistoryEntry[] {
   const h = object(value, ['schemaVersion', 'history'])
   if (h.schemaVersion !== 1) throw new Error('Unsupported history version')
   return list(h.history, 100).map(value => {
     const entry = object(value, ['id', 'startedAt', 'definition', 'outcome', 'scores', 'simulated'])
-    const startedAt = text(entry.startedAt, 40)
-    if (!Number.isFinite(Date.parse(startedAt))) throw new Error('Invalid timestamp')
+    const startedAt = timestamp(entry.startedAt)
     return { id: text(entry.id, 100), startedAt, definition: validateDefinition(entry.definition),
       outcome: choice(entry.outcome, ['pass', 'fail', 'inconclusive']),
-      scores: list(entry.scores, 21).map(s => s === null ? null : number(s, 100)), simulated: boolean(entry.simulated) }
+      scores: list(entry.scores, 21).map(s => s === null ? null : measurement(s, 100)), simulated: boolean(entry.simulated) }
   })
 }
 export function readStorage(): { definition: ExperimentDefinition; tests: SavedTest[]; history: HistoryEntry[]; statuses: Record<string, TestStatus>; warning: string } {
@@ -172,7 +231,7 @@ export function readStorage(): { definition: ExperimentDefinition; tests: SavedT
   } catch { return { definition: defaultDefinition, tests: [], history: [], statuses: {}, warning: 'Saved storage is unavailable or corrupt. Working in memory; export your work before leaving.' } }
 }
 export function summarize(result: LabResult, secrets: string[]): HistoryEntry {
-  return { id: result.id, startedAt: result.startedAt, definition: safeDefinition(result.definition, secrets),
+  return { id: safeIdentifier(result.id, secrets), startedAt: result.startedAt, definition: safeDefinition(result.definition, secrets),
     outcome: result.outcome, scores: result.runs.map(r => r.score), simulated: result.runs.every(r => r.simulation) }
 }
 export const aggregate = (outcomes: Outcome[]): Outcome => outcomes.includes('fail') ? 'fail' : !outcomes.length || outcomes.includes('inconclusive') ? 'inconclusive' : 'pass'

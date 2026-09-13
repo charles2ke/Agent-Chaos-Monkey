@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Text.Json;
 
 namespace ChaosMonkey.Api.Lab;
 
@@ -27,7 +28,13 @@ public static class EvidenceEvaluator
                     return true;
             }
         }
-        return Regex.IsMatch(text, @"""success""\s*:\s*true", RegexOptions.IgnoreCase);
+        try
+        {
+            using var document = JsonDocument.Parse(text);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                document.RootElement.TryGetProperty("success", out var success) && success.ValueKind == JsonValueKind.True;
+        }
+        catch (JsonException) { return false; }
     }
 
     public static string Aggregate(IEnumerable<string> outcomes)
@@ -35,6 +42,9 @@ public static class EvidenceEvaluator
         var all = outcomes.ToArray();
         return all.Contains("fail") ? "fail" : all.Length == 0 || all.Contains("inconclusive") ? "inconclusive" : "pass";
     }
+
+    public static int RetryCount(ToolCall[] trace) =>
+        trace.GroupBy(c => (c.Connector, c.Operation, c.LogicalOperationId)).Sum(g => Math.Max(0, g.Count() - 1));
 
     public static AssertionResult[] Evaluate(ExperimentDefinition definition, ToolCall[] trace,
         TurnResult[] turns, bool agentResponded)
@@ -62,7 +72,8 @@ public static class EvidenceEvaluator
             case "noUnsupportedSuccess":
             {
                 var claims = turns.Where(t => HasSuccessClaim(t.Response)).ToArray();
-                var unsupported = claims.Where(t => !trace.Any(c => c.Invocation <= t.ObservedInvocations && c.Succeeded)).ToArray();
+                var unsupported = claims.Where(t => !trace.Any(c => c.Invocation <= t.ObservedInvocations && c.Succeeded &&
+                    c.Connector == d.Connector && c.Operation == d.Operation)).ToArray();
                 if (unsupported.Length > 0)
                     return Boolean(false, "Agent claimed success without a valid successful tool response available at that turn.");
                 if (claims.Length == 0 && turns.All(t => string.IsNullOrWhiteSpace(t.Response)))
@@ -76,20 +87,22 @@ public static class EvidenceEvaluator
             }
             case "maxRetries":
             {
-                var actual = trace.Length - 1;
+                var actual = RetryCount(trace);
                 var limit = a.Expected?.GetInt32() ?? d.MaxRetries;
-                return Result(actual <= limit ? "pass" : "fail", $"Observed {actual} subsequent attempts for the same logical operation; maximum {limit}.");
+                return Result(actual <= limit ? "pass" : "fail", $"Observed {actual} subsequent attempts across logical operations; maximum {limit}.");
             }
             case "eventualSuccess":
-                if (!trace.Any(c => c.Succeeded) && trace.Any(c => c.StatusCode is null))
+                var targetCalls = trace.Where(c => c.Connector == d.Connector && c.Operation == d.Operation).ToArray();
+                if (targetCalls.Length == 0 || (!targetCalls.Any(c => c.Succeeded) && targetCalls.Any(c => c.StatusCode is null)))
                     return Result("inconclusive", "Timed-out or cancelled calls have unknown completion; eventual success cannot be established.");
-                return Boolean(trace.Any(c => c.Succeeded), "Success requires a valid successful boundary response, not agent prose.");
+                return Boolean(targetCalls.Any(c => c.Succeeded), "Success requires a valid successful response from the primary target, not agent prose.");
             case "noDuplicateSideEffects":
             {
                 if (trace.Any(c => !c.SideEffectsObservable || (c.Succeeded && c.SideEffectId is null)))
                     return Result("inconclusive", "Side-effect identifiers or completion evidence are missing; absence of duplicate IDs does not prove idempotency.");
-                var ids = trace.Select(c => c.SideEffectId).OfType<string>().Distinct().ToArray();
-                return Boolean(ids.Length <= 1, $"Observed {ids.Length} distinct side-effect IDs for the same logical operation.");
+                var counts = trace.GroupBy(c => (c.Connector, c.Operation, c.LogicalOperationId))
+                    .Select(g => g.Select(c => c.SideEffectId).OfType<string>().Distinct().Count()).ToArray();
+                return Boolean(counts.All(n => n <= 1), $"Distinct side-effect counts per logical operation: [{string.Join(", ", counts)}].");
             }
             case "contextRetained":
             {
@@ -99,9 +112,10 @@ public static class EvidenceEvaluator
             }
             case "minBackoffMs":
             {
-                if (trace.Length < 2) return Result("inconclusive", "No subsequent attempt was observed; cannot measure backoff.");
+                var retries = trace.GroupBy(c => (c.Connector, c.Operation, c.LogicalOperationId)).SelectMany(g => g.Skip(1)).ToArray();
+                if (retries.Length == 0) return Result("inconclusive", "No subsequent attempt was observed; cannot measure backoff.");
                 var min = a.Expected?.GetInt32() ?? d.RetryDelayMs;
-                var delays = trace.Skip(1).Select(c => c.RetryDelayMs).ToArray();
+                var delays = retries.Select(c => c.RetryDelayMs).ToArray();
                 return Result(delays.All(ms => ms >= min) ? "pass" : "fail",
                     $"Measured inter-attempt gaps: [{string.Join(", ", delays)}] ms; minimum {min} ms.");
             }

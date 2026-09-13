@@ -110,6 +110,14 @@ try {
       if (!response.ok) throw new Error(`API returned HTTP ${response.status}; check server configuration and suite definition.`)
       const result = await response.json()
       if (!validResult(result)) throw new Error('API returned an invalid laboratory report.')
+      if (result.runs.some(run => run.infrastructureError)) {
+        infrastructureError = true
+        results.push({ id: test.id, name: test.name, outcome: 'infrastructure-error',
+          error: 'Agent transport or laboratory run lifetime failed; partial evidence is retained.',
+          result: redact(result) })
+        console.error(`${redact(test.name)}: agent infrastructure error`)
+        continue
+      }
       const critical = result.runs.some(run =>
         run.assertions.some(assertion => assertion.severity === 'critical' && assertion.outcome === 'fail') ||
         run.findings.some(finding => finding.severity.toLowerCase() === 'critical'))

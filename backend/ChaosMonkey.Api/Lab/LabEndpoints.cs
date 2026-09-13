@@ -4,6 +4,21 @@ namespace ChaosMonkey.Api.Lab;
 
 public static class LabEndpoints
 {
+    public static void AddLab(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<LabGatewayOptions>(configuration.GetSection("LabGateway"));
+        foreach (var name in new[] { LabGateway.HttpClientName, LabRunner.AgentClientName })
+        {
+            services.AddHttpClient(name, client => client.Timeout = TimeSpan.FromSeconds(90))
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                {
+                    AllowAutoRedirect = false, UseCookies = false, UseDefaultCredentials = false, UseProxy = false
+                });
+        }
+        services.AddSingleton<LabGateway>();
+        services.AddSingleton<LabRunner>();
+    }
+
     public static void MapLab(this WebApplication app)
     {
         app.MapGet("/api/lab/capabilities", (LabGateway gateway) => Results.Ok(new
@@ -21,7 +36,8 @@ public static class LabEndpoints
             gatewayProtocol = new
             {
                 method = "POST",
-                authorization = "Send the supplied capability using the ****** scheme.",
+                authorizationScheme = "Bearer",
+                authorizationHeader = "Authorization",
                 body = new { sessionId = "<provided session>", connector = "<provided connector>", operation = "<provided operation>", arguments = new { } },
                 notes = "Callback URL and capability are supplied only to an allowlisted agent. No caller URLs or credentials are accepted. Completion evidence stops when the agent response ends."
             }
