@@ -39,11 +39,13 @@ jobs:
       - name: Determine package version
         id: version
         shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
             version="${GITHUB_REF_NAME#nuget-v}"
           else
-            version="${{ inputs.version }}"
+            version="$INPUT_VERSION"
           fi
           if [ -z "$version" ]; then
             version="0.0.0-dev.${GITHUB_RUN_NUMBER}"
