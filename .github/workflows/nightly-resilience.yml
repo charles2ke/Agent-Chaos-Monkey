@@ -42,8 +42,12 @@ jobs:
           ANTHROPIC_API_KEY: ''
           OPENAI_API_KEY: ''
         run: |
+          set -euo pipefail
           repository_root=$(pwd -P)
-          suite_path=$(realpath -e -- "$SUITE")
+          if ! suite_path=$(realpath -e -- "$SUITE"); then
+            echo "Suite file not found: $SUITE" >&2
+            exit 2
+          fi
           case "$suite_path" in
             "$repository_root"/examples/*.json|"$repository_root"/suites/*.json) ;;
             *) echo "Suite must be a JSON file under examples/ or suites/." >&2; exit 2 ;;
@@ -58,12 +62,13 @@ jobs:
           }
           const hasAgentEndpoint = value => value && typeof value === 'object' &&
             Object.entries(value).some(([key, child]) =>
-              key === 'agentEndpoint' || hasAgentEndpoint(child))
-          if (hasAgentEndpoint(Object.fromEntries(
-            Object.entries(suite).filter(([key]) => key !== 'tests')))) {
+              (key === 'agentEndpoint' && typeof child === 'string' && child.trim()) ||
+              hasAgentEndpoint(child))
+          const { tests, ...suiteOptions } = suite
+          if (hasAgentEndpoint(suiteOptions)) {
             throw new Error('Nightly resilience suite must not define agentEndpoint.')
           }
-          for (const [index, test] of suite.tests.entries()) {
+          for (const [index, test] of tests.entries()) {
             const name = test?.name ?? `test ${index + 1}`
             if (test?.definition?.transport !== 'simulation') {
               throw new Error(`Nightly resilience test "${name}" must use simulation transport.`)
