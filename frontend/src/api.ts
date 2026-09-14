@@ -5,6 +5,11 @@ export type ChaosModeId =
   | 'ExpiredAuth'
   | 'EmptyResponse'
   | 'MalformedData'
+  | 'PromptInjection'
+  | 'ToolSchemaDrift'
+  | 'TruncatedStream'
+  | 'ContextExhaustion'
+  | 'CascadingFailure'
 
 export interface ChaosModeInfo {
   id: ChaosModeId

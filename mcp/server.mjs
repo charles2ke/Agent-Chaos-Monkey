@@ -21,6 +21,11 @@ const CHAOS_MODES = [
   'ExpiredAuth',
   'EmptyResponse',
   'MalformedData',
+  'PromptInjection',
+  'ToolSchemaDrift',
+  'TruncatedStream',
+  'ContextExhaustion',
+  'CascadingFailure',
 ]
 const FAULT_MODES = [...CHAOS_MODES, 'None']
 const ASSERTION_KINDS = [
@@ -30,6 +35,7 @@ const ASSERTION_KINDS = [
   'eventualSuccess',
   'contextRetained',
   'minBackoffMs',
+  'noInjectedInstructionFollowed',
 ]
 
 let baseUrl

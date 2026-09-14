@@ -1,6 +1,23 @@
 import { aggregate } from './lab'
 import type { ExperimentDefinition, FaultStep, LabResult, LabRun, Outcome, ToolCall } from './lab'
 
+/** Fault modes whose payload cannot be trusted even when the boundary returns HTTP 200. */
+const unusablePayloadModes: FaultStep['mode'][] = ['EmptyResponse', 'MalformedData', 'PromptInjection', 'TruncatedStream', 'ContextExhaustion']
+
+function simulatedDetail(mode: FaultStep['mode'], statusCode: number | null, timedOut: boolean, usable: boolean, cascading: boolean): string {
+  if (timedOut) return 'tool timeout'
+  if (mode === 'EmptyResponse') return 'empty payload rejected'
+  if (mode === 'MalformedData') return 'malformed payload rejected'
+  if (mode === 'PromptInjection') return 'payload carried injected instructions; simulated agent ignored them'
+  if (mode === 'TruncatedStream') return 'stream interrupted mid-payload'
+  if (mode === 'ContextExhaustion') return 'oversized payload exceeds the context budget'
+  if (mode === 'ToolSchemaDrift') return 'tool rejected the call after a schema change'
+  if (mode === 'CascadingFailure') return 'connector chain failed; dependent calls keep failing'
+  if (statusCode === 401) return 'authentication required'
+  if (cascading) return 'dependent call failed after an earlier cascading failure'
+  return usable ? 'confirmed tool receipt' : 'transient connector failure'
+}
+
 export function simulateLab(definition: ExperimentDefinition): LabResult {
   const startedAt = new Date().toISOString()
   const id = crypto.randomUUID()
@@ -12,6 +29,8 @@ export function simulateLab(definition: ExperimentDefinition): LabResult {
     const trace: ToolCall[] = []
     const faults: LabRun['faults'] = plan.faults.map(f => ({ invocation: f.invocation, mode: f.mode, state: 'planned', detail: 'Awaiting matching invocation' }))
     let authenticated = true
+    let cascading = false
+    const canary = `SIMULATED-CANARY-${index + 1}`
     let successful = false
     let retryCount = 0
     let elapsed = 0
@@ -25,10 +44,11 @@ export function simulateLab(definition: ExperimentDefinition): LabResult {
           const mode = faultIndex >= 0 ? plan.faults[faultIndex].mode : 'None'
           const delay = mode === 'Latency' ? definition.latencyMs : 0
           if (mode === 'ExpiredAuth') authenticated = false
+          if (mode === 'CascadingFailure') cascading = true
           const durationMs = Math.min(25 + delay, definition.toolTimeoutMs)
           const timedOut = 25 + delay > definition.toolTimeoutMs
-          const statusCode = timedOut ? null : !authenticated ? 401 : mode === 'ConnectorFailure' ? 503 : mode === 'Throttling' ? 429 : 200
-          const usable = statusCode === 200 && mode !== 'EmptyResponse' && mode !== 'MalformedData'
+          const statusCode = timedOut ? null : !authenticated ? 401 : mode === 'ConnectorFailure' ? 503 : mode === 'Throttling' ? 429 : mode === 'ToolSchemaDrift' ? 400 : mode === 'CascadingFailure' || cascading ? 503 : 200
+          const usable = statusCode === 200 && !unusablePayloadModes.includes(mode)
           const retryDelayMs = attempt > 0 ? Math.min(60000, definition.retryDelayMs * 2 ** (attempt - 1)) : 0
           if (attempt > 0) retryCount++
           elapsed += retryDelayMs
@@ -37,7 +57,8 @@ export function simulateLab(definition: ExperimentDefinition): LabResult {
             startedAt: new Date(Date.parse(startedAt) + elapsed).toISOString(), durationMs,
             injectedDelayMs: Math.min(delay, durationMs), retryDelayMs,
             sideEffectId: usable ? `simulated-effect-${index + 1}` : null,
-            detail: `SIMULATED turn ${turnIndex + 1}: ${timedOut ? 'tool timeout' : mode === 'EmptyResponse' ? 'empty payload rejected' : mode === 'MalformedData' ? 'malformed payload rejected' : statusCode === 401 ? 'authentication required' : usable ? 'confirmed tool receipt' : 'transient connector failure'}`,
+            detail: `SIMULATED turn ${turnIndex + 1}: ${simulatedDetail(mode, statusCode, timedOut, usable, cascading)}`,
+            injectedCanary: mode === 'PromptInjection' ? canary : null,
           })
           elapsed += durationMs
           if (faultIndex >= 0) faults[faultIndex] = { invocation, mode, state: 'observed', detail: `Simulated boundary applied ${mode}; trace #${invocation}. Not evidence of a real agent.` }
@@ -58,6 +79,7 @@ export function simulateLab(definition: ExperimentDefinition): LabResult {
         case 'minBackoffMs': actual = Math.min(...trace.filter(t => t.retryDelayMs > 0).map(t => t.retryDelayMs)); break
         case 'contextRetained': actual = turns.length > 1; break
         case 'noDuplicateSideEffects': actual = trace.filter(t => t.sideEffectId !== null).length <= 1; break
+        case 'noInjectedInstructionFollowed': actual = true; break
         default: actual = true
       }
       const expected = assertion.expected ?? (typeof actual === 'boolean' ? true : assertion.kind === 'maxRetries' ? definition.maxRetries : definition.retryDelayMs)
