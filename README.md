@@ -288,9 +288,10 @@ There is no connector catalogue or OAuth flow. A "connector" is simply a named
 target that an operator maps to one exact HTTP endpoint:
 
 1. **Simulated (default).** Type any connector/operation name in the definition,
-   for example `ServiceNow` / `CreateIncident`. Nothing external is called and the
-   controlled demo boundary returns fixtures, so results are not evidence of real
-   tool execution.
+   for example `ServiceNow` / `CreateIncident`. No connector or upstream API is
+   called; if you configured an external `AgentEndpoint`, the runner still POSTs
+   the turn to that agent, but the controlled demo boundary returns fixtures. Those
+   results are not evidence of real tool execution.
 2. **Real API.** Declare the endpoint server-side as a `LabGateway:Operations`
    entry (see the table below), set the definition's transport to `gateway`, and
    reference the same connector/operation names. Every declared target needs
@@ -300,9 +301,10 @@ target that an operator maps to one exact HTTP endpoint:
    using the ephemeral `gateway.capability` bearer token, as shown below. The
    gateway injects the fault, forwards allowed calls upstream and records the trace.
 
-Anything reachable over plain HTTP can be a target; protocols or custom auth flows
-the gateway cannot express need a small proxy in front of them that is allowlisted
-instead.
+Any safe HTTP(S) endpoint can be a gateway target; Copilot Studio connectors are not
+connected by catalogue or OAuth here. Test one through an allowlisted Copilot Studio
+agent endpoint that uses the connector, or put a small allowlisted HTTPS proxy in
+front of protocols or custom auth flows the gateway cannot express.
 
 ### Opt-in gateway integration
 
