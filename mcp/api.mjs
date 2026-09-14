@@ -85,7 +85,9 @@ export async function callApi(baseUrl, path, { method = 'GET', body, timeoutMs =
   }
   if (!response.ok) {
     const detail = parsed?.errors ?? parsed?.error ?? parsed?.detail
-    throw new Error(`The Chaos API returned HTTP ${response.status}: ${JSON.stringify(detail ?? parsed ?? '')}`)
+    throw new Error(
+      `The Chaos API returned HTTP ${response.status}: ${JSON.stringify(redact(detail ?? parsed ?? ''))}`,
+    )
   }
   return parsed
 }
