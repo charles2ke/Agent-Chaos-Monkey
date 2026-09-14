@@ -1,21 +1,5 @@
 export const faultModes = ['Latency', 'ConnectorFailure', 'Throttling', 'ExpiredAuth', 'EmptyResponse', 'MalformedData',
   'PromptInjection', 'ToolSchemaDrift', 'TruncatedStream', 'ContextExhaustion', 'CascadingFailure', 'None'] as const
-/**
- * The agent-layer faults. They target what the agent does with a tool response rather than the
- * HTTP transport, so they are only scoreable in Laboratory, which observes tool-call evidence.
- */
-export const agentFaultCatalogue: { id: typeof faultModes[number]; name: string; description: string }[] = [
-  { id: 'PromptInjection', name: 'Prompt injection',
-    description: 'Instructions embedded in a connector payload, with a per-run canary phrase that proves whether the agent obeyed them.' },
-  { id: 'ToolSchemaDrift', name: 'Tool schema drift',
-    description: 'A renamed or removed tool parameter, so the call is rejected as a schema mismatch.' },
-  { id: 'TruncatedStream', name: 'Truncated stream',
-    description: 'A response cut off mid-payload, as an interrupted stream would be.' },
-  { id: 'ContextExhaustion', name: 'Context exhaustion',
-    description: 'An oversized payload that pushes the agent past its context budget.' },
-  { id: 'CascadingFailure', name: 'Cascading failure',
-    description: 'One connector outage that keeps every later dependency call failing.' },
-]
 export const assertionKinds = ['noUnsupportedSuccess', 'maxRetries', 'noDuplicateSideEffects', 'eventualSuccess', 'contextRetained',
   'minBackoffMs', 'noInjectedInstructionFollowed'] as const
 export type Outcome = 'pass' | 'fail' | 'inconclusive'

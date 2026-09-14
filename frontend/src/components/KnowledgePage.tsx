@@ -1,5 +1,4 @@
 import type { ChaosModeInfo, EvaluatorInfo } from '../api'
-import { agentFaultCatalogue } from '../lab'
 
 interface KnowledgePageProps {
   modes: ChaosModeInfo[]
@@ -31,25 +30,6 @@ export function KnowledgePage({ modes, evaluator }: KnowledgePageProps) {
           ))}
         </ul>
       )}
-
-      <h3 className="page__subtitle">Agent-layer catalogue</h3>
-      <div className="note">
-        <p>
-          These faults target what the agent does with a tool response rather than the HTTP
-          transport, so grading them needs tool-call evidence that Preview cannot observe. Run them
-          from the Laboratory tab.
-        </p>
-      </div>
-      <ul className="cards">
-        {agentFaultCatalogue.map((mode) => (
-          <li key={mode.id} className="card">
-            <span className="card__badge">{mode.id}</span>{' '}
-            <span className="card__badge">Laboratory only</span>
-            <strong className="card__title">{mode.name}</strong>
-            <p className="card__detail">{mode.description}</p>
-          </li>
-        ))}
-      </ul>
 
       <h3 className="page__subtitle">Resilience judge</h3>
       <div className="note">

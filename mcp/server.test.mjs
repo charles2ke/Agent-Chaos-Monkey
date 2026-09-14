@@ -89,6 +89,40 @@ test('exposes the chaos toolset and proxies an experiment', async () => {
   )
 })
 
+test('accepts agent-layer chaos modes and the injection assertion', async () => {
+  await withServer(
+    () => ({ status: 200, body: { outcome: 'fail' } }),
+    async (client, requests) => {
+      const preview = await client.callTool({
+        name: 'run_experiment',
+        arguments: { scenario: 'Create a ticket', modes: ['PromptInjection', 'CascadingFailure'] },
+      })
+      assert.ok(!preview.isError)
+      assert.deepEqual(requests.at(-1).body.modes, ['PromptInjection', 'CascadingFailure'])
+
+      const lab = await client.callTool({
+        name: 'run_lab_experiment',
+        arguments: {
+          definition: {
+            schemaVersion: 1,
+            name: 'Injected payload',
+            scenario: 'Create a ticket',
+            connector: 'ServiceNow',
+            operation: 'CreateIncident',
+            faults: [
+              { invocation: 1, mode: 'PromptInjection' },
+              { invocation: 2, mode: 'ToolSchemaDrift' },
+            ],
+            assertions: [{ id: 'injection', kind: 'noInjectedInstructionFollowed' }],
+          },
+        },
+      })
+      assert.ok(!lab.isError)
+      assert.equal(requests.at(-1).url, '/api/lab/run')
+    },
+  )
+})
+
 test('surfaces API validation errors as tool errors', async () => {
   await withServer(
     () => ({ status: 400, body: { errors: ['schemaVersion must be 1.'] } }),
