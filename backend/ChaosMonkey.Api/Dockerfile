@@ -16,7 +16,7 @@ RUN dotnet publish ChaosMonkey.Api/ChaosMonkey.Api.csproj \
         --no-restore \
         /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 # Run as the non-root user provided by the base image.
