@@ -51,6 +51,10 @@ public sealed class AgentInvoker
     {
         var payload = BuildPayload(request, plan);
         var stopwatch = Stopwatch.StartNew();
+        if (plan.LatencyMs > 0)
+        {
+            await Task.Delay(plan.LatencyMs, cancellationToken).ConfigureAwait(false);
+        }
 
         if (!TryParseEndpoint(request.AgentEndpoint, out var uri) || uri is null)
         {

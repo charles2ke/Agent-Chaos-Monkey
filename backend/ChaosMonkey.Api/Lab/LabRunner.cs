@@ -39,8 +39,16 @@ public sealed class LabRunner(LabGateway gateway, IHttpClientFactory clients)
         var safeDefinition = definition with
         {
             Name = redactor.Clean(definition.Name), Scenario = redactor.Clean(definition.Scenario),
+            Connector = redactor.Clean(definition.Connector), Operation = redactor.Clean(definition.Operation),
+            AgentEndpoint = definition.AgentEndpoint is null ? null : redactor.Clean(definition.AgentEndpoint),
             AgentVersion = definition.AgentVersion is null ? null : redactor.Clean(definition.AgentVersion),
-            Turns = definition.Turns.Select(t => t with { Message = redactor.Clean(t.Message) }).ToArray()
+            Turns = definition.Turns.Select(t => t with { Message = redactor.Clean(t.Message) }).ToArray(),
+            Faults = definition.Faults.Select(f => f with
+            {
+                Connector = f.Connector is null ? null : redactor.Clean(f.Connector),
+                Operation = f.Operation is null ? null : redactor.Clean(f.Operation)
+            }).ToArray(),
+            Assertions = definition.Assertions.Select(a => a with { Id = redactor.Clean(a.Id) }).ToArray()
         };
         return new(Guid.NewGuid().ToString("n"), start, safeDefinition, EvidenceEvaluator.Aggregate(runs.Select(r => r.Outcome)), runs.ToArray());
     }

@@ -14,15 +14,17 @@ export interface SavedTest { id: string; name: string; definition: ExperimentDef
 export interface ToolCall {
   invocation: number; connector: string; operation: string; statusCode: number | null; startedAt: string
   durationMs: number; injectedDelayMs: number; retryDelayMs: number; sideEffectId: string | null; detail: string
+  succeeded?: boolean; sideEffectsObservable?: boolean; sessionId?: string; logicalOperationId?: string
+  evidenceSource?: string; contextRetained?: boolean | null; targetInvocation?: number
 }
 export interface LabRun {
   id: string; label: string; simulation: boolean; outcome: Outcome; score: number | null
   agentResponse: string; agentDurationMs: number; injectedDelayMs: number; retryCount: number | null
-  faults: { invocation: number; mode: string; state: 'planned' | 'injected' | 'observed' | 'skipped'; detail: string }[]
+  faults: { invocation: number; mode: string; state: 'planned' | 'injected' | 'observed' | 'skipped'; detail: string; connector?: string; operation?: string }[]
   trace: ToolCall[]
   assertions: { id: string; outcome: Outcome; severity: string; detail: string; evidence: string[] }[]
   findings: { severity: string; title: string; detail: string; evidence: string[] }[]
-  turns: { message: string; response: string; sessionId: string }[]
+  turns: { message: string; response: string; sessionId: string; observedInvocations?: number }[]
   dimensions: { name: string; outcome: string; detail: string }[]
 }
 export interface LabResult { id: string; startedAt: string; definition: ExperimentDefinition; outcome: Outcome; runs: LabRun[] }
@@ -92,15 +94,24 @@ export function validateResult(value: unknown): LabResult {
         agentDurationMs: measurement(r.agentDurationMs), injectedDelayMs: measurement(r.injectedDelayMs),
         retryCount: r.retryCount === null ? null : number(r.retryCount, 1000),
         faults: list(r.faults, 20).map(value => {
-          const f = object(value, ['invocation', 'mode', 'state', 'detail'])
-          return { invocation: number(f.invocation, 100, 1), mode: choice(f.mode, faultModes), state: choice(f.state, ['planned', 'injected', 'observed', 'skipped']), detail: outputText(f.detail) }
+          const f = object(value, ['invocation', 'mode', 'state', 'detail', 'connector', 'operation'])
+          return { invocation: number(f.invocation, 100, 1), mode: choice(f.mode, faultModes), state: choice(f.state, ['planned', 'injected', 'observed', 'skipped']), detail: outputText(f.detail),
+            ...(f.connector === undefined ? {} : { connector: text(f.connector, 100) }),
+            ...(f.operation === undefined ? {} : { operation: text(f.operation, 100) }) }
         }),
         trace: list(r.trace, 1000).map(value => {
-          const t = object(value, ['invocation', 'connector', 'operation', 'statusCode', 'startedAt', 'durationMs', 'injectedDelayMs', 'retryDelayMs', 'sideEffectId', 'detail'])
+          const t = object(value, ['invocation', 'connector', 'operation', 'statusCode', 'startedAt', 'durationMs', 'injectedDelayMs', 'retryDelayMs', 'sideEffectId', 'detail', 'succeeded', 'sideEffectsObservable', 'sessionId', 'logicalOperationId', 'evidenceSource', 'contextRetained', 'targetInvocation'])
           return { invocation: number(t.invocation, 1000, 1), connector: text(t.connector, 100), operation: text(t.operation, 100),
             statusCode: t.statusCode === null ? null : number(t.statusCode, 599, 100), startedAt: timestamp(t.startedAt),
             durationMs: measurement(t.durationMs), injectedDelayMs: measurement(t.injectedDelayMs), retryDelayMs: measurement(t.retryDelayMs),
-            sideEffectId: t.sideEffectId === null ? null : outputText(t.sideEffectId, 1000), detail: outputText(t.detail) }
+            sideEffectId: t.sideEffectId === null ? null : outputText(t.sideEffectId, 1000), detail: outputText(t.detail),
+            ...(t.succeeded === undefined ? {} : { succeeded: boolean(t.succeeded) }),
+            ...(t.sideEffectsObservable === undefined ? {} : { sideEffectsObservable: boolean(t.sideEffectsObservable) }),
+            ...(t.sessionId === undefined ? {} : { sessionId: outputText(t.sessionId, 1000) }),
+            ...(t.logicalOperationId === undefined ? {} : { logicalOperationId: outputText(t.logicalOperationId, 1000) }),
+            ...(t.evidenceSource === undefined ? {} : { evidenceSource: outputText(t.evidenceSource, 1000) }),
+            ...(t.contextRetained === undefined ? {} : { contextRetained: t.contextRetained === null ? null : boolean(t.contextRetained) }),
+            ...(t.targetInvocation === undefined ? {} : { targetInvocation: number(t.targetInvocation, 1000, 0) }) }
         }),
         assertions: list(r.assertions, 30).map(value => {
           const a = object(value, ['id', 'outcome', 'severity', 'detail', 'evidence'])
@@ -111,8 +122,9 @@ export function validateResult(value: unknown): LabResult {
           return { severity: text(f.severity, 30), title: text(f.title, 1000), detail: outputText(f.detail), evidence: list(f.evidence, 1000).map(e => outputText(e)) }
         }),
         turns: list(r.turns, 11).map(value => {
-          const t = object(value, ['message', 'response', 'sessionId'])
-          return { message: outputText(t.message), response: outputText(t.response), sessionId: outputText(t.sessionId, 1000) }
+          const t = object(value, ['message', 'response', 'sessionId', 'observedInvocations'])
+          return { message: outputText(t.message), response: outputText(t.response), sessionId: outputText(t.sessionId, 1000),
+            ...(t.observedInvocations === undefined ? {} : { observedInvocations: number(t.observedInvocations, 1000, 0) }) }
         }),
         dimensions: list(r.dimensions, 30).map(value => {
           const d = object(value, ['name', 'outcome', 'detail'])
@@ -150,8 +162,8 @@ export function validateDefinition(value: unknown): ExperimentDefinition {
     connector: text(d.connector, 100), operation: text(d.operation, 100),
     executionMode: choice(d.executionMode, ['single', 'matrix', 'sequence']),
     transport: choice(d.transport, ['simulation', 'gateway']), faults,
-    latencyMs: number(d.latencyMs, 60000), toolTimeoutMs: number(d.toolTimeoutMs, 60000, 1),
-    maxRetries: number(d.maxRetries, 10), retryDelayMs: number(d.retryDelayMs, 60000),
+    latencyMs: number(d.latencyMs, 30000), toolTimeoutMs: number(d.toolTimeoutMs, 30000, 1),
+    maxRetries: number(d.maxRetries, 10), retryDelayMs: number(d.retryDelayMs, 5000),
     turns: list(d.turns, 10).map(value => { const t = object(value, ['message', 'reauthenticate']); return { message: text(t.message, 4000), reauthenticate: boolean(t.reauthenticate) } }),
     assertions, ...(endpoint ? { agentEndpoint: endpoint } : {}),
     ...(d.agentVersion === undefined || d.agentVersion === '' ? {} : { agentVersion: text(d.agentVersion, 100) }),
