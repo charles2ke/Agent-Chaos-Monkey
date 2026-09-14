@@ -1,0 +1,116 @@
+name: Remediate chaos failures
+
+# Turns a failing chaos run into a remediation pull request: suggested instruction/system-prompt
+# additions and a retry-policy configuration derived from the observed tool-boundary evidence.
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Path to the suite JSON file to run.'
+        type: string
+        required: false
+        default: 'examples/demo-suite.json'
+      api-url:
+        description: 'Base URL of the Chaos Monkey API.'
+        type: string
+        required: false
+        default: 'http://localhost:5249'
+  workflow_call:
+    inputs:
+      suite:
+        type: string
+        required: false
+        default: 'examples/demo-suite.json'
+      api-url:
+        type: string
+        required: false
+        default: 'http://localhost:5249'
+
+permissions:
+  contents: read
+
+jobs:
+  remediate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Start Chaos Monkey API
+        shell: bash
+        env:
+          API_URL: ${{ inputs.api-url }}
+          LabGateway__Enabled: 'false'
+        run: |
+          set -euo pipefail
+          dotnet run --project backend/ChaosMonkey.Api --no-launch-profile --urls "$API_URL" > chaos-api.log 2>&1 &
+          echo "$!" > chaos-api.pid
+          for _ in $(seq 1 60); do
+            if curl --fail --silent "${API_URL%/}/api/health" > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          echo "API failed to become ready in time." >&2
+          exit 2
+
+      - name: Run suite
+        shell: bash
+        run: node cli/run-suite.mjs "${{ inputs.suite }}" --url "${{ inputs.api-url }}" --output results || true
+
+      - name: Generate remediation
+        id: remediation
+        shell: bash
+        run: |
+          set -uo pipefail
+          node cli/suggest-remediation.mjs results/chaos-results.json --output remediation
+          status=$?
+          if [ "$status" -gt 1 ]; then exit "$status"; fi
+          echo "suggestions=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Open remediation pull request
+        if: ${{ steps.remediation.outputs.suggestions == '1' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch="chaos-remediation/${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add remediation
+          git commit -m "Add chaos remediation suggestions from run ${GITHUB_RUN_ID}"
+          git push origin "$branch"
+          gh pr create --title "Chaos remediation: address failing resilience assertions" \
+            --body-file remediation/pull-request.md --base "${GITHUB_REF_NAME}" --head "$branch"
+
+      - name: Stop Chaos Monkey API
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          if [ -f chaos-api.pid ]; then kill "$(cat chaos-api.pid)" 2>/dev/null || true; fi
+
+      - name: Upload remediation artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: chaos-remediation
+          path: |
+            results/
+            remediation/
+          if-no-files-found: ignore
+          retention-days: 14

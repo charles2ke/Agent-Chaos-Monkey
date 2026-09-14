@@ -45,6 +45,8 @@ jobs:
         env:
           PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/static
         run: npm run test:e2e:static
+      - name: CLI tests
+        run: node --test cli/*.test.mjs
       - name: MCP server tests
         working-directory: mcp
         run: |
@@ -98,4 +100,65 @@ jobs:
             frontend/test-results/
             frontend/e2e/screenshots/
             frontend/e2e-static/screenshots/
+          retention-days: 14
+
+  gateway:
+    # Drives the documented sample agent through the live tool gateway so the suite produces
+    # observed evidence (real tool calls, statuses and side-effect ids) rather than `inconclusive`.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Run sample agent through the gateway
+        shell: bash
+        env:
+          Llm__ApiKey: ''
+          ANTHROPIC_API_KEY: ''
+          OPENAI_API_KEY: ''
+          LabGateway__Enabled: 'true'
+          LabGateway__PublicBaseUrl: 'http://127.0.0.1:5249'
+          LabGateway__AgentEndpoints__0: 'http://127.0.0.1:5250/agent'
+          LabGateway__Operations__0__Connector: 'ServiceNow'
+          LabGateway__Operations__0__Operation: 'CreateIncident'
+          LabGateway__Operations__0__Url: 'http://127.0.0.1:5251/create'
+          LabGateway__Operations__0__Method: 'POST'
+          LabGateway__Operations__0__SideEffectIdProperty: 'id'
+        run: |
+          node examples/sample-agent/tool.mjs --port 5251 > /tmp/chaos-tool.log 2>&1 &
+          tool_pid=$!
+          node examples/sample-agent/agent.mjs --port 5250 --profile resilient > /tmp/chaos-agent.log 2>&1 &
+          agent_pid=$!
+          dotnet run --project backend/ChaosMonkey.Api --no-launch-profile --urls http://127.0.0.1:5249 > /tmp/chaos-api.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" "$agent_pid" "$tool_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:5249/api/health > /dev/null; then break; fi
+            if ! kill -0 "$api_pid" 2>/dev/null; then exit 2; fi
+            sleep 1
+          done
+          node cli/run-suite.mjs examples/gateway-suite.json --url http://127.0.0.1:5249 --output results/gateway
+          node cli/summarize-results.mjs results/gateway/chaos-results.json --title 'Gateway sample-agent suite' >> "$GITHUB_STEP_SUMMARY"
+          kill "$agent_pid" 2>/dev/null || true
+          sleep 1
+          node cli/benchmark.mjs examples/benchmark-targets.json --url http://127.0.0.1:5249 --output results/benchmark
+          cat results/benchmark/leaderboard.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload gateway evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: gateway-evidence
+          path: |
+            results/
+            /tmp/chaos-api.log
+            /tmp/chaos-agent.log
+          if-no-files-found: ignore
           retention-days: 14

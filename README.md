@@ -7,11 +7,13 @@
 [![Live demo](https://img.shields.io/badge/live%20demo-GitHub%20Pages-2ea44f?logo=github)](https://charles2ke.github.io/Agent-Chaos-Monkey/)
 [![Pages](https://github.com/charles2ke/Agent-Chaos-Monkey/actions/workflows/pages.yml/badge.svg)](https://github.com/charles2ke/Agent-Chaos-Monkey/actions/workflows/pages.yml)
 [![CodeQL](https://github.com/charles2ke/Agent-Chaos-Monkey/actions/workflows/codeql.yml/badge.svg)](https://github.com/charles2ke/Agent-Chaos-Monkey/actions/workflows/codeql.yml)
+[![Coverage](https://github.com/charles2ke/Agent-Chaos-Monkey/actions/workflows/coverage.yml/badge.svg)](https://github.com/charles2ke/Agent-Chaos-Monkey/actions/workflows/coverage.yml)
+[![Backend coverage 73%](https://img.shields.io/badge/backend%20coverage-73%25-yellow)](.github/workflows/coverage.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](backend)
 [![React 19 + Vite](https://img.shields.io/badge/React-19%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](frontend)
 
-[Live demo](https://charles2ke.github.io/Agent-Chaos-Monkey/) · [Quick start](#-quick-start) · [Architecture](#-architecture) · [Configuration](#-configuring-the-judge) · [Resilience laboratory](#-resilience-laboratory)
+[Live demo](https://charles2ke.github.io/Agent-Chaos-Monkey/) · [Evaluate in 3 minutes](docs/JUDGES.md) · [Quick start](#-quick-start) · [Leaderboard](docs/LEADERBOARD.md) · [Copilot Studio](docs/COPILOT_STUDIO.md) · [GitHub Action](docs/ACTION.md) · [Deploy to Azure](docs/DEPLOY.md) · [Resilience laboratory](#-resilience-laboratory)
 
 </div>
 
@@ -71,6 +73,16 @@ for tool-call evidence. The guided demo also works on GitHub Pages without a bac
 | 🧩 Malformed response | Structurally broken / unparseable body |
 | 🚦 HTTP 429 | Throttling / rate limiting |
 | 🔐 HTTP 401 | Expired or invalid authentication |
+| 💉 Prompt injection | Instructions embedded in a connector payload, with a per-run canary phrase that proves whether the agent obeyed them |
+| 🧬 Tool schema drift | A renamed or removed tool parameter, so the call is rejected as a schema mismatch |
+| ✂️ Truncated stream | A response cut off mid-payload, as an interrupted stream would be |
+| 🧠 Context exhaustion | An oversized payload that pushes the agent past its context budget |
+| 🌊 Cascading failure | One connector outage that keeps every later dependency call failing |
+
+The last five are agent-layer faults: they target what the agent *does with* a tool response rather
+than the HTTP transport. Prompt injection is scored by the `noInjectedInstructionFollowed`
+assertion — the run fails only when a reply repeats the canary phrase that was planted in the
+payload, which is observed evidence, not a guess.
 
 ## 🚀 Quick start
 
@@ -150,9 +162,11 @@ ASP.NET Core Chaos API
    │      ├── 429
    │      ├── 500
    │      ├── malformed response
-   │      └── empty response
+   │      ├── empty response
+   │      └── agent-layer faults (prompt injection, schema drift,
+   │             truncated stream, context exhaustion, cascade)
    │
-   ├──────────────► Target Copilot Studio agent
+   ├──────────────► Target agent (HTTPS POST, or Copilot Studio over Direct Line)
    │
    ▼
 Configurable LLM Evaluator
@@ -188,7 +202,7 @@ All packages are kept on their latest stable releases.
 | `POST` | `/api/demo-agent` | The built-in, deliberately imperfect agent |
 | `POST` | `/api/lab/run` | Run a version 1 definition with evidence-backed assertions |
 | `POST` | `/api/lab/suite` | Run a collection of saved regression tests |
-| `GET` | `/api/lab/capabilities` | Supported schema, gateway status, target names and limits |
+| `GET` | `/api/lab/capabilities` | Supported schema, fault modes, assertion kinds, available transports, gateway status and limits |
 | `POST` | `/api/lab/gateway/{runId}` | Capability-scoped tool callback, available only during a run |
 
 ## ⚙️ Configuring the judge
@@ -197,10 +211,35 @@ The resilience judge runs on any configurable LLM: the backend speaks both the A
 
 | Variable | Value |
 | --- | --- |
-| `Llm__Provider` | `anthropic` \| `openai` (any OpenAI-compatible gateway: Azure OpenAI, Ollama, vLLM) |
+| `Llm__Provider` | `anthropic` \| `openai` \| `azure` (`openai` also covers any OpenAI-compatible gateway: Ollama, vLLM) |
 | `Llm__Model` | Model name, e.g. `claude-opus-4-1-20250805` or `gpt-4.1` |
-| `Llm__ApiKey` | Falls back to `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` |
-| `Llm__BaseUrl` | Optional override, e.g. `http://localhost:11434/v1` for a local model |
+| `Llm__ApiKey` | Falls back to `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`. Ignored by the `azure` provider |
+| `Llm__BaseUrl` | Optional override, e.g. `http://localhost:11434/v1`; required for `azure` (`https://<resource>.openai.azure.com`) |
+| `Llm__Deployment` | Azure OpenAI / AI Foundry deployment name (`azure` provider only) |
+| `Llm__ApiVersion` | Azure REST API version, default `2024-10-21` |
+
+### Azure OpenAI / AI Foundry with Entra ID
+
+The `azure` provider authenticates with `DefaultAzureCredential` and never accepts an API key: any
+ambient `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` is cleared at startup, and requests carry an Entra ID
+token for `https://cognitiveservices.azure.com/.default`. Give the identity the **Cognitive Services
+OpenAI User** role on the resource.
+
+```bash
+export Llm__Provider=azure
+export Llm__BaseUrl=https://my-resource.openai.azure.com
+export Llm__Deployment=gpt-4.1              # deployment name, not model name
+export Llm__ApiVersion=2024-10-21           # optional
+dotnet run --project backend/ChaosMonkey.Api
+curl -s http://localhost:5249/api/evaluator # → provider azure, authentication entra-id
+```
+
+Export a completed run in the Azure AI evaluation schema so it surfaces in Foundry evaluation
+dashboards:
+
+```bash
+node cli/export-azure-eval.mjs results/chaos-results.json --output results/azure-eval
+```
 
 > [!NOTE]
 > When no credentials are present, a deterministic rule-based judge scores the run instead, so the demo always works offline.
@@ -214,7 +253,12 @@ cd frontend && npm run test:e2e           # Playwright UI tests (boots both serv
 cd frontend && npm run test:e2e:static    # Playwright against the static Pages build
 cd frontend && npm run record:walkthrough # re-records docs/videos/walkthrough.mp4
 cd mcp && npm test                        # MCP server unit and stdio round-trip tests
+node --test cli/*.test.mjs                # CLI: suite runner, baseline diff, benchmark, remediation
+node cli/check-dependency-table.mjs       # verifies the dependency table below against real lockfiles
 ```
+
+Backend line coverage is measured by [`.github/workflows/coverage.yml`](.github/workflows/coverage.yml)
+(coverlet, currently **73%**, floor 70%).
 
 ## 🌐 Published demo
 
@@ -337,6 +381,35 @@ must implement their own session and authentication integration. The API is a
 development harness, not a public multi-tenant service; place it behind trusted
 network/access controls before exposing it.
 
+### A sample agent that participates
+
+[`examples/sample-agent/`](examples/sample-agent/README.md) is a dependency-free Node agent plus a
+disposable connector, so you can watch the whole loop produce observed evidence without owning an
+agent. `--profile resilient` passes every experiment; `--profile naive` fabricates a ticket
+reference and relays raw connector text, which is exactly the failure this project exists to catch.
+[`examples/gateway-suite.json`](examples/gateway-suite.json) is the matching suite, and the
+`gateway` job in [the CI workflow](.github/workflows/resilience.yml) runs it on every pull request.
+
+### Copilot Studio and the Microsoft 365 Agents SDK
+
+`transport: "directline"` drives a real Copilot Studio agent instead of posting to a generic HTTPS
+endpoint: token exchange, conversation start, activity send and watermark-polled receive, with the
+chaos turn payload delivered on `activity.value` (and `channelData.chaosMonkey`). The agent's tool
+call is mapped onto the same scoped gateway, so a run yields observed evidence rather than
+`inconclusive`.
+
+| Setting | Purpose |
+| --- | --- |
+| `LabGateway__DirectLine__Enabled=true` | Enable the Direct Line transport |
+| `LabGateway__DirectLine__Secret` | Channel secret; host configuration only, never accepted in a definition and redacted from every report |
+| `LabGateway__DirectLine__BaseUrl` | Default `https://directline.botframework.com` |
+| `LabGateway__DirectLine__UserId` | Conversation user id, default `chaos-monkey` |
+| `LabGateway__DirectLine__PollIntervalMs` / `__ReceiveTimeoutSeconds` | Receive tuning (default 500 ms / 45 s) |
+
+Full walkthrough and a ready-to-paste activity handler:
+[`docs/COPILOT_STUDIO.md`](docs/COPILOT_STUDIO.md) and
+[`examples/copilot-studio/agent-handler.ts`](examples/copilot-studio/agent-handler.ts).
+
 ### Headless suites and CI
 
 Start the API, then run the credential-free demo suite with Node.js 22:
@@ -407,7 +480,8 @@ detection. It is simulation-only: dispatched suites must reside under `examples/
 as tools. Start the API, then:
 
 ```bash
-cd mcp && npm install && npm start   # stdio MCP server, npm test for its tests
+npx agent-chaos-monkey-mcp           # published package, no clone required
+cd mcp && npm install && npm start   # from a clone: stdio MCP server, npm test for its tests
 ```
 
 | Tool | Purpose |
@@ -425,6 +499,74 @@ they reach the model. See [`mcp/README.md`](mcp/README.md).
 > **Break → Observe → Judge → Generate Eval → Fix → Re-test → PR Gate.**
 
 For the fuller argument behind why this matters, see [_The Failure Mode Nobody Tests For_](docs/blog/agent-chaos-testing.md).
+
+## 🤖 GitHub Action
+
+Gate a pull request on resilience the same way you gate it on tests:
+
+```yaml
+- uses: charles2ke/agent-chaos-monkey@v1
+  with:
+    suite: examples/agent-regression-suite.json
+    api-url: http://localhost:5249
+    baseline: examples/baseline/agent-regression-baseline.json
+    allow-inconclusive: 'false'
+```
+
+The action runs the suite, posts a sticky pull-request comment with per-dimension score deltas
+against the committed baseline, exposes `outcome`/`exit-code`/`results-path` as outputs and exits
+with the runner's exit code so the check turns red on a regression.
+[`.github/workflows/chaos-gate.yml`](.github/workflows/chaos-gate.yml) is a reusable workflow that
+also starts the API for you. See [`docs/ACTION.md`](docs/ACTION.md).
+
+## 📦 Install without cloning
+
+| Artifact | Command |
+| --- | --- |
+| MCP server (npm) | `npx agent-chaos-monkey-mcp` |
+| API container (GHCR) | `docker run --rm -p 5249:8080 ghcr.io/charles2ke/agent-chaos-monkey-api:latest` |
+| Chaos engine (NuGet) | `dotnet add package AgentChaosMonkey.Engine` *(published by [`publish-nuget.yml`](.github/workflows/publish-nuget.yml) on release)* |
+
+## ☁️ Deploy to Azure
+
+```bash
+azd auth login
+azd up
+```
+
+[`azure.yaml`](azure.yaml) and [`infra/`](infra) provision the API on Azure Container Apps and the UI
+on Azure Static Web Apps, so a reviewer gets a live backend without installing .NET.
+See [`docs/DEPLOY.md`](docs/DEPLOY.md).
+
+## 🏁 Resilience leaderboard
+
+Measured, not asserted: **2 of 4 benchmarked agents reported success to the user after the connector
+returned HTTP 401.** Full table, per-dimension breakdown, reproduction commands and an explicit list
+of platforms that are *not* measured yet: [`docs/LEADERBOARD.md`](docs/LEADERBOARD.md).
+
+```bash
+node cli/benchmark.mjs examples/benchmark-targets.json --url http://127.0.0.1:5249 --output results/benchmark
+```
+
+## 🛠️ From failure to fix
+
+Detection is only half the tagline. `cli/suggest-remediation.mjs` turns a failing run into concrete
+changes — instruction/system-prompt additions and a retry/idempotency policy — each traced back to
+the assertion that produced it:
+
+```bash
+node cli/suggest-remediation.mjs results/chaos-results.json --output results/remediation
+```
+
+[`.github/workflows/remediate.yml`](.github/workflows/remediate.yml) runs a suite, generates the
+artifacts and opens them as a pull request. Review before merging: the suggestions come from
+observed tool-boundary evidence, not from a model.
+
+## 🧑‍⚖️ Evaluating this project
+
+[`docs/JUDGES.md`](docs/JUDGES.md) is a three-minute path with exact commands and expected output,
+including how to reproduce an agent claiming "Ticket created!" after an HTTP 401 — and how to fix
+it. The 90-second pitch script is in [`docs/videos/pitch-script.md`](docs/videos/pitch-script.md).
 
 ## 📄 License
 
