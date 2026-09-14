@@ -51,6 +51,8 @@ public sealed record ToolCall(int Invocation, string Connector, string Operation
     public string EvidenceSource { get; init; } = "";
     public bool? ContextRetained { get; init; }
     public int TargetInvocation { get; init; }
+    /// <summary>Canary phrase embedded in a delivered prompt-injection payload, when one was injected.</summary>
+    public string? InjectedCanary { get; init; }
 }
 public sealed record AssertionResult(string Id, string Outcome, string Severity, string Detail, string[] Evidence);
 public sealed record LabFinding(string Severity, string Title, string Detail, string[] Evidence);
@@ -89,9 +91,11 @@ public sealed class UpstreamOperation
 public static class LabValidation
 {
     public static readonly string[] Modes =
-        ["Latency", "ConnectorFailure", "Throttling", "ExpiredAuth", "EmptyResponse", "MalformedData", "None"];
+        ["Latency", "ConnectorFailure", "Throttling", "ExpiredAuth", "EmptyResponse", "MalformedData",
+         "PromptInjection", "ToolSchemaDrift", "TruncatedStream", "ContextExhaustion", "CascadingFailure", "None"];
     public static readonly string[] AssertionKinds =
-        ["noUnsupportedSuccess", "maxRetries", "noDuplicateSideEffects", "eventualSuccess", "contextRetained", "minBackoffMs"];
+        ["noUnsupportedSuccess", "maxRetries", "noDuplicateSideEffects", "eventualSuccess", "contextRetained",
+         "minBackoffMs", "noInjectedInstructionFollowed"];
 
     public static string[] Errors(ExperimentDefinition? d)
     {

@@ -1,0 +1,100 @@
+name: Backend code coverage
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/coverage.yml'
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MIN_LINE_COVERAGE: '70'
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run backend tests with coverage
+        run: |
+          dotnet test backend/ChaosMonkey.slnx \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./coverage-results \
+            --logger "console;verbosity=minimal"
+
+      - name: Locate Cobertura report
+        id: locate
+        shell: bash
+        run: |
+          report="$(find ./coverage-results -name 'coverage.cobertura.xml' | head -n 1)"
+          if [ -z "$report" ]; then
+            echo "::error::No coverage.cobertura.xml produced by dotnet test"
+            exit 1
+          fi
+          echo "path=$report" >> "$GITHUB_OUTPUT"
+          cp "$report" ./coverage.cobertura.xml
+
+      - name: Summarise coverage and enforce threshold
+        shell: bash
+        env:
+          COVERAGE_FILE: ${{ steps.locate.outputs.path }}
+          MIN_LINE_COVERAGE: ${{ env.MIN_LINE_COVERAGE }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const xml = fs.readFileSync(process.env.COVERAGE_FILE, 'utf8');
+          const m = xml.match(/<coverage\b[^>]*>/);
+          if (!m) {
+            console.error('Could not find <coverage> element');
+            process.exit(2);
+          }
+          const attrs = {};
+          for (const [, k, v] of m[0].matchAll(/([\w-]+)="([^"]*)"/g)) attrs[k] = v;
+          const lineRate = parseFloat(attrs['line-rate']);
+          const branchRate = parseFloat(attrs['branch-rate']);
+          const linesCovered = parseInt(attrs['lines-covered'] || '0', 10);
+          const linesValid = parseInt(attrs['lines-valid'] || '0', 10);
+          const branchesCovered = parseInt(attrs['branches-covered'] || '0', 10);
+          const branchesValid = parseInt(attrs['branches-valid'] || '0', 10);
+          const linePct = +(lineRate * 100).toFixed(2);
+          const branchPct = +(branchRate * 100).toFixed(2);
+          const min = parseFloat(process.env.MIN_LINE_COVERAGE);
+          const summary = [
+            '## Backend coverage',
+            '',
+            `| Metric | Covered | Total | Percentage |`,
+            `| --- | --- | --- | --- |`,
+            `| Lines | ${linesCovered} | ${linesValid} | **${linePct}%** |`,
+            `| Branches | ${branchesCovered} | ${branchesValid} | ${branchPct}% |`,
+            '',
+            `Minimum required line coverage: **${min}%**`,
+            '',
+            linePct >= min
+              ? `:white_check_mark: Line coverage ${linePct}% meets the ${min}% threshold.`
+              : `:x: Line coverage ${linePct}% is below the ${min}% threshold.`,
+            '',
+          ].join('\n');
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary + '\n');
+          console.log(summary);
+          if (linePct < min) {
+            process.exit(1);
+          }
+          NODE
+
+      - name: Upload Cobertura report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-coverage
+          path: coverage.cobertura.xml

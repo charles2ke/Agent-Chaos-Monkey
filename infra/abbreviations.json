@@ -1,0 +1,10 @@
+{
+  "analyticsWorkspace": "log",
+  "applicationInsights": "appi",
+  "containerApp": "ca",
+  "containerAppsEnvironment": "cae",
+  "containerRegistry": "cr",
+  "managedIdentityUserAssigned": "id",
+  "resourcesResourceGroups": "rg",
+  "staticWebApp": "stapp"
+}

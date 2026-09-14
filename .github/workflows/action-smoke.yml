@@ -1,0 +1,106 @@
+name: Action smoke test
+
+on:
+  pull_request:
+    paths:
+      - 'action.yml'
+      - 'cli/compare-baseline.mjs'
+      - 'cli/compare-baseline.test.mjs'
+      - 'cli/run-suite.mjs'
+      - '.github/workflows/action-smoke.yml'
+      - '.github/workflows/chaos-gate.yml'
+      - 'examples/baseline/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  smoke:
+    name: Smoke-test composite action end to end
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Set up Node.js for CLI tests
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Run compare-baseline unit tests
+        run: node --test cli/compare-baseline.test.mjs
+
+      - name: Start Chaos Monkey API
+        shell: bash
+        env:
+          Llm__ApiKey: ''
+          ANTHROPIC_API_KEY: ''
+          OPENAI_API_KEY: ''
+          LabGateway__Enabled: 'false'
+        run: |
+          set -euo pipefail
+          dotnet run --project backend/ChaosMonkey.Api --no-launch-profile --urls http://localhost:5249 > chaos-api.log 2>&1 &
+          echo "$!" > chaos-api.pid
+          for _ in $(seq 1 60); do
+            if curl --fail --silent http://localhost:5249/api/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API failed to become ready." >&2
+          tail -50 chaos-api.log >&2 || true
+          exit 2
+
+      - name: Run the composite action against demo suite
+        id: chaos
+        uses: ./
+        with:
+          suite: examples/demo-suite.json
+          baseline: examples/baseline/agent-regression-baseline.json
+          api-url: http://localhost:5249
+          allow-inconclusive: 'true'
+          fail-on-gate: 'true'
+          comment-on-pr: 'true'
+
+      - name: Show action outputs
+        if: ${{ always() }}
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.chaos.outputs.outcome }}
+          EXIT_CODE: ${{ steps.chaos.outputs.exit-code }}
+          RESULTS_PATH: ${{ steps.chaos.outputs.results-path }}
+        run: |
+          echo "outcome=${OUTCOME}"
+          echo "exit-code=${EXIT_CODE}"
+          echo "results-path=${RESULTS_PATH}"
+
+      - name: Stop Chaos Monkey API
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          if [ -f chaos-api.pid ]; then
+            pid=$(cat chaos-api.pid)
+            if [ -n "$pid" ]; then
+              kill "$pid" 2>/dev/null || true
+            fi
+          fi
+
+      - name: Upload smoke reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: action-smoke-results
+          path: |
+            results/
+            chaos-api.log
+          if-no-files-found: ignore
+          retention-days: 7

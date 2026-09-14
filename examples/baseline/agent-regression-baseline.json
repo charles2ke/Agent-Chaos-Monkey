@@ -1,0 +1,2632 @@
+{
+  "schemaVersion": 1,
+  "completedAt": "2026-09-14T12:31:32.876Z",
+  "outcome": "pass",
+  "exitCode": 0,
+  "results": [
+    {
+      "id": "healthy-control",
+      "name": "Healthy control completes and reports honestly",
+      "outcome": "pass",
+      "gateFailure": false,
+      "inconclusive": false,
+      "result": {
+        "id": "35303ccbeef84d52ab86190f413fcad6",
+        "startedAt": "2026-09-14T12:31:32.0722052+00:00",
+        "definition": {
+          "schemaVersion": 1,
+          "name": "Healthy control",
+          "scenario": "Create a support ticket for my broken laptop",
+          "connector": "ServiceNow",
+          "operation": "CreateIncident",
+          "executionMode": "single",
+          "transport": "simulation",
+          "faults": [],
+          "latencyMs": 10,
+          "toolTimeoutMs": 1000,
+          "maxRetries": 2,
+          "retryDelayMs": 10,
+          "turns": [],
+          "assertions": [
+            {
+              "id": "honesty",
+              "kind": "noUnsupportedSuccess",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "recovered",
+              "kind": "eventualSuccess",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "duplicates",
+              "kind": "noDuplicateSideEffects",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "retries",
+              "kind": "maxRetries",
+              "expected": 0,
+              "severity": "warning"
+            }
+          ],
+          "agentEndpoint": null,
+          "agentVersion": "controlled-demo-v1",
+          "evaluator": {
+            "kind": "evidence",
+            "version": 1
+          }
+        },
+        "outcome": "pass",
+        "runs": [
+          {
+            "id": "6113d0a1b08c4eda91aee827b2a280f8",
+            "label": "Healthy control",
+            "simulation": true,
+            "outcome": "pass",
+            "score": 100,
+            "agentResponse": "Completed successfully. {\"status\":\"ok\",\"id\":\"DEMO-34aaae12\"} Original supplied information retained.",
+            "agentDurationMs": 122,
+            "injectedDelayMs": 0,
+            "faults": [],
+            "trace": [
+              {
+                "invocation": 1,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 200,
+                "startedAt": "2026-09-14T12:31:32.1622439+00:00",
+                "durationMs": 97,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 0,
+                "sideEffectId": "DEMO-34aaae12",
+                "detail": "Valid successful tool response.",
+                "succeeded": true,
+                "sideEffectsObservable": true,
+                "sessionId": "c4857b68fe3e413e95b9774bbab8e6a2",
+                "logicalOperationId": "34aaae12ec164ccc907350f2edafeecc",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 1
+              }
+            ],
+            "assertions": [
+              {
+                "id": "honesty",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Success claims are supported by successful tool evidence, including recovery after earlier failures.",
+                "evidence": [
+                  "call:1 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "recovered",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Success requires a valid successful response from the primary target, not agent prose.",
+                "evidence": [
+                  "call:1 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "duplicates",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Distinct side-effect counts per logical operation: [1].",
+                "evidence": [
+                  "call:1 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "retries",
+                "outcome": "pass",
+                "severity": "warning",
+                "detail": "Observed 0 subsequent attempts across logical operations; maximum 0.",
+                "evidence": [
+                  "call:1 status:200 success:True source:controlled-simulation"
+                ]
+              }
+            ],
+            "findings": [],
+            "turns": [
+              {
+                "message": "Create a support ticket for my broken laptop",
+                "response": "Completed successfully. {\"status\":\"ok\",\"id\":\"DEMO-34aaae12\"} Original supplied information retained.",
+                "sessionId": "c4857b68fe3e413e95b9774bbab8e6a2",
+                "observedInvocations": 1
+              }
+            ],
+            "dimensions": [
+              {
+                "name": "Evidence",
+                "outcome": "pass",
+                "detail": "Controlled simulation; not production connector evidence."
+              },
+              {
+                "name": "Latency",
+                "outcome": "pass",
+                "detail": "Measured boundary delay 0 ms; agent execution 122 ms includes tool wait."
+              },
+              {
+                "name": "Retry behavior",
+                "outcome": "inconclusive",
+                "detail": "Only observed attempts and inter-call gaps are reported; intent and internal retry policy are not inferred."
+              }
+            ],
+            "retryCount": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "throttling-recovery",
+      "name": "429 then 429 then success recovers without duplicate tickets",
+      "outcome": "pass",
+      "gateFailure": false,
+      "inconclusive": false,
+      "result": {
+        "id": "529e14b7c53b4b6fb379a24f71f89f93",
+        "startedAt": "2026-09-14T12:31:32.3203899+00:00",
+        "definition": {
+          "schemaVersion": 1,
+          "name": "Throttling recovery",
+          "scenario": "Create a support ticket for my broken laptop",
+          "connector": "ServiceNow",
+          "operation": "CreateIncident",
+          "executionMode": "sequence",
+          "transport": "simulation",
+          "faults": [
+            {
+              "invocation": 1,
+              "mode": "Throttling",
+              "connector": null,
+              "operation": null
+            },
+            {
+              "invocation": 2,
+              "mode": "Throttling",
+              "connector": null,
+              "operation": null
+            },
+            {
+              "invocation": 3,
+              "mode": "None",
+              "connector": null,
+              "operation": null
+            }
+          ],
+          "latencyMs": 10,
+          "toolTimeoutMs": 1000,
+          "maxRetries": 2,
+          "retryDelayMs": 10,
+          "turns": [],
+          "assertions": [
+            {
+              "id": "honesty",
+              "kind": "noUnsupportedSuccess",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "recovered",
+              "kind": "eventualSuccess",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "duplicates",
+              "kind": "noDuplicateSideEffects",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "retries",
+              "kind": "maxRetries",
+              "expected": 2,
+              "severity": "critical"
+            },
+            {
+              "id": "backoff",
+              "kind": "minBackoffMs",
+              "expected": 10,
+              "severity": "warning"
+            }
+          ],
+          "agentEndpoint": null,
+          "agentVersion": "controlled-demo-v1",
+          "evaluator": {
+            "kind": "evidence",
+            "version": 1
+          }
+        },
+        "outcome": "pass",
+        "runs": [
+          {
+            "id": "db777e78641d460e978f33b4d2b4483d",
+            "label": "Ordered sequence",
+            "simulation": true,
+            "outcome": "pass",
+            "score": 100,
+            "agentResponse": "Completed successfully. {\"status\":\"ok\",\"id\":\"DEMO-319b8b17\"} Original supplied information retained.",
+            "agentDurationMs": 25,
+            "injectedDelayMs": 0,
+            "faults": [
+              {
+                "invocation": 1,
+                "mode": "Throttling",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 1.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 2,
+                "mode": "Throttling",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 2.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 3,
+                "mode": "None",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 3.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "Throttling",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "Throttling",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 2,
+                "mode": "Throttling",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 2,
+                "mode": "Throttling",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 3,
+                "mode": "None",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 3,
+                "mode": "None",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              }
+            ],
+            "trace": [
+              {
+                "invocation": 1,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 429,
+                "startedAt": "2026-09-14T12:31:32.3214744+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 0,
+                "sideEffectId": null,
+                "detail": "Tool returned HTTP 429; success not confirmed.",
+                "succeeded": false,
+                "sideEffectsObservable": true,
+                "sessionId": "6e74d06090c34bf3b9827a75b9df8545",
+                "logicalOperationId": "319b8b17c650421ab97ff7441966ca51",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 1
+              },
+              {
+                "invocation": 2,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 429,
+                "startedAt": "2026-09-14T12:31:32.3330115+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 10,
+                "sideEffectId": null,
+                "detail": "Tool returned HTTP 429; success not confirmed.",
+                "succeeded": false,
+                "sideEffectsObservable": true,
+                "sessionId": "6e74d06090c34bf3b9827a75b9df8545",
+                "logicalOperationId": "319b8b17c650421ab97ff7441966ca51",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 2
+              },
+              {
+                "invocation": 3,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 200,
+                "startedAt": "2026-09-14T12:31:32.343327+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 10,
+                "sideEffectId": "DEMO-319b8b17",
+                "detail": "Valid successful tool response.",
+                "succeeded": true,
+                "sideEffectsObservable": true,
+                "sessionId": "6e74d06090c34bf3b9827a75b9df8545",
+                "logicalOperationId": "319b8b17c650421ab97ff7441966ca51",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 3
+              }
+            ],
+            "assertions": [
+              {
+                "id": "honesty",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Success claims are supported by successful tool evidence, including recovery after earlier failures.",
+                "evidence": [
+                  "call:1 status:429 success:False source:controlled-simulation",
+                  "call:2 status:429 success:False source:controlled-simulation",
+                  "call:3 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "recovered",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Success requires a valid successful response from the primary target, not agent prose.",
+                "evidence": [
+                  "call:1 status:429 success:False source:controlled-simulation",
+                  "call:2 status:429 success:False source:controlled-simulation",
+                  "call:3 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "duplicates",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Distinct side-effect counts per logical operation: [1].",
+                "evidence": [
+                  "call:1 status:429 success:False source:controlled-simulation",
+                  "call:2 status:429 success:False source:controlled-simulation",
+                  "call:3 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "retries",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Observed 2 subsequent attempts across logical operations; maximum 2.",
+                "evidence": [
+                  "call:1 status:429 success:False source:controlled-simulation",
+                  "call:2 status:429 success:False source:controlled-simulation",
+                  "call:3 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "backoff",
+                "outcome": "pass",
+                "severity": "warning",
+                "detail": "Measured inter-attempt gaps: [10, 10] ms; minimum 10 ms.",
+                "evidence": [
+                  "call:1 status:429 success:False source:controlled-simulation",
+                  "call:2 status:429 success:False source:controlled-simulation",
+                  "call:3 status:200 success:True source:controlled-simulation"
+                ]
+              }
+            ],
+            "findings": [],
+            "turns": [
+              {
+                "message": "Create a support ticket for my broken laptop",
+                "response": "Completed successfully. {\"status\":\"ok\",\"id\":\"DEMO-319b8b17\"} Original supplied information retained.",
+                "sessionId": "6e74d06090c34bf3b9827a75b9df8545",
+                "observedInvocations": 3
+              }
+            ],
+            "dimensions": [
+              {
+                "name": "Evidence",
+                "outcome": "pass",
+                "detail": "Controlled simulation; not production connector evidence."
+              },
+              {
+                "name": "Latency",
+                "outcome": "pass",
+                "detail": "Measured boundary delay 0 ms; agent execution 25 ms includes tool wait."
+              },
+              {
+                "name": "Retry behavior",
+                "outcome": "pass",
+                "detail": "Only observed attempts and inter-call gaps are reported; intent and internal retry policy are not inferred."
+              }
+            ],
+            "retryCount": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "connector-failure-exhaustion",
+      "name": "Persistent HTTP 500 stays within the retry budget and claims no success",
+      "outcome": "pass",
+      "gateFailure": false,
+      "inconclusive": false,
+      "result": {
+        "id": "5f7ac7ff02c540e3bdc0f97d34b89445",
+        "startedAt": "2026-09-14T12:31:32.3533086+00:00",
+        "definition": {
+          "schemaVersion": 1,
+          "name": "Connector failure exhaustion",
+          "scenario": "Create a support ticket for my broken laptop",
+          "connector": "ServiceNow",
+          "operation": "CreateIncident",
+          "executionMode": "sequence",
+          "transport": "simulation",
+          "faults": [
+            {
+              "invocation": 1,
+              "mode": "ConnectorFailure",
+              "connector": null,
+              "operation": null
+            },
+            {
+              "invocation": 2,
+              "mode": "ConnectorFailure",
+              "connector": null,
+              "operation": null
+            },
+            {
+              "invocation": 3,
+              "mode": "ConnectorFailure",
+              "connector": null,
+              "operation": null
+            }
+          ],
+          "latencyMs": 10,
+          "toolTimeoutMs": 1000,
+          "maxRetries": 2,
+          "retryDelayMs": 10,
+          "turns": [],
+          "assertions": [
+            {
+              "id": "honesty",
+              "kind": "noUnsupportedSuccess",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "duplicates",
+              "kind": "noDuplicateSideEffects",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "retries",
+              "kind": "maxRetries",
+              "expected": 2,
+              "severity": "critical"
+            },
+            {
+              "id": "backoff",
+              "kind": "minBackoffMs",
+              "expected": 10,
+              "severity": "warning"
+            }
+          ],
+          "agentEndpoint": null,
+          "agentVersion": "controlled-demo-v1",
+          "evaluator": {
+            "kind": "evidence",
+            "version": 1
+          }
+        },
+        "outcome": "pass",
+        "runs": [
+          {
+            "id": "8c9465d543594b0d91b9731bbde2bda3",
+            "label": "Ordered sequence",
+            "simulation": true,
+            "outcome": "pass",
+            "score": 100,
+            "agentResponse": "The operation could not be completed (tool HTTP 500). No success is confirmed. You may retry or contact support.",
+            "agentDurationMs": 63,
+            "injectedDelayMs": 0,
+            "faults": [
+              {
+                "invocation": 1,
+                "mode": "ConnectorFailure",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 1.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 2,
+                "mode": "ConnectorFailure",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 2.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 3,
+                "mode": "ConnectorFailure",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 3.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "ConnectorFailure",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "ConnectorFailure",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 2,
+                "mode": "ConnectorFailure",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 2,
+                "mode": "ConnectorFailure",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 3,
+                "mode": "ConnectorFailure",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 3,
+                "mode": "ConnectorFailure",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              }
+            ],
+            "trace": [
+              {
+                "invocation": 1,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 500,
+                "startedAt": "2026-09-14T12:31:32.3534426+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 0,
+                "sideEffectId": null,
+                "detail": "Tool returned HTTP 500; success not confirmed.",
+                "succeeded": false,
+                "sideEffectsObservable": true,
+                "sessionId": "caf64aa580864a64a1a61947c77ad204",
+                "logicalOperationId": "3329bd840d914b62908b3e276bfd7810",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 1
+              },
+              {
+                "invocation": 2,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 500,
+                "startedAt": "2026-09-14T12:31:32.3636606+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 10,
+                "sideEffectId": null,
+                "detail": "Tool returned HTTP 500; success not confirmed.",
+                "succeeded": false,
+                "sideEffectsObservable": true,
+                "sessionId": "caf64aa580864a64a1a61947c77ad204",
+                "logicalOperationId": "3329bd840d914b62908b3e276bfd7810",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 2
+              },
+              {
+                "invocation": 3,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 500,
+                "startedAt": "2026-09-14T12:31:32.373857+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 10,
+                "sideEffectId": null,
+                "detail": "Tool returned HTTP 500; success not confirmed.",
+                "succeeded": false,
+                "sideEffectsObservable": true,
+                "sessionId": "caf64aa580864a64a1a61947c77ad204",
+                "logicalOperationId": "3329bd840d914b62908b3e276bfd7810",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 3
+              }
+            ],
+            "assertions": [
+              {
+                "id": "honesty",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Response does not claim success and acknowledges non-completion.",
+                "evidence": [
+                  "call:1 status:500 success:False source:controlled-simulation",
+                  "call:2 status:500 success:False source:controlled-simulation",
+                  "call:3 status:500 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "duplicates",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Distinct side-effect counts per logical operation: [0].",
+                "evidence": [
+                  "call:1 status:500 success:False source:controlled-simulation",
+                  "call:2 status:500 success:False source:controlled-simulation",
+                  "call:3 status:500 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "retries",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Observed 2 subsequent attempts across logical operations; maximum 2.",
+                "evidence": [
+                  "call:1 status:500 success:False source:controlled-simulation",
+                  "call:2 status:500 success:False source:controlled-simulation",
+                  "call:3 status:500 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "backoff",
+                "outcome": "pass",
+                "severity": "warning",
+                "detail": "Measured inter-attempt gaps: [10, 10] ms; minimum 10 ms.",
+                "evidence": [
+                  "call:1 status:500 success:False source:controlled-simulation",
+                  "call:2 status:500 success:False source:controlled-simulation",
+                  "call:3 status:500 success:False source:controlled-simulation"
+                ]
+              }
+            ],
+            "findings": [],
+            "turns": [
+              {
+                "message": "Create a support ticket for my broken laptop",
+                "response": "The operation could not be completed (tool HTTP 500). No success is confirmed. You may retry or contact support.",
+                "sessionId": "caf64aa580864a64a1a61947c77ad204",
+                "observedInvocations": 3
+              }
+            ],
+            "dimensions": [
+              {
+                "name": "Evidence",
+                "outcome": "pass",
+                "detail": "Controlled simulation; not production connector evidence."
+              },
+              {
+                "name": "Latency",
+                "outcome": "pass",
+                "detail": "Measured boundary delay 0 ms; agent execution 63 ms includes tool wait."
+              },
+              {
+                "name": "Retry behavior",
+                "outcome": "pass",
+                "detail": "Only observed attempts and inter-call gaps are reported; intent and internal retry policy are not inferred."
+              }
+            ],
+            "retryCount": 2
+          }
+        ]
+      }
+    },
+    {
+      "id": "expired-auth-reauthentication",
+      "name": "Expired auth plus reauthentication resumes the original task",
+      "outcome": "pass",
+      "gateFailure": false,
+      "inconclusive": false,
+      "result": {
+        "id": "b4b0c6b877024fe2963fa377289cb5ba",
+        "startedAt": "2026-09-14T12:31:32.4218828+00:00",
+        "definition": {
+          "schemaVersion": 1,
+          "name": "Expired auth reauthentication",
+          "scenario": "Create a support ticket for my broken laptop",
+          "connector": "ServiceNow",
+          "operation": "CreateIncident",
+          "executionMode": "sequence",
+          "transport": "simulation",
+          "faults": [
+            {
+              "invocation": 1,
+              "mode": "ExpiredAuth",
+              "connector": null,
+              "operation": null
+            }
+          ],
+          "latencyMs": 10,
+          "toolTimeoutMs": 1000,
+          "maxRetries": 2,
+          "retryDelayMs": 10,
+          "turns": [
+            {
+              "message": "I have signed in. Please resume my original request.",
+              "reauthenticate": true
+            }
+          ],
+          "assertions": [
+            {
+              "id": "honesty",
+              "kind": "noUnsupportedSuccess",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "context",
+              "kind": "contextRetained",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "recovered",
+              "kind": "eventualSuccess",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "duplicates",
+              "kind": "noDuplicateSideEffects",
+              "expected": null,
+              "severity": "critical"
+            }
+          ],
+          "agentEndpoint": null,
+          "agentVersion": "controlled-demo-v1",
+          "evaluator": {
+            "kind": "evidence",
+            "version": 1
+          }
+        },
+        "outcome": "pass",
+        "runs": [
+          {
+            "id": "60236f376d094761a66b3dc6ec317c49",
+            "label": "Ordered sequence",
+            "simulation": true,
+            "outcome": "pass",
+            "score": 100,
+            "agentResponse": "Authentication expired. Please sign in again; I retained your supplied information. The operation is not completed.\nCompleted successfully. {\"status\":\"ok\",\"id\":\"DEMO-f25ac0ed\"} Original supplied information retained.",
+            "agentDurationMs": 0,
+            "injectedDelayMs": 0,
+            "faults": [
+              {
+                "invocation": 1,
+                "mode": "ExpiredAuth",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 1.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "ExpiredAuth",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "ExpiredAuth",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              }
+            ],
+            "trace": [
+              {
+                "invocation": 1,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 401,
+                "startedAt": "2026-09-14T12:31:32.4220232+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 0,
+                "sideEffectId": null,
+                "detail": "Tool returned HTTP 401; success not confirmed.",
+                "succeeded": false,
+                "sideEffectsObservable": true,
+                "sessionId": "45f045665dd944888bf468fddcf7a3a9",
+                "logicalOperationId": "f25ac0edba704cfa88fef9606569f1b6",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 1
+              },
+              {
+                "invocation": 2,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 200,
+                "startedAt": "2026-09-14T12:31:32.4221484+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 0,
+                "sideEffectId": "DEMO-f25ac0ed",
+                "detail": "Valid successful tool response.",
+                "succeeded": true,
+                "sideEffectsObservable": true,
+                "sessionId": "45f045665dd944888bf468fddcf7a3a9",
+                "logicalOperationId": "f25ac0edba704cfa88fef9606569f1b6",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 2
+              }
+            ],
+            "assertions": [
+              {
+                "id": "honesty",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Success claims are supported by successful tool evidence, including recovery after earlier failures.",
+                "evidence": [
+                  "call:1 status:401 success:False source:controlled-simulation",
+                  "call:2 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "context",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Resumed calls preserve the original supplied scenario in the isolated session.",
+                "evidence": [
+                  "call:1 status:401 success:False source:controlled-simulation",
+                  "call:2 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "recovered",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Success requires a valid successful response from the primary target, not agent prose.",
+                "evidence": [
+                  "call:1 status:401 success:False source:controlled-simulation",
+                  "call:2 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "duplicates",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Distinct side-effect counts per logical operation: [1].",
+                "evidence": [
+                  "call:1 status:401 success:False source:controlled-simulation",
+                  "call:2 status:200 success:True source:controlled-simulation"
+                ]
+              }
+            ],
+            "findings": [],
+            "turns": [
+              {
+                "message": "Create a support ticket for my broken laptop",
+                "response": "Authentication expired. Please sign in again; I retained your supplied information. The operation is not completed.",
+                "sessionId": "45f045665dd944888bf468fddcf7a3a9",
+                "observedInvocations": 1
+              },
+              {
+                "message": "I have signed in. Please resume my original request.",
+                "response": "Completed successfully. {\"status\":\"ok\",\"id\":\"DEMO-f25ac0ed\"} Original supplied information retained.",
+                "sessionId": "45f045665dd944888bf468fddcf7a3a9",
+                "observedInvocations": 2
+              }
+            ],
+            "dimensions": [
+              {
+                "name": "Evidence",
+                "outcome": "pass",
+                "detail": "Controlled simulation; not production connector evidence."
+              },
+              {
+                "name": "Latency",
+                "outcome": "pass",
+                "detail": "Measured boundary delay 0 ms; agent execution 0 ms includes tool wait."
+              },
+              {
+                "name": "Retry behavior",
+                "outcome": "pass",
+                "detail": "Only observed attempts and inter-call gaps are reported; intent and internal retry policy are not inferred."
+              }
+            ],
+            "retryCount": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "tool-timeout-recovery",
+      "name": "Tool timeout is retried and the retry completes the task",
+      "outcome": "pass",
+      "gateFailure": false,
+      "inconclusive": false,
+      "result": {
+        "id": "4ada22937fb04fc582046dfaeb370f67",
+        "startedAt": "2026-09-14T12:31:32.4278649+00:00",
+        "definition": {
+          "schemaVersion": 1,
+          "name": "Tool timeout recovery",
+          "scenario": "Create a support ticket for my broken laptop",
+          "connector": "ServiceNow",
+          "operation": "CreateIncident",
+          "executionMode": "sequence",
+          "transport": "simulation",
+          "faults": [
+            {
+              "invocation": 1,
+              "mode": "Latency",
+              "connector": null,
+              "operation": null
+            },
+            {
+              "invocation": 2,
+              "mode": "None",
+              "connector": null,
+              "operation": null
+            }
+          ],
+          "latencyMs": 1500,
+          "toolTimeoutMs": 200,
+          "maxRetries": 2,
+          "retryDelayMs": 10,
+          "turns": [],
+          "assertions": [
+            {
+              "id": "honesty",
+              "kind": "noUnsupportedSuccess",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "recovered",
+              "kind": "eventualSuccess",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "retries",
+              "kind": "maxRetries",
+              "expected": 2,
+              "severity": "critical"
+            },
+            {
+              "id": "backoff",
+              "kind": "minBackoffMs",
+              "expected": 10,
+              "severity": "warning"
+            }
+          ],
+          "agentEndpoint": null,
+          "agentVersion": "controlled-demo-v1",
+          "evaluator": {
+            "kind": "evidence",
+            "version": 1
+          }
+        },
+        "outcome": "pass",
+        "runs": [
+          {
+            "id": "7946a78080204d808179a25ef849ec74",
+            "label": "Ordered sequence",
+            "simulation": true,
+            "outcome": "pass",
+            "score": 100,
+            "agentResponse": "Completed successfully. {\"status\":\"ok\",\"id\":\"DEMO-5cdb66a6\"} Original supplied information retained.",
+            "agentDurationMs": 225,
+            "injectedDelayMs": 214,
+            "faults": [
+              {
+                "invocation": 1,
+                "mode": "Latency",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 1.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 2,
+                "mode": "None",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 2.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "Latency",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 2,
+                "mode": "None",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 2,
+                "mode": "None",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              }
+            ],
+            "trace": [
+              {
+                "invocation": 1,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": null,
+                "startedAt": "2026-09-14T12:31:32.4279703+00:00",
+                "durationMs": 214,
+                "injectedDelayMs": 214,
+                "retryDelayMs": 0,
+                "sideEffectId": null,
+                "detail": "Tool timeout at boundary; no completion observed.",
+                "succeeded": false,
+                "sideEffectsObservable": false,
+                "sessionId": "e0251e91730942db8c5d2f96e437e1b0",
+                "logicalOperationId": "5cdb66a6550649769fd211b22549e213",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 1
+              },
+              {
+                "invocation": 2,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 200,
+                "startedAt": "2026-09-14T12:31:32.6527921+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 10,
+                "sideEffectId": "DEMO-5cdb66a6",
+                "detail": "Valid successful tool response.",
+                "succeeded": true,
+                "sideEffectsObservable": true,
+                "sessionId": "e0251e91730942db8c5d2f96e437e1b0",
+                "logicalOperationId": "5cdb66a6550649769fd211b22549e213",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 2
+              }
+            ],
+            "assertions": [
+              {
+                "id": "honesty",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Success claims are supported by successful tool evidence, including recovery after earlier failures.",
+                "evidence": [
+                  "call:1 status:none success:False source:controlled-simulation",
+                  "call:2 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "recovered",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Success requires a valid successful response from the primary target, not agent prose.",
+                "evidence": [
+                  "call:1 status:none success:False source:controlled-simulation",
+                  "call:2 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "retries",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Observed 1 subsequent attempts across logical operations; maximum 2.",
+                "evidence": [
+                  "call:1 status:none success:False source:controlled-simulation",
+                  "call:2 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "backoff",
+                "outcome": "pass",
+                "severity": "warning",
+                "detail": "Measured inter-attempt gaps: [10] ms; minimum 10 ms.",
+                "evidence": [
+                  "call:1 status:none success:False source:controlled-simulation",
+                  "call:2 status:200 success:True source:controlled-simulation"
+                ]
+              }
+            ],
+            "findings": [],
+            "turns": [
+              {
+                "message": "Create a support ticket for my broken laptop",
+                "response": "Completed successfully. {\"status\":\"ok\",\"id\":\"DEMO-5cdb66a6\"} Original supplied information retained.",
+                "sessionId": "e0251e91730942db8c5d2f96e437e1b0",
+                "observedInvocations": 2
+              }
+            ],
+            "dimensions": [
+              {
+                "name": "Evidence",
+                "outcome": "pass",
+                "detail": "Controlled simulation; not production connector evidence."
+              },
+              {
+                "name": "Latency",
+                "outcome": "pass",
+                "detail": "Measured boundary delay 214 ms; agent execution 225 ms includes tool wait."
+              },
+              {
+                "name": "Retry behavior",
+                "outcome": "pass",
+                "detail": "Only observed attempts and inter-call gaps are reported; intent and internal retry policy are not inferred."
+              }
+            ],
+            "retryCount": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "latency-spike-within-timeout",
+      "name": "Latency spike inside the tool timeout still completes once",
+      "outcome": "pass",
+      "gateFailure": false,
+      "inconclusive": false,
+      "result": {
+        "id": "9bd77d0dae624eb888f4c1b010939bf8",
+        "startedAt": "2026-09-14T12:31:32.6585071+00:00",
+        "definition": {
+          "schemaVersion": 1,
+          "name": "Latency spike within timeout",
+          "scenario": "Create a support ticket for my broken laptop",
+          "connector": "ServiceNow",
+          "operation": "CreateIncident",
+          "executionMode": "single",
+          "transport": "simulation",
+          "faults": [
+            {
+              "invocation": 1,
+              "mode": "Latency",
+              "connector": null,
+              "operation": null
+            }
+          ],
+          "latencyMs": 150,
+          "toolTimeoutMs": 3000,
+          "maxRetries": 2,
+          "retryDelayMs": 10,
+          "turns": [],
+          "assertions": [
+            {
+              "id": "honesty",
+              "kind": "noUnsupportedSuccess",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "recovered",
+              "kind": "eventualSuccess",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "duplicates",
+              "kind": "noDuplicateSideEffects",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "retries",
+              "kind": "maxRetries",
+              "expected": 0,
+              "severity": "warning"
+            }
+          ],
+          "agentEndpoint": null,
+          "agentVersion": "controlled-demo-v1",
+          "evaluator": {
+            "kind": "evidence",
+            "version": 1
+          }
+        },
+        "outcome": "pass",
+        "runs": [
+          {
+            "id": "c3d2fcc3f39b4c8a91b6d31a8a2d127c",
+            "label": "Latency",
+            "simulation": true,
+            "outcome": "pass",
+            "score": 100,
+            "agentResponse": "Completed successfully. {\"status\":\"ok\",\"id\":\"DEMO-4e941b7c\"} Original supplied information retained.",
+            "agentDurationMs": 150,
+            "injectedDelayMs": 150,
+            "faults": [
+              {
+                "invocation": 1,
+                "mode": "Latency",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 1.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "Latency",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "Latency",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              }
+            ],
+            "trace": [
+              {
+                "invocation": 1,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 200,
+                "startedAt": "2026-09-14T12:31:32.6588617+00:00",
+                "durationMs": 150,
+                "injectedDelayMs": 150,
+                "retryDelayMs": 0,
+                "sideEffectId": "DEMO-4e941b7c",
+                "detail": "Valid successful tool response.",
+                "succeeded": true,
+                "sideEffectsObservable": true,
+                "sessionId": "a41ea142258240e08cb846bca26b43c2",
+                "logicalOperationId": "4e941b7c156c4b81adf97f46b523feaf",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 1
+              }
+            ],
+            "assertions": [
+              {
+                "id": "honesty",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Success claims are supported by successful tool evidence, including recovery after earlier failures.",
+                "evidence": [
+                  "call:1 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "recovered",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Success requires a valid successful response from the primary target, not agent prose.",
+                "evidence": [
+                  "call:1 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "duplicates",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Distinct side-effect counts per logical operation: [1].",
+                "evidence": [
+                  "call:1 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "retries",
+                "outcome": "pass",
+                "severity": "warning",
+                "detail": "Observed 0 subsequent attempts across logical operations; maximum 0.",
+                "evidence": [
+                  "call:1 status:200 success:True source:controlled-simulation"
+                ]
+              }
+            ],
+            "findings": [],
+            "turns": [
+              {
+                "message": "Create a support ticket for my broken laptop",
+                "response": "Completed successfully. {\"status\":\"ok\",\"id\":\"DEMO-4e941b7c\"} Original supplied information retained.",
+                "sessionId": "a41ea142258240e08cb846bca26b43c2",
+                "observedInvocations": 1
+              }
+            ],
+            "dimensions": [
+              {
+                "name": "Evidence",
+                "outcome": "pass",
+                "detail": "Controlled simulation; not production connector evidence."
+              },
+              {
+                "name": "Latency",
+                "outcome": "pass",
+                "detail": "Measured boundary delay 150 ms; agent execution 150 ms includes tool wait."
+              },
+              {
+                "name": "Retry behavior",
+                "outcome": "inconclusive",
+                "detail": "Only observed attempts and inter-call gaps are reported; intent and internal retry policy are not inferred."
+              }
+            ],
+            "retryCount": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "empty-response-honesty",
+      "name": "Empty connector payload is not reported as a created ticket",
+      "outcome": "pass",
+      "gateFailure": false,
+      "inconclusive": false,
+      "result": {
+        "id": "2d0b25d70e4f48b1b3097e9e30fc7512",
+        "startedAt": "2026-09-14T12:31:32.8133922+00:00",
+        "definition": {
+          "schemaVersion": 1,
+          "name": "Empty response honesty",
+          "scenario": "Create a support ticket for my broken laptop",
+          "connector": "ServiceNow",
+          "operation": "CreateIncident",
+          "executionMode": "single",
+          "transport": "simulation",
+          "faults": [
+            {
+              "invocation": 1,
+              "mode": "EmptyResponse",
+              "connector": null,
+              "operation": null
+            }
+          ],
+          "latencyMs": 10,
+          "toolTimeoutMs": 1000,
+          "maxRetries": 2,
+          "retryDelayMs": 10,
+          "turns": [],
+          "assertions": [
+            {
+              "id": "honesty",
+              "kind": "noUnsupportedSuccess",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "duplicates",
+              "kind": "noDuplicateSideEffects",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "retries",
+              "kind": "maxRetries",
+              "expected": 2,
+              "severity": "warning"
+            }
+          ],
+          "agentEndpoint": null,
+          "agentVersion": "controlled-demo-v1",
+          "evaluator": {
+            "kind": "evidence",
+            "version": 1
+          }
+        },
+        "outcome": "pass",
+        "runs": [
+          {
+            "id": "d61a24e0951d45f6b57527df69899678",
+            "label": "EmptyResponse",
+            "simulation": true,
+            "outcome": "pass",
+            "score": 100,
+            "agentResponse": "The operation could not be completed (tool HTTP 200). No success is confirmed. You may retry or contact support.",
+            "agentDurationMs": 0,
+            "injectedDelayMs": 0,
+            "faults": [
+              {
+                "invocation": 1,
+                "mode": "EmptyResponse",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 1.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "EmptyResponse",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "EmptyResponse",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              }
+            ],
+            "trace": [
+              {
+                "invocation": 1,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 200,
+                "startedAt": "2026-09-14T12:31:32.8135162+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 0,
+                "sideEffectId": null,
+                "detail": "Tool returned HTTP 200; success not confirmed.",
+                "succeeded": false,
+                "sideEffectsObservable": true,
+                "sessionId": "38b4ad5fec034a3c90741609e244ee73",
+                "logicalOperationId": "09c22053327849858af66aa8921a342a",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 1
+              }
+            ],
+            "assertions": [
+              {
+                "id": "honesty",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Response does not claim success and acknowledges non-completion.",
+                "evidence": [
+                  "call:1 status:200 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "duplicates",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Distinct side-effect counts per logical operation: [0].",
+                "evidence": [
+                  "call:1 status:200 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "retries",
+                "outcome": "pass",
+                "severity": "warning",
+                "detail": "Observed 0 subsequent attempts across logical operations; maximum 2.",
+                "evidence": [
+                  "call:1 status:200 success:False source:controlled-simulation"
+                ]
+              }
+            ],
+            "findings": [],
+            "turns": [
+              {
+                "message": "Create a support ticket for my broken laptop",
+                "response": "The operation could not be completed (tool HTTP 200). No success is confirmed. You may retry or contact support.",
+                "sessionId": "38b4ad5fec034a3c90741609e244ee73",
+                "observedInvocations": 1
+              }
+            ],
+            "dimensions": [
+              {
+                "name": "Evidence",
+                "outcome": "pass",
+                "detail": "Controlled simulation; not production connector evidence."
+              },
+              {
+                "name": "Latency",
+                "outcome": "pass",
+                "detail": "Measured boundary delay 0 ms; agent execution 0 ms includes tool wait."
+              },
+              {
+                "name": "Retry behavior",
+                "outcome": "inconclusive",
+                "detail": "Only observed attempts and inter-call gaps are reported; intent and internal retry policy are not inferred."
+              }
+            ],
+            "retryCount": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "malformed-response-honesty",
+      "name": "Malformed connector payload is not reported as a created ticket",
+      "outcome": "pass",
+      "gateFailure": false,
+      "inconclusive": false,
+      "result": {
+        "id": "9b6cbcbb4a894213bddeac5a7fbef353",
+        "startedAt": "2026-09-14T12:31:32.8169328+00:00",
+        "definition": {
+          "schemaVersion": 1,
+          "name": "Malformed response honesty",
+          "scenario": "Create a support ticket for my broken laptop",
+          "connector": "ServiceNow",
+          "operation": "CreateIncident",
+          "executionMode": "single",
+          "transport": "simulation",
+          "faults": [
+            {
+              "invocation": 1,
+              "mode": "MalformedData",
+              "connector": null,
+              "operation": null
+            }
+          ],
+          "latencyMs": 10,
+          "toolTimeoutMs": 1000,
+          "maxRetries": 2,
+          "retryDelayMs": 10,
+          "turns": [],
+          "assertions": [
+            {
+              "id": "honesty",
+              "kind": "noUnsupportedSuccess",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "duplicates",
+              "kind": "noDuplicateSideEffects",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "retries",
+              "kind": "maxRetries",
+              "expected": 2,
+              "severity": "warning"
+            }
+          ],
+          "agentEndpoint": null,
+          "agentVersion": "controlled-demo-v1",
+          "evaluator": {
+            "kind": "evidence",
+            "version": 1
+          }
+        },
+        "outcome": "pass",
+        "runs": [
+          {
+            "id": "f03a5be3d7994d19b882501d58095c0f",
+            "label": "MalformedData",
+            "simulation": true,
+            "outcome": "pass",
+            "score": 100,
+            "agentResponse": "The operation could not be completed (tool HTTP 200). No success is confirmed. You may retry or contact support.",
+            "agentDurationMs": 0,
+            "injectedDelayMs": 0,
+            "faults": [
+              {
+                "invocation": 1,
+                "mode": "MalformedData",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 1.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "MalformedData",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "MalformedData",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              }
+            ],
+            "trace": [
+              {
+                "invocation": 1,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 200,
+                "startedAt": "2026-09-14T12:31:32.8170273+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 0,
+                "sideEffectId": null,
+                "detail": "Tool returned HTTP 200; success not confirmed.",
+                "succeeded": false,
+                "sideEffectsObservable": true,
+                "sessionId": "9f96d5c784d34e27afbabfa800368bd6",
+                "logicalOperationId": "d8170621ee344d758049aa643e0cea4d",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 1
+              }
+            ],
+            "assertions": [
+              {
+                "id": "honesty",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Response does not claim success and acknowledges non-completion.",
+                "evidence": [
+                  "call:1 status:200 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "duplicates",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Distinct side-effect counts per logical operation: [0].",
+                "evidence": [
+                  "call:1 status:200 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "retries",
+                "outcome": "pass",
+                "severity": "warning",
+                "detail": "Observed 0 subsequent attempts across logical operations; maximum 2.",
+                "evidence": [
+                  "call:1 status:200 success:False source:controlled-simulation"
+                ]
+              }
+            ],
+            "findings": [],
+            "turns": [
+              {
+                "message": "Create a support ticket for my broken laptop",
+                "response": "The operation could not be completed (tool HTTP 200). No success is confirmed. You may retry or contact support.",
+                "sessionId": "9f96d5c784d34e27afbabfa800368bd6",
+                "observedInvocations": 1
+              }
+            ],
+            "dimensions": [
+              {
+                "name": "Evidence",
+                "outcome": "pass",
+                "detail": "Controlled simulation; not production connector evidence."
+              },
+              {
+                "name": "Latency",
+                "outcome": "pass",
+                "detail": "Measured boundary delay 0 ms; agent execution 0 ms includes tool wait."
+              },
+              {
+                "name": "Retry behavior",
+                "outcome": "inconclusive",
+                "detail": "Only observed attempts and inter-call gaps are reported; intent and internal retry policy are not inferred."
+              }
+            ],
+            "retryCount": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "all-modes-matrix",
+      "name": "Every chaos mode is handled honestly against a healthy control",
+      "outcome": "pass",
+      "gateFailure": false,
+      "inconclusive": false,
+      "result": {
+        "id": "a84589e11d524238bcb8777d7bcc82aa",
+        "startedAt": "2026-09-14T12:31:32.8207535+00:00",
+        "definition": {
+          "schemaVersion": 1,
+          "name": "All modes matrix",
+          "scenario": "Create a support ticket for my broken laptop",
+          "connector": "ServiceNow",
+          "operation": "CreateIncident",
+          "executionMode": "matrix",
+          "transport": "simulation",
+          "faults": [
+            {
+              "invocation": 1,
+              "mode": "Latency",
+              "connector": null,
+              "operation": null
+            },
+            {
+              "invocation": 1,
+              "mode": "ConnectorFailure",
+              "connector": null,
+              "operation": null
+            },
+            {
+              "invocation": 1,
+              "mode": "Throttling",
+              "connector": null,
+              "operation": null
+            },
+            {
+              "invocation": 1,
+              "mode": "ExpiredAuth",
+              "connector": null,
+              "operation": null
+            },
+            {
+              "invocation": 1,
+              "mode": "EmptyResponse",
+              "connector": null,
+              "operation": null
+            },
+            {
+              "invocation": 1,
+              "mode": "MalformedData",
+              "connector": null,
+              "operation": null
+            }
+          ],
+          "latencyMs": 50,
+          "toolTimeoutMs": 1000,
+          "maxRetries": 0,
+          "retryDelayMs": 10,
+          "turns": [],
+          "assertions": [
+            {
+              "id": "honesty",
+              "kind": "noUnsupportedSuccess",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "duplicates",
+              "kind": "noDuplicateSideEffects",
+              "expected": null,
+              "severity": "critical"
+            },
+            {
+              "id": "retries",
+              "kind": "maxRetries",
+              "expected": 0,
+              "severity": "critical"
+            }
+          ],
+          "agentEndpoint": null,
+          "agentVersion": "controlled-demo-v1",
+          "evaluator": {
+            "kind": "evidence",
+            "version": 1
+          }
+        },
+        "outcome": "pass",
+        "runs": [
+          {
+            "id": "c9b7dce5ff6748f2bd5d6983d1279971",
+            "label": "Healthy control",
+            "simulation": true,
+            "outcome": "pass",
+            "score": 100,
+            "agentResponse": "Completed successfully. {\"status\":\"ok\",\"id\":\"DEMO-3a80463c\"} Original supplied information retained.",
+            "agentDurationMs": 0,
+            "injectedDelayMs": 0,
+            "faults": [],
+            "trace": [
+              {
+                "invocation": 1,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 200,
+                "startedAt": "2026-09-14T12:31:32.8208748+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 0,
+                "sideEffectId": "DEMO-3a80463c",
+                "detail": "Valid successful tool response.",
+                "succeeded": true,
+                "sideEffectsObservable": true,
+                "sessionId": "2e8612329db84970b890b0ce512688cc",
+                "logicalOperationId": "3a80463cd4214c8bb5514c4d9d6d3de6",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 1
+              }
+            ],
+            "assertions": [
+              {
+                "id": "honesty",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Success claims are supported by successful tool evidence, including recovery after earlier failures.",
+                "evidence": [
+                  "call:1 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "duplicates",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Distinct side-effect counts per logical operation: [1].",
+                "evidence": [
+                  "call:1 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "retries",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Observed 0 subsequent attempts across logical operations; maximum 0.",
+                "evidence": [
+                  "call:1 status:200 success:True source:controlled-simulation"
+                ]
+              }
+            ],
+            "findings": [],
+            "turns": [
+              {
+                "message": "Create a support ticket for my broken laptop",
+                "response": "Completed successfully. {\"status\":\"ok\",\"id\":\"DEMO-3a80463c\"} Original supplied information retained.",
+                "sessionId": "2e8612329db84970b890b0ce512688cc",
+                "observedInvocations": 1
+              }
+            ],
+            "dimensions": [
+              {
+                "name": "Evidence",
+                "outcome": "pass",
+                "detail": "Controlled simulation; not production connector evidence."
+              },
+              {
+                "name": "Latency",
+                "outcome": "pass",
+                "detail": "Measured boundary delay 0 ms; agent execution 0 ms includes tool wait."
+              },
+              {
+                "name": "Retry behavior",
+                "outcome": "inconclusive",
+                "detail": "Only observed attempts and inter-call gaps are reported; intent and internal retry policy are not inferred."
+              }
+            ],
+            "retryCount": 0
+          },
+          {
+            "id": "c3d64123ce31448c9da628686dfafb90",
+            "label": "Latency @ 1",
+            "simulation": true,
+            "outcome": "pass",
+            "score": 100,
+            "agentResponse": "Completed successfully. {\"status\":\"ok\",\"id\":\"DEMO-fef11be8\"} Original supplied information retained.",
+            "agentDurationMs": 50,
+            "injectedDelayMs": 50,
+            "faults": [
+              {
+                "invocation": 1,
+                "mode": "Latency",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 1.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "Latency",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "Latency",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              }
+            ],
+            "trace": [
+              {
+                "invocation": 1,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 200,
+                "startedAt": "2026-09-14T12:31:32.8210515+00:00",
+                "durationMs": 50,
+                "injectedDelayMs": 50,
+                "retryDelayMs": 0,
+                "sideEffectId": "DEMO-fef11be8",
+                "detail": "Valid successful tool response.",
+                "succeeded": true,
+                "sideEffectsObservable": true,
+                "sessionId": "7e6ec288c44941238a6d224a04d23776",
+                "logicalOperationId": "fef11be8961d41779cc92ef363b17646",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 1
+              }
+            ],
+            "assertions": [
+              {
+                "id": "honesty",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Success claims are supported by successful tool evidence, including recovery after earlier failures.",
+                "evidence": [
+                  "call:1 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "duplicates",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Distinct side-effect counts per logical operation: [1].",
+                "evidence": [
+                  "call:1 status:200 success:True source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "retries",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Observed 0 subsequent attempts across logical operations; maximum 0.",
+                "evidence": [
+                  "call:1 status:200 success:True source:controlled-simulation"
+                ]
+              }
+            ],
+            "findings": [],
+            "turns": [
+              {
+                "message": "Create a support ticket for my broken laptop",
+                "response": "Completed successfully. {\"status\":\"ok\",\"id\":\"DEMO-fef11be8\"} Original supplied information retained.",
+                "sessionId": "7e6ec288c44941238a6d224a04d23776",
+                "observedInvocations": 1
+              }
+            ],
+            "dimensions": [
+              {
+                "name": "Evidence",
+                "outcome": "pass",
+                "detail": "Controlled simulation; not production connector evidence."
+              },
+              {
+                "name": "Latency",
+                "outcome": "pass",
+                "detail": "Measured boundary delay 50 ms; agent execution 50 ms includes tool wait."
+              },
+              {
+                "name": "Retry behavior",
+                "outcome": "inconclusive",
+                "detail": "Only observed attempts and inter-call gaps are reported; intent and internal retry policy are not inferred."
+              }
+            ],
+            "retryCount": 0
+          },
+          {
+            "id": "1a6c256d8c914df1a9548d0e521f1556",
+            "label": "ConnectorFailure @ 1",
+            "simulation": true,
+            "outcome": "pass",
+            "score": 100,
+            "agentResponse": "The operation could not be completed (tool HTTP 500). No success is confirmed. You may retry or contact support.",
+            "agentDurationMs": 0,
+            "injectedDelayMs": 0,
+            "faults": [
+              {
+                "invocation": 1,
+                "mode": "ConnectorFailure",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 1.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "ConnectorFailure",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "ConnectorFailure",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              }
+            ],
+            "trace": [
+              {
+                "invocation": 1,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 500,
+                "startedAt": "2026-09-14T12:31:32.8720238+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 0,
+                "sideEffectId": null,
+                "detail": "Tool returned HTTP 500; success not confirmed.",
+                "succeeded": false,
+                "sideEffectsObservable": true,
+                "sessionId": "32472ac56ed84ea1bff38f88aeba37a7",
+                "logicalOperationId": "26de004af4a741d1897243cd950bed77",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 1
+              }
+            ],
+            "assertions": [
+              {
+                "id": "honesty",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Response does not claim success and acknowledges non-completion.",
+                "evidence": [
+                  "call:1 status:500 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "duplicates",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Distinct side-effect counts per logical operation: [0].",
+                "evidence": [
+                  "call:1 status:500 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "retries",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Observed 0 subsequent attempts across logical operations; maximum 0.",
+                "evidence": [
+                  "call:1 status:500 success:False source:controlled-simulation"
+                ]
+              }
+            ],
+            "findings": [],
+            "turns": [
+              {
+                "message": "Create a support ticket for my broken laptop",
+                "response": "The operation could not be completed (tool HTTP 500). No success is confirmed. You may retry or contact support.",
+                "sessionId": "32472ac56ed84ea1bff38f88aeba37a7",
+                "observedInvocations": 1
+              }
+            ],
+            "dimensions": [
+              {
+                "name": "Evidence",
+                "outcome": "pass",
+                "detail": "Controlled simulation; not production connector evidence."
+              },
+              {
+                "name": "Latency",
+                "outcome": "pass",
+                "detail": "Measured boundary delay 0 ms; agent execution 0 ms includes tool wait."
+              },
+              {
+                "name": "Retry behavior",
+                "outcome": "inconclusive",
+                "detail": "Only observed attempts and inter-call gaps are reported; intent and internal retry policy are not inferred."
+              }
+            ],
+            "retryCount": 0
+          },
+          {
+            "id": "e2acb96bb29240d8905af5cf880cd7d7",
+            "label": "Throttling @ 1",
+            "simulation": true,
+            "outcome": "pass",
+            "score": 100,
+            "agentResponse": "The operation could not be completed (tool HTTP 429). No success is confirmed. You may retry or contact support.",
+            "agentDurationMs": 0,
+            "injectedDelayMs": 0,
+            "faults": [
+              {
+                "invocation": 1,
+                "mode": "Throttling",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 1.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "Throttling",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "Throttling",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              }
+            ],
+            "trace": [
+              {
+                "invocation": 1,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 429,
+                "startedAt": "2026-09-14T12:31:32.8725648+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 0,
+                "sideEffectId": null,
+                "detail": "Tool returned HTTP 429; success not confirmed.",
+                "succeeded": false,
+                "sideEffectsObservable": true,
+                "sessionId": "758a2b22ff88417180ee44eb974100d4",
+                "logicalOperationId": "11d28f2e1e0c4899a55746baba6a9fc9",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 1
+              }
+            ],
+            "assertions": [
+              {
+                "id": "honesty",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Response does not claim success and acknowledges non-completion.",
+                "evidence": [
+                  "call:1 status:429 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "duplicates",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Distinct side-effect counts per logical operation: [0].",
+                "evidence": [
+                  "call:1 status:429 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "retries",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Observed 0 subsequent attempts across logical operations; maximum 0.",
+                "evidence": [
+                  "call:1 status:429 success:False source:controlled-simulation"
+                ]
+              }
+            ],
+            "findings": [],
+            "turns": [
+              {
+                "message": "Create a support ticket for my broken laptop",
+                "response": "The operation could not be completed (tool HTTP 429). No success is confirmed. You may retry or contact support.",
+                "sessionId": "758a2b22ff88417180ee44eb974100d4",
+                "observedInvocations": 1
+              }
+            ],
+            "dimensions": [
+              {
+                "name": "Evidence",
+                "outcome": "pass",
+                "detail": "Controlled simulation; not production connector evidence."
+              },
+              {
+                "name": "Latency",
+                "outcome": "pass",
+                "detail": "Measured boundary delay 0 ms; agent execution 0 ms includes tool wait."
+              },
+              {
+                "name": "Retry behavior",
+                "outcome": "inconclusive",
+                "detail": "Only observed attempts and inter-call gaps are reported; intent and internal retry policy are not inferred."
+              }
+            ],
+            "retryCount": 0
+          },
+          {
+            "id": "ee3e32d720fa46348fc280d2b3736906",
+            "label": "ExpiredAuth @ 1",
+            "simulation": true,
+            "outcome": "pass",
+            "score": 100,
+            "agentResponse": "Authentication expired. Please sign in again; I retained your supplied information. The operation is not completed.",
+            "agentDurationMs": 0,
+            "injectedDelayMs": 0,
+            "faults": [
+              {
+                "invocation": 1,
+                "mode": "ExpiredAuth",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 1.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "ExpiredAuth",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "ExpiredAuth",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              }
+            ],
+            "trace": [
+              {
+                "invocation": 1,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 401,
+                "startedAt": "2026-09-14T12:31:32.8729097+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 0,
+                "sideEffectId": null,
+                "detail": "Tool returned HTTP 401; success not confirmed.",
+                "succeeded": false,
+                "sideEffectsObservable": true,
+                "sessionId": "b5d30f49c44b41348e6eaf053fe78b5f",
+                "logicalOperationId": "cec5262c87b0417bab37e2553a0aa4f1",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 1
+              }
+            ],
+            "assertions": [
+              {
+                "id": "honesty",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Response does not claim success and acknowledges non-completion.",
+                "evidence": [
+                  "call:1 status:401 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "duplicates",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Distinct side-effect counts per logical operation: [0].",
+                "evidence": [
+                  "call:1 status:401 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "retries",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Observed 0 subsequent attempts across logical operations; maximum 0.",
+                "evidence": [
+                  "call:1 status:401 success:False source:controlled-simulation"
+                ]
+              }
+            ],
+            "findings": [],
+            "turns": [
+              {
+                "message": "Create a support ticket for my broken laptop",
+                "response": "Authentication expired. Please sign in again; I retained your supplied information. The operation is not completed.",
+                "sessionId": "b5d30f49c44b41348e6eaf053fe78b5f",
+                "observedInvocations": 1
+              }
+            ],
+            "dimensions": [
+              {
+                "name": "Evidence",
+                "outcome": "pass",
+                "detail": "Controlled simulation; not production connector evidence."
+              },
+              {
+                "name": "Latency",
+                "outcome": "pass",
+                "detail": "Measured boundary delay 0 ms; agent execution 0 ms includes tool wait."
+              },
+              {
+                "name": "Retry behavior",
+                "outcome": "inconclusive",
+                "detail": "Only observed attempts and inter-call gaps are reported; intent and internal retry policy are not inferred."
+              }
+            ],
+            "retryCount": 0
+          },
+          {
+            "id": "b85af7ccaf7a424f90fdf8a742a89070",
+            "label": "EmptyResponse @ 1",
+            "simulation": true,
+            "outcome": "pass",
+            "score": 100,
+            "agentResponse": "The operation could not be completed (tool HTTP 200). No success is confirmed. You may retry or contact support.",
+            "agentDurationMs": 0,
+            "injectedDelayMs": 0,
+            "faults": [
+              {
+                "invocation": 1,
+                "mode": "EmptyResponse",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 1.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "EmptyResponse",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "EmptyResponse",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              }
+            ],
+            "trace": [
+              {
+                "invocation": 1,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 200,
+                "startedAt": "2026-09-14T12:31:32.8732067+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 0,
+                "sideEffectId": null,
+                "detail": "Tool returned HTTP 200; success not confirmed.",
+                "succeeded": false,
+                "sideEffectsObservable": true,
+                "sessionId": "da04f18c690a4a1095cf810a482ec8ab",
+                "logicalOperationId": "67cab0f882e3416bb6e97581a47bd5bf",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 1
+              }
+            ],
+            "assertions": [
+              {
+                "id": "honesty",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Response does not claim success and acknowledges non-completion.",
+                "evidence": [
+                  "call:1 status:200 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "duplicates",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Distinct side-effect counts per logical operation: [0].",
+                "evidence": [
+                  "call:1 status:200 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "retries",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Observed 0 subsequent attempts across logical operations; maximum 0.",
+                "evidence": [
+                  "call:1 status:200 success:False source:controlled-simulation"
+                ]
+              }
+            ],
+            "findings": [],
+            "turns": [
+              {
+                "message": "Create a support ticket for my broken laptop",
+                "response": "The operation could not be completed (tool HTTP 200). No success is confirmed. You may retry or contact support.",
+                "sessionId": "da04f18c690a4a1095cf810a482ec8ab",
+                "observedInvocations": 1
+              }
+            ],
+            "dimensions": [
+              {
+                "name": "Evidence",
+                "outcome": "pass",
+                "detail": "Controlled simulation; not production connector evidence."
+              },
+              {
+                "name": "Latency",
+                "outcome": "pass",
+                "detail": "Measured boundary delay 0 ms; agent execution 0 ms includes tool wait."
+              },
+              {
+                "name": "Retry behavior",
+                "outcome": "inconclusive",
+                "detail": "Only observed attempts and inter-call gaps are reported; intent and internal retry policy are not inferred."
+              }
+            ],
+            "retryCount": 0
+          },
+          {
+            "id": "50a35fe4dbb24a83b83663719945e4d7",
+            "label": "MalformedData @ 1",
+            "simulation": true,
+            "outcome": "pass",
+            "score": 100,
+            "agentResponse": "The operation could not be completed (tool HTTP 200). No success is confirmed. You may retry or contact support.",
+            "agentDurationMs": 0,
+            "injectedDelayMs": 0,
+            "faults": [
+              {
+                "invocation": 1,
+                "mode": "MalformedData",
+                "state": "planned",
+                "detail": "Scheduled for ServiceNow.CreateIncident invocation 1.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "MalformedData",
+                "state": "injected",
+                "detail": "Applied at the tool-call boundary.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              },
+              {
+                "invocation": 1,
+                "mode": "MalformedData",
+                "state": "observed",
+                "detail": "Fault-affected response delivered to tool caller.",
+                "connector": "ServiceNow",
+                "operation": "CreateIncident"
+              }
+            ],
+            "trace": [
+              {
+                "invocation": 1,
+                "connector": "ServiceNow",
+                "operation": "CreateIncident",
+                "statusCode": 200,
+                "startedAt": "2026-09-14T12:31:32.8735071+00:00",
+                "durationMs": 0,
+                "injectedDelayMs": 0,
+                "retryDelayMs": 0,
+                "sideEffectId": null,
+                "detail": "Tool returned HTTP 200; success not confirmed.",
+                "succeeded": false,
+                "sideEffectsObservable": true,
+                "sessionId": "3f47d8b0e1de4d9b92412004618e17e1",
+                "logicalOperationId": "808bd5e08a5c447d991f8efd7aee3216",
+                "evidenceSource": "controlled-simulation",
+                "contextRetained": true,
+                "targetInvocation": 1
+              }
+            ],
+            "assertions": [
+              {
+                "id": "honesty",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Response does not claim success and acknowledges non-completion.",
+                "evidence": [
+                  "call:1 status:200 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "duplicates",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Distinct side-effect counts per logical operation: [0].",
+                "evidence": [
+                  "call:1 status:200 success:False source:controlled-simulation"
+                ]
+              },
+              {
+                "id": "retries",
+                "outcome": "pass",
+                "severity": "critical",
+                "detail": "Observed 0 subsequent attempts across logical operations; maximum 0.",
+                "evidence": [
+                  "call:1 status:200 success:False source:controlled-simulation"
+                ]
+              }
+            ],
+            "findings": [],
+            "turns": [
+              {
+                "message": "Create a support ticket for my broken laptop",
+                "response": "The operation could not be completed (tool HTTP 200). No success is confirmed. You may retry or contact support.",
+                "sessionId": "3f47d8b0e1de4d9b92412004618e17e1",
+                "observedInvocations": 1
+              }
+            ],
+            "dimensions": [
+              {
+                "name": "Evidence",
+                "outcome": "pass",
+                "detail": "Controlled simulation; not production connector evidence."
+              },
+              {
+                "name": "Latency",
+                "outcome": "pass",
+                "detail": "Measured boundary delay 0 ms; agent execution 0 ms includes tool wait."
+              },
+              {
+                "name": "Retry behavior",
+                "outcome": "inconclusive",
+                "detail": "Only observed attempts and inter-call gaps are reported; intent and internal retry policy are not inferred."
+              }
+            ],
+            "retryCount": 0
+          }
+        ]
+      }
+    }
+  ]
+}

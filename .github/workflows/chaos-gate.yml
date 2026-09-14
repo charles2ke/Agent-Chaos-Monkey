@@ -1,0 +1,137 @@
+name: Chaos gate
+
+on:
+  workflow_call:
+    inputs:
+      suite:
+        description: 'Path to the suite JSON file to run.'
+        type: string
+        required: false
+        default: 'examples/demo-suite.json'
+      baseline:
+        description: 'Optional path to a committed baseline chaos-results.json.'
+        type: string
+        required: false
+        default: 'examples/baseline/agent-regression-baseline.json'
+      api-url:
+        description: 'Base URL of the Chaos Monkey API.'
+        type: string
+        required: false
+        default: 'http://localhost:5249'
+      allow-inconclusive:
+        description: 'When "true", inconclusive suites do not fail the gate.'
+        type: string
+        required: false
+        default: 'false'
+      fail-on-gate:
+        description: 'When "true", the workflow fails on suite non-zero exit codes.'
+        type: string
+        required: false
+        default: 'true'
+      comment-on-pr:
+        description: 'When "true", post/update a sticky PR comment.'
+        type: string
+        required: false
+        default: 'true'
+      node-version:
+        description: 'Node.js major version.'
+        type: string
+        required: false
+        default: '22'
+      dotnet-version:
+        description: 'Dotnet SDK version used to run the local API.'
+        type: string
+        required: false
+        default: '10.0.x'
+      start-api:
+        description: 'When "true", start the local ChaosMonkey.Api on api-url before running the suite.'
+        type: string
+        required: false
+        default: 'true'
+    outputs:
+      outcome:
+        description: 'Overall suite outcome.'
+        value: ${{ jobs.chaos.outputs.outcome }}
+      exit-code:
+        description: 'Suite exit code.'
+        value: ${{ jobs.chaos.outputs.exit-code }}
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  chaos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      outcome: ${{ steps.chaos.outputs.outcome }}
+      exit-code: ${{ steps.chaos.outputs.exit-code }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up .NET
+        if: ${{ inputs.start-api == 'true' }}
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Start Chaos Monkey API
+        if: ${{ inputs.start-api == 'true' }}
+        shell: bash
+        env:
+          API_URL: ${{ inputs.api-url }}
+          Llm__ApiKey: ''
+          ANTHROPIC_API_KEY: ''
+          OPENAI_API_KEY: ''
+          LabGateway__Enabled: 'false'
+        run: |
+          set -euo pipefail
+          dotnet run --project backend/ChaosMonkey.Api --no-launch-profile --urls "$API_URL" > chaos-api.log 2>&1 &
+          echo "$!" > chaos-api.pid
+          for _ in $(seq 1 60); do
+            if curl --fail --silent "${API_URL%/}/api/health" > /dev/null; then
+              echo "API ready."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API failed to become ready in time." >&2
+          tail -50 chaos-api.log >&2 || true
+          exit 2
+
+      - name: Run Chaos Monkey suite
+        id: chaos
+        uses: charles2ke/agent-chaos-monkey@v1
+        with:
+          suite: ${{ inputs.suite }}
+          baseline: ${{ inputs.baseline }}
+          api-url: ${{ inputs.api-url }}
+          allow-inconclusive: ${{ inputs.allow-inconclusive }}
+          fail-on-gate: ${{ inputs.fail-on-gate }}
+          comment-on-pr: ${{ inputs.comment-on-pr }}
+          node-version: ${{ inputs.node-version }}
+
+      - name: Stop Chaos Monkey API
+        if: ${{ always() && inputs.start-api == 'true' }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          if [ -f chaos-api.pid ]; then
+            pid=$(cat chaos-api.pid)
+            if [ -n "$pid" ]; then
+              kill "$pid" 2>/dev/null || true
+            fi
+          fi
+
+      - name: Upload chaos reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: chaos-results
+          path: |
+            results/
+            chaos-api.log
+          if-no-files-found: ignore
+          retention-days: 14

@@ -1,0 +1,169 @@
+name: 'Agent Chaos Monkey'
+description: 'Run controlled chaos-monkey resilience experiments against an AI agent and gate PRs on score deltas vs a committed baseline.'
+author: 'charles2ke'
+branding:
+  icon: 'shuffle'
+  color: 'purple'
+
+inputs:
+  suite:
+    description: 'Path to the suite JSON file to run.'
+    required: true
+    default: 'examples/demo-suite.json'
+  api-url:
+    description: 'Base URL of the Chaos Monkey API. Must be HTTPS or loopback HTTP with no credentials.'
+    required: false
+    default: 'http://localhost:5249'
+  output:
+    description: 'Directory where chaos-results.json / chaos-results.xml are written.'
+    required: false
+    default: 'results'
+  timeout-ms:
+    description: 'Per-experiment timeout in milliseconds (1..600000).'
+    required: false
+    default: '60000'
+  allow-inconclusive:
+    description: 'When "true", inconclusive suites do not fail the gate (exit 3 becomes exit 0).'
+    required: false
+    default: 'false'
+  baseline:
+    description: 'Optional path to a committed baseline chaos-results.json for score-delta reporting.'
+    required: false
+    default: ''
+  comment-on-pr:
+    description: 'When "true" and running on a pull_request event with a writable GITHUB_TOKEN, post a sticky score-delta comment.'
+    required: false
+    default: 'true'
+  fail-on-gate:
+    description: 'When "true", the action exits with the suite exit code (0/1/2/3). Set to "false" to always exit 0.'
+    required: false
+    default: 'true'
+  node-version:
+    description: 'Node.js major version to install for running the suite.'
+    required: false
+    default: '22'
+
+outputs:
+  outcome:
+    description: 'Overall suite outcome (pass, fail, inconclusive, infrastructure-error).'
+    value: ${{ steps.summarize.outputs.outcome }}
+  exit-code:
+    description: 'Suite exit code (0 pass, 1 critical failure, 2 infrastructure error, 3 inconclusive).'
+    value: ${{ steps.run.outputs.exit-code }}
+  results-path:
+    description: 'Filesystem path to the chaos-results.json report.'
+    value: ${{ steps.summarize.outputs.results-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v7
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Run Chaos Monkey suite
+      id: run
+      shell: bash
+      env:
+        CHAOS_SUITE: ${{ inputs.suite }}
+        CHAOS_API_URL: ${{ inputs.api-url }}
+        CHAOS_OUTPUT: ${{ inputs.output }}
+        CHAOS_TIMEOUT_MS: ${{ inputs.timeout-ms }}
+        CHAOS_ALLOW_INCONCLUSIVE: ${{ inputs.allow-inconclusive }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -uo pipefail
+        args=("$ACTION_PATH/cli/run-suite.mjs" "$CHAOS_SUITE" \
+          --url "$CHAOS_API_URL" \
+          --output "$CHAOS_OUTPUT" \
+          --timeout-ms "$CHAOS_TIMEOUT_MS")
+        if [ "$CHAOS_ALLOW_INCONCLUSIVE" = "true" ]; then
+          args+=(--allow-inconclusive)
+        fi
+        exit_code=0
+        node "${args[@]}" || exit_code=$?
+        echo "exit-code=${exit_code}" >> "$GITHUB_OUTPUT"
+        echo "results-path=${CHAOS_OUTPUT}/chaos-results.json" >> "$GITHUB_OUTPUT"
+
+    - name: Compare against baseline and build comment
+      id: summarize
+      shell: bash
+      env:
+        CHAOS_OUTPUT: ${{ inputs.output }}
+        CHAOS_BASELINE: ${{ inputs.baseline }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -uo pipefail
+        results_path="${CHAOS_OUTPUT}/chaos-results.json"
+        echo "results-path=${results_path}" >> "$GITHUB_OUTPUT"
+        if [ ! -f "$results_path" ]; then
+          echo "outcome=infrastructure-error" >> "$GITHUB_OUTPUT"
+          echo "Chaos Monkey did not produce ${results_path}." >&2
+          exit 0
+        fi
+        outcome=$(node -e "const r=require('./'+process.argv[1]); process.stdout.write(String(r.outcome||''))" "$results_path")
+        echo "outcome=${outcome}" >> "$GITHUB_OUTPUT"
+        comment_path="${CHAOS_OUTPUT}/chaos-comment.md"
+        compare_args=("$ACTION_PATH/cli/compare-baseline.mjs" "$results_path" \
+          --output "$comment_path" \
+          --title "Agent Chaos Monkey")
+        if [ -n "$CHAOS_BASELINE" ]; then
+          compare_args+=(--baseline "$CHAOS_BASELINE")
+        fi
+        node "${compare_args[@]}" > /dev/null
+        {
+          echo "<!-- agent-chaos-monkey:sticky -->"
+          cat "$comment_path"
+        } > "${CHAOS_OUTPUT}/chaos-comment-body.md"
+        cat "${CHAOS_OUTPUT}/chaos-comment-body.md" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Post or update sticky PR comment
+      if: ${{ inputs.comment-on-pr == 'true' && github.event_name == 'pull_request' }}
+      shell: bash
+      env:
+        CHAOS_OUTPUT: ${{ inputs.output }}
+        GH_TOKEN: ${{ github.token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+      run: |
+        set -uo pipefail
+        body_file="${CHAOS_OUTPUT}/chaos-comment-body.md"
+        if [ ! -f "$body_file" ]; then
+          echo "No comment body to post."
+          exit 0
+        fi
+        if [ -z "${GH_TOKEN:-}" ]; then
+          echo "No GITHUB_TOKEN available; skipping PR comment."
+          exit 0
+        fi
+        marker='<!-- agent-chaos-monkey:sticky -->'
+        # Fork PRs receive a read-only token; probe with a HEAD-style list first and swallow errors gracefully.
+        comments_json=$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate 2>/dev/null || echo '[]')
+        existing_id=$(printf '%s' "$comments_json" | node -e "
+          let data='';process.stdin.on('data',c=>data+=c);process.stdin.on('end',()=>{
+            try{const arr=JSON.parse(data);const m=arr.find(c=>c && typeof c.body==='string' && c.body.includes('${marker}'));
+            if(m) process.stdout.write(String(m.id));}catch{}
+          })")
+        if [ -n "$existing_id" ]; then
+          if ! gh api -X PATCH "repos/${REPO}/issues/comments/${existing_id}" -F body=@"${body_file}" > /dev/null 2>&1; then
+            echo "Unable to update existing PR comment (fork PR with read-only token?); skipping."
+          fi
+        else
+          if ! gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" -F body=@"${body_file}" > /dev/null 2>&1; then
+            echo "Unable to post PR comment (fork PR with read-only token?); skipping."
+          fi
+        fi
+
+    - name: Enforce gate
+      if: ${{ inputs.fail-on-gate == 'true' }}
+      shell: bash
+      env:
+        EXIT_CODE: ${{ steps.run.outputs.exit-code }}
+      run: |
+        set -uo pipefail
+        code="${EXIT_CODE:-0}"
+        if [ "$code" != "0" ]; then
+          echo "Chaos Monkey suite exited with code ${code}."
+          exit "$code"
+        fi

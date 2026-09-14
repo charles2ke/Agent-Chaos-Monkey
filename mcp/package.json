@@ -1,13 +1,40 @@
 {
   "name": "agent-chaos-monkey-mcp",
-  "private": true,
   "version": "0.1.0",
   "type": "module",
   "description": "MCP server exposing the Agent Chaos Monkey resilience API as tools",
+  "license": "MIT",
+  "author": "Charles Gomes",
+  "homepage": "https://github.com/charles2ke/Agent-Chaos-Monkey#readme",
+  "bugs": {
+    "url": "https://github.com/charles2ke/Agent-Chaos-Monkey/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/charles2ke/Agent-Chaos-Monkey.git",
+    "directory": "mcp"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "chaos-engineering",
+    "resilience-testing",
+    "ai-agents",
+    "agent-testing",
+    "chaos-monkey"
+  ],
   "bin": {
     "agent-chaos-monkey-mcp": "server.mjs"
   },
   "main": "server.mjs",
+  "files": [
+    "server.mjs",
+    "api.mjs",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server.mjs",
     "test": "node --test"
@@ -15,5 +42,9 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
     "zod": "^3.25.76"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

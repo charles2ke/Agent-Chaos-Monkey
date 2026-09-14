@@ -1,5 +1,7 @@
-export const faultModes = ['Latency', 'ConnectorFailure', 'Throttling', 'ExpiredAuth', 'EmptyResponse', 'MalformedData', 'None'] as const
-export const assertionKinds = ['noUnsupportedSuccess', 'maxRetries', 'noDuplicateSideEffects', 'eventualSuccess', 'contextRetained', 'minBackoffMs'] as const
+export const faultModes = ['Latency', 'ConnectorFailure', 'Throttling', 'ExpiredAuth', 'EmptyResponse', 'MalformedData',
+  'PromptInjection', 'ToolSchemaDrift', 'TruncatedStream', 'ContextExhaustion', 'CascadingFailure', 'None'] as const
+export const assertionKinds = ['noUnsupportedSuccess', 'maxRetries', 'noDuplicateSideEffects', 'eventualSuccess', 'contextRetained',
+  'minBackoffMs', 'noInjectedInstructionFollowed'] as const
 export type Outcome = 'pass' | 'fail' | 'inconclusive'
 export interface FaultStep { invocation: number; mode: typeof faultModes[number]; connector?: string; operation?: string }
 export interface Assertion { id: string; kind: typeof assertionKinds[number]; expected?: number | boolean; severity: 'critical' | 'warning' }
@@ -15,12 +17,12 @@ export interface ToolCall {
   invocation: number; connector: string; operation: string; statusCode: number | null; startedAt: string
   durationMs: number; injectedDelayMs: number; retryDelayMs: number; sideEffectId: string | null; detail: string
   succeeded?: boolean; sideEffectsObservable?: boolean; sessionId?: string; logicalOperationId?: string
-  evidenceSource?: string; contextRetained?: boolean | null; targetInvocation?: number
+  evidenceSource?: string; contextRetained?: boolean | null; targetInvocation?: number; injectedCanary?: string | null
 }
 export interface LabRun {
   id: string; label: string; simulation: boolean; outcome: Outcome; score: number | null
   agentResponse: string; agentDurationMs: number; injectedDelayMs: number; retryCount: number | null
-  faults: { invocation: number; mode: string; state: 'planned' | 'injected' | 'observed' | 'skipped'; detail: string; connector?: string; operation?: string }[]
+  faults: { invocation: number; mode: string; state: 'planned' | 'injected' | 'observed' | 'skipped' | 'cascaded'; detail: string; connector?: string; operation?: string }[]
   trace: ToolCall[]
   assertions: { id: string; outcome: Outcome; severity: string; detail: string; evidence: string[] }[]
   findings: { severity: string; title: string; detail: string; evidence: string[] }[]
@@ -95,12 +97,12 @@ export function validateResult(value: unknown): LabResult {
         retryCount: r.retryCount === null ? null : number(r.retryCount, 1000),
         faults: list(r.faults, 20).map(value => {
           const f = object(value, ['invocation', 'mode', 'state', 'detail', 'connector', 'operation'])
-          return { invocation: number(f.invocation, 100, 1), mode: choice(f.mode, faultModes), state: choice(f.state, ['planned', 'injected', 'observed', 'skipped']), detail: outputText(f.detail),
+          return { invocation: number(f.invocation, 100, 1), mode: choice(f.mode, faultModes), state: choice(f.state, ['planned', 'injected', 'observed', 'skipped', 'cascaded']), detail: outputText(f.detail),
             ...(f.connector === undefined ? {} : { connector: text(f.connector, 100) }),
             ...(f.operation === undefined ? {} : { operation: text(f.operation, 100) }) }
         }),
         trace: list(r.trace, 1000).map(value => {
-          const t = object(value, ['invocation', 'connector', 'operation', 'statusCode', 'startedAt', 'durationMs', 'injectedDelayMs', 'retryDelayMs', 'sideEffectId', 'detail', 'succeeded', 'sideEffectsObservable', 'sessionId', 'logicalOperationId', 'evidenceSource', 'contextRetained', 'targetInvocation'])
+          const t = object(value, ['invocation', 'connector', 'operation', 'statusCode', 'startedAt', 'durationMs', 'injectedDelayMs', 'retryDelayMs', 'sideEffectId', 'detail', 'succeeded', 'sideEffectsObservable', 'sessionId', 'logicalOperationId', 'evidenceSource', 'contextRetained', 'targetInvocation', 'injectedCanary'])
           return { invocation: number(t.invocation, 1000, 1), connector: text(t.connector, 100), operation: text(t.operation, 100),
             statusCode: t.statusCode === null ? null : number(t.statusCode, 599, 100), startedAt: timestamp(t.startedAt),
             durationMs: measurement(t.durationMs), injectedDelayMs: measurement(t.injectedDelayMs), retryDelayMs: measurement(t.retryDelayMs),
@@ -111,6 +113,7 @@ export function validateResult(value: unknown): LabResult {
             ...(t.logicalOperationId === undefined ? {} : { logicalOperationId: outputText(t.logicalOperationId, 1000) }),
             ...(t.evidenceSource === undefined ? {} : { evidenceSource: outputText(t.evidenceSource, 1000) }),
             ...(t.contextRetained === undefined ? {} : { contextRetained: t.contextRetained === null ? null : boolean(t.contextRetained) }),
+            ...(t.injectedCanary === undefined ? {} : { injectedCanary: t.injectedCanary === null ? null : outputText(t.injectedCanary, 100) }),
             ...(t.targetInvocation === undefined ? {} : { targetInvocation: number(t.targetInvocation, 1000, 0) }) }
         }),
         assertions: list(r.assertions, 30).map(value => {

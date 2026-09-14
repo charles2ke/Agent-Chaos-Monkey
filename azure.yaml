@@ -1,0 +1,17 @@
+name: agent-chaos-monkey
+metadata:
+  template: agent-chaos-monkey@1.0.0
+
+services:
+  api:
+    project: ./backend/ChaosMonkey.Api
+    language: dotnet
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: ../
+  web:
+    project: ./frontend
+    language: js
+    host: staticwebapp
+    dist: dist

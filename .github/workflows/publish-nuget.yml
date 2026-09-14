@@ -1,0 +1,92 @@
+# Optional NuGet publish for the chaos engine library.
+#
+# This workflow is opt-in: it only runs on tags matching `nuget-v*` or on manual
+# workflow_dispatch, and it requires the repository secret `NUGET_API_KEY` to be
+# set. If the secret is absent the publish step is skipped so the workflow does
+# not fail spuriously.
+#
+# Packaging metadata is passed on the `dotnet pack` command line as MSBuild
+# properties rather than by editing the .csproj, because the backend project
+# files are owned by a different agent in this workspace. If/when the .csproj
+# grows a `<PackageId>` etc. the -p:... overrides here should be revisited.
+
+name: Publish NuGet package
+
+on:
+  push:
+    tags:
+      - 'nuget-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package version (e.g. 0.1.0). Defaults to git tag suffix.'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Determine package version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            version="${GITHUB_REF_NAME#nuget-v}"
+          else
+            version="${{ inputs.version }}"
+          fi
+          if [ -z "$version" ]; then
+            version="0.0.0-dev.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+          echo "Publishing version: $version"
+
+      - name: Restore
+        run: dotnet restore backend/ChaosMonkey.Api/ChaosMonkey.Api.csproj
+
+      - name: Pack
+        run: |
+          dotnet pack backend/ChaosMonkey.Api/ChaosMonkey.Api.csproj \
+            --configuration Release \
+            --output ./nupkgs \
+            -p:PackageId=AgentChaosMonkey.Engine \
+            -p:Version=${{ steps.version.outputs.value }} \
+            -p:Authors="Charles Gomes" \
+            -p:Company="Agent Chaos Monkey" \
+            -p:Description="Chaos engine and resilience gateway for AI agents." \
+            -p:PackageLicenseExpression=MIT \
+            -p:PackageProjectUrl=https://github.com/charles2ke/Agent-Chaos-Monkey \
+            -p:RepositoryUrl=https://github.com/charles2ke/Agent-Chaos-Monkey \
+            -p:RepositoryType=git \
+            -p:PackageTags="chaos-engineering;resilience;ai-agents;mcp" \
+            -p:IsPackable=true
+
+      - name: Upload package as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-package
+          path: ./nupkgs/*.nupkg
+
+      - name: Push to nuget.org
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "${NUGET_API_KEY:-}" ]; then
+            echo "NUGET_API_KEY secret is not configured; skipping publish." \
+              >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          dotnet nuget push "./nupkgs/*.nupkg" \
+            --api-key "$NUGET_API_KEY" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate

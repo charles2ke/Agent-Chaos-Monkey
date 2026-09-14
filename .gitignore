@@ -18,3 +18,7 @@ appsettings.Local.json
 
 # Headless suite output
 /results/
+
+# azd
+.azure/
+

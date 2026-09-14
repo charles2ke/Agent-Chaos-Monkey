@@ -1,0 +1,8 @@
+node_modules
+*.test.mjs
+server.test.mjs
+package-lock.json
+.env
+.env.*
+coverage
+.nyc_output
