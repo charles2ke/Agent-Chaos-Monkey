@@ -74,6 +74,19 @@ jobs:
           node cli/summarize-results.mjs results/regression/chaos-results.json --title 'Agent regression suite' >> "$GITHUB_STEP_SUMMARY"
           if [ "$demo" -ne 0 ]; then exit "$demo"; fi
           exit "$regression"
+      - name: Publish suite results as JUnit
+        if: always()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: |
+            results/chaos-results.xml
+            results/regression/chaos-results.xml
+          check_name: Resilience suites
+          annotate_only: true
+          detailed_summary: true
+          include_passed: true
+          require_tests: false
+          fail_on_failure: false
       - name: Upload reports and screenshot evidence
         if: always()
         uses: actions/upload-artifact@v6

@@ -374,8 +374,9 @@ then inconclusive results. All tests still run.
 frontend checks, both Playwright suites and the headless demo and regression suites
 with no production credentials. Its `resilience-reports-and-screenshots` artifact
 includes JSON/JUnit, browser reports and screenshots, and both suites are rendered
-into the job summary. Set the workflow job as a required repository check
-if you want it to block merges.
+into the job summary. `chaos-results.xml` is also published through a JUnit reporter,
+so each experiment surfaces as its own test row. Make the job a required status check
+in branch protection if you want a resilience regression to block the pull request.
 
 ### The regression baseline
 

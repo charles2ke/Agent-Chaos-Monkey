@@ -61,6 +61,17 @@ jobs:
           node cli/run-suite.mjs "$SUITE" --output results --timeout-ms "$TIMEOUT_MS" || status=$?
           node cli/summarize-results.mjs results/chaos-results.json --title "Nightly: $SUITE" >> "$GITHUB_STEP_SUMMARY"
           exit "$status"
+      - name: Publish suite results as JUnit
+        if: always()
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: results/chaos-results.xml
+          check_name: Nightly resilience suite
+          annotate_only: true
+          detailed_summary: true
+          include_passed: true
+          require_tests: false
+          fail_on_failure: false
       - name: Upload regression reports
         if: always()
         uses: actions/upload-artifact@v6
