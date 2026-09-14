@@ -170,11 +170,28 @@ export function check(sources, rows) {
   return problems;
 }
 
+// Merges two PackageReference maps; a package declared in both projects must not
+// disagree on version, since the dependency table has only one column to represent it.
+export function mergePackageReferences(testsPackages, apiPackages) {
+  const merged = new Map(testsPackages);
+  for (const [name, version] of apiPackages) {
+    const existing = merged.get(name);
+    if (existing !== undefined && existing !== version) {
+      throw new Error(
+        `Package "${name}" is referenced at conflicting versions across backend projects: ` +
+          `${existing} (tests) vs ${version} (api)`
+      );
+    }
+    merged.set(name, version);
+  }
+  return merged;
+}
+
 export function loadSources(opts) {
   const testsPackages = parsePackageReferences(readFileSync(opts.testsCsproj, 'utf8'));
   const apiXml = readFileSync(opts.apiCsproj, 'utf8');
   const apiPackages = parsePackageReferences(apiXml);
-  const backendPackages = new Map([...testsPackages, ...apiPackages]);
+  const backendPackages = mergePackageReferences(testsPackages, apiPackages);
   return {
     frontendLock: JSON.parse(readFileSync(opts.frontendLock, 'utf8')),
     backendPackages,
