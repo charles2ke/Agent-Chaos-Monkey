@@ -14,6 +14,8 @@ test.describe('agent tabs', () => {
     await page.getByRole('button', { name: 'Knowledge' }).click()
     await expect(page.getByRole('heading', { name: 'Chaos catalogue' })).toBeVisible()
     await expect(page.getByText('Expired auth (HTTP 401)')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Agent-layer catalogue' })).toBeVisible()
+    await expect(page.getByText('Prompt injection')).toBeVisible()
     await page.screenshot({ path: `${screenshots}/06-knowledge.png`, fullPage: true })
 
     await page.getByRole('button', { name: 'Tools' }).click()

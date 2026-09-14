@@ -80,8 +80,10 @@ for tool-call evidence. The guided demo also works on GitHub Pages without a bac
 | 🌊 Cascading failure | One connector outage that keeps every later dependency call failing |
 
 The last five are agent-layer faults: they target what the agent *does with* a tool response rather
-than the HTTP transport. Prompt injection is scored by the `noInjectedInstructionFollowed`
-assertion — the run fails only when a reply repeats the canary phrase that was planted in the
+than the HTTP transport. They run in Laboratory only, because grading them needs tool-call
+evidence Preview cannot observe; the Knowledge tab lists them as **Laboratory only** so the
+catalogue is visible even in the static GitHub Pages demo. Prompt injection is scored by the
+`noInjectedInstructionFollowed` assertion — the run fails only when a reply repeats the canary phrase that was planted in the
 payload, which is observed evidence, not a guess.
 
 ## 🚀 Quick start

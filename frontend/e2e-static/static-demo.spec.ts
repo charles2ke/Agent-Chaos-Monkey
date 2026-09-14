@@ -45,6 +45,10 @@ test.describe('static GitHub Pages build', () => {
 
     await page.getByRole('button', { name: 'Knowledge' }).click()
     await expect(page.getByRole('heading', { name: 'Chaos catalogue' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Agent-layer catalogue' })).toBeVisible()
+    await expect(page.getByText('Cascading failure')).toBeVisible()
+    await expect(page.getByText('Laboratory only').first()).toBeVisible()
+    await page.screenshot({ path: `${screenshots}/04-static-knowledge.png`, fullPage: true })
 
     await page.getByRole('button', { name: 'Tools' }).click()
     await expect(page.getByRole('radio', { name: /MCP\.FileSearch/ })).toBeVisible()
