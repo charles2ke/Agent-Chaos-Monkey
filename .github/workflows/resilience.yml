@@ -50,7 +50,7 @@ jobs:
         run: |
           npm ci
           npm test
-      - name: Run credential-free demo suite
+      - name: Run credential-free demo and regression suites
         shell: bash
         env:
           Llm__ApiKey: ''
@@ -66,7 +66,14 @@ jobs:
             if ! kill -0 "$api_pid" 2>/dev/null; then exit 2; fi
             sleep 1
           done
-          node cli/run-suite.mjs examples/demo-suite.json --output results
+          demo=0
+          node cli/run-suite.mjs examples/demo-suite.json --output results || demo=$?
+          regression=0
+          node cli/run-suite.mjs examples/agent-regression-suite.json --output results/regression || regression=$?
+          node cli/summarize-results.mjs results/chaos-results.json --title 'Demo suite' >> "$GITHUB_STEP_SUMMARY"
+          node cli/summarize-results.mjs results/regression/chaos-results.json --title 'Agent regression suite' >> "$GITHUB_STEP_SUMMARY"
+          if [ "$demo" -ne 0 ]; then exit "$demo"; fi
+          exit "$regression"
       - name: Upload reports and screenshot evidence
         if: always()
         uses: actions/upload-artifact@v6

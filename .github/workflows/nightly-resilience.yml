@@ -1,0 +1,70 @@
+name: Nightly resilience regression
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Suite file to run, relative to the repository root
+        type: string
+        default: examples/agent-regression-suite.json
+      timeout-ms:
+        description: Per-test runner timeout in milliseconds
+        type: string
+        default: '60000'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-resilience
+  cancel-in-progress: false
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Run regression suite
+        shell: bash
+        env:
+          SUITE: ${{ inputs.suite || 'examples/agent-regression-suite.json' }}
+          TIMEOUT_MS: ${{ inputs.timeout-ms || '60000' }}
+          # Supplied only for live-agent drift detection; the committed suite runs credential-free.
+          CHAOS_AGENT_API_KEY: ${{ secrets.CHAOS_AGENT_API_KEY }}
+          Llm__ApiKey: ''
+          ANTHROPIC_API_KEY: ''
+          OPENAI_API_KEY: ''
+          LabGateway__Enabled: ${{ vars.CHAOS_LAB_GATEWAY_ENABLED || 'false' }}
+        run: |
+          case "$SUITE" in
+            examples/*.json|suites/*.json) ;;
+            *) echo "Suite must be a JSON file under examples/ or suites/." >&2; exit 2 ;;
+          esac
+          dotnet run --project backend/ChaosMonkey.Api --no-launch-profile --urls http://localhost:5249 > /tmp/chaos-api.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..60}; do
+            if curl --fail --silent http://localhost:5249/api/health > /dev/null; then break; fi
+            if ! kill -0 "$api_pid" 2>/dev/null; then exit 2; fi
+            sleep 1
+          done
+          status=0
+          node cli/run-suite.mjs "$SUITE" --output results --timeout-ms "$TIMEOUT_MS" || status=$?
+          node cli/summarize-results.mjs results/chaos-results.json --title "Nightly: $SUITE" >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+      - name: Upload regression reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: nightly-resilience-reports
+          path: results/
+          retention-days: 14
