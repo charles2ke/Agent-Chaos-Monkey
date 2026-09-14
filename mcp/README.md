@@ -27,7 +27,7 @@ arguments, so a model cannot exfiltrate or forge them.
 | --- | --- | --- |
 | `CHAOS_API_URL` | `http://localhost:5249` | Base URL of the Chaos API. Must be HTTPS, or HTTP on loopback, with no credentials, query or fragment. |
 | `CHAOS_AGENT_API_KEY` | _(unset)_ | Credential forwarded to the agent under test. |
-| `CHAOS_TIMEOUT_MS` | `120000` | Per-request timeout in ms (1–600000). |
+| `CHAOS_TIMEOUT_MS` | `120000` | Per-request timeout in ms (1–600000). `run_lab_suite` applies it per test, not to the whole suite. |
 
 Register it with an MCP client, for example in `.vscode/mcp.json` or a client's
 `mcpServers` configuration:
@@ -55,6 +55,10 @@ Register it with an MCP client, for example in `.vscode/mcp.json` or a client's
 | `get_lab_capabilities` | Supported schema, execution modes, assertion kinds, gateway status and limits |
 | `run_lab_experiment` | Run a version 1 laboratory definition with evidence-backed assertions |
 | `run_lab_suite` | Run 1–20 saved regression tests and return the aggregate outcome |
+
+`run_lab_suite` executes each test as its own laboratory run and aggregates the
+outcomes, so every test gets a full timeout budget and the configured
+`CHAOS_AGENT_API_KEY`.
 
 Definitions accepted by `run_lab_experiment` and `run_lab_suite` use the same
 version 1 schema as [`examples/demo-suite.json`](../examples/demo-suite.json).

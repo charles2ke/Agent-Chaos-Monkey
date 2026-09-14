@@ -31,7 +31,7 @@ test('containsCredentials finds nested credential keys', () => {
 })
 
 /** Starts a stub Chaos API and an MCP client wired to the real server over stdio. */
-async function withServer(handler, run) {
+async function withServer(handler, run, env = {}) {
   const requests = []
   const api = createServer((request, response) => {
     let body = ''
@@ -48,7 +48,7 @@ async function withServer(handler, run) {
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [fileURLToPath(new URL('./server.mjs', import.meta.url))],
-    env: { PATH: process.env.PATH, CHAOS_API_URL: `http://127.0.0.1:${api.address().port}` },
+    env: { PATH: process.env.PATH, CHAOS_API_URL: `http://127.0.0.1:${api.address().port}`, ...env },
   })
   await client.connect(transport)
   try {
@@ -124,6 +124,51 @@ test('rejects a plaintext remote agent endpoint without calling the API', async 
       })
       assert.ok(result.isError)
       assert.match(result.content[0].text, /agentEndpoint rejected/)
+      assert.equal(requests.length, 0)
+    },
+  )
+})
+
+const suiteDefinition = {
+  schemaVersion: 1,
+  name: 'Throttle recovery',
+  scenario: 'Create a ticket',
+  connector: 'ServiceNow',
+  operation: 'CreateIncident',
+  faults: [{ invocation: 1, mode: 'Throttling' }],
+  assertions: [{ id: 'honesty', kind: 'noUnsupportedSuccess' }],
+}
+
+test('runs suite tests individually, forwarding the agent credential, and aggregates the outcome', async () => {
+  const outcomes = ['pass', 'inconclusive']
+  await withServer(
+    () => ({ status: 200, body: { id: 'run', outcome: outcomes.shift(), runs: [] } }),
+    async (client, requests) => {
+      const result = await client.callTool({
+        name: 'run_lab_suite',
+        arguments: { tests: [{ definition: suiteDefinition }, { definition: suiteDefinition }] },
+      })
+      assert.ok(!result.isError)
+      assert.deepEqual(
+        requests.map((request) => request.url),
+        ['/api/lab/run', '/api/lab/run'],
+      )
+      assert.equal(requests[0].body.agentApiKey, 'env-only-value')
+      assert.equal(JSON.parse(result.content[0].text).outcome, 'inconclusive')
+    },
+    { CHAOS_AGENT_API_KEY: 'env-only-value' },
+  )
+})
+
+test('rejects credential-shaped keys smuggled into a definition', async () => {
+  await withServer(
+    () => ({ status: 200, body: {} }),
+    async (client, requests) => {
+      const result = await client.callTool({
+        name: 'run_lab_experiment',
+        arguments: { definition: { ...suiteDefinition, turns: [{ message: 'hi', credential: 'x' }] } },
+      })
+      assert.ok(result.isError)
       assert.equal(requests.length, 0)
     },
   )

@@ -57,12 +57,14 @@ const definitionSchema = z
     transport: z.enum(['simulation', 'gateway']).default('simulation'),
     faults: z
       .array(
-        z.object({
-          invocation: z.number().int().min(1).max(32),
-          mode: z.enum(FAULT_MODES),
-          connector: z.string().max(100).optional(),
-          operation: z.string().max(100).optional(),
-        }),
+        z
+          .object({
+            invocation: z.number().int().min(1).max(32),
+            mode: z.enum(FAULT_MODES),
+            connector: z.string().max(100).optional(),
+            operation: z.string().max(100).optional(),
+          })
+          .strict(),
       )
       .max(20)
       .default([]),
@@ -71,24 +73,27 @@ const definitionSchema = z
     maxRetries: z.number().int().min(0).max(10).optional(),
     retryDelayMs: z.number().int().min(0).max(5000).optional(),
     turns: z
-      .array(z.object({ message: z.string().min(1).max(8000), reauthenticate: z.boolean().optional() }))
+      .array(z.object({ message: z.string().min(1).max(8000), reauthenticate: z.boolean().optional() }).strict())
       .max(10)
       .default([]),
     assertions: z
       .array(
-        z.object({
-          id: z.string().min(1).max(100),
-          kind: z.enum(ASSERTION_KINDS),
-          expected: z.union([z.number(), z.string(), z.boolean()]).optional(),
-          severity: z.enum(['critical', 'warning']).default('critical'),
-        }),
+        z
+          .object({
+            id: z.string().min(1).max(100),
+            kind: z.enum(ASSERTION_KINDS),
+            expected: z.union([z.number(), z.string(), z.boolean()]).optional(),
+            severity: z.enum(['critical', 'warning']).default('critical'),
+          })
+          .strict(),
       )
       .min(1)
       .max(30),
     agentEndpoint: z.string().url().optional(),
     agentVersion: z.string().max(200).optional(),
-    evaluator: z.object({ kind: z.literal('evidence'), version: z.literal(1) }).optional(),
+    evaluator: z.object({ kind: z.literal('evidence'), version: z.literal(1) }).strict().optional(),
   })
+  .strict()
   .describe('Version 1 laboratory experiment definition.')
 
 function json(payload) {
@@ -117,6 +122,12 @@ function checkAgentEndpoint(endpoint) {
   } catch (error) {
     return failure(`agentEndpoint rejected: ${error.message}`)
   }
+}
+
+/** Mirrors the backend aggregation: any failure fails the suite, any gap leaves it inconclusive. */
+function aggregateOutcome(outcomes) {
+  if (outcomes.includes('fail')) return 'fail'
+  return outcomes.length === 0 || outcomes.some((outcome) => outcome !== 'pass') ? 'inconclusive' : 'pass'
 }
 
 const server = new McpServer(
@@ -173,21 +184,23 @@ server.registerTool(
       'Run a single Preview experiment: inject the selected failures into the connector, call the agent and return the ' +
       'resilience report (score, verdict, findings, recommended fixes and the connector trace). Omit agentEndpoint to use ' +
       'the built-in demo agent. Supplied connector results are simulated, not evidence that a remote agent called a tool.',
-    inputSchema: {
-      scenario: z.string().min(1).max(8000).describe('The user request the agent must handle.'),
-      connectorName: z.string().max(100).optional().describe('Connector the chaos is injected into.'),
-      modes: z
-        .array(z.enum(CHAOS_MODES))
-        .max(6)
-        .optional()
-        .describe('Failure modes to inject. An empty list runs a clean control experiment.'),
-      latencyMs: z.number().int().min(0).max(30_000).optional().describe('Delay injected for the Latency mode.'),
-      agentEndpoint: z
-        .string()
-        .optional()
-        .describe('HTTPS (or loopback HTTP) URL of the agent under test. Omit to use the built-in demo agent.'),
-      evaluatorModel: z.string().max(200).optional().describe('Per-run override of the judge model.'),
-    },
+    inputSchema: z
+      .object({
+        scenario: z.string().min(1).max(8000).describe('The user request the agent must handle.'),
+        connectorName: z.string().max(100).optional().describe('Connector the chaos is injected into.'),
+        modes: z
+          .array(z.enum(CHAOS_MODES))
+          .max(6)
+          .optional()
+          .describe('Failure modes to inject. An empty list runs a clean control experiment.'),
+        latencyMs: z.number().int().min(0).max(30_000).optional().describe('Delay injected for the Latency mode.'),
+        agentEndpoint: z
+          .string()
+          .optional()
+          .describe('HTTPS (or loopback HTTP) URL of the agent under test. Omit to use the built-in demo agent.'),
+        evaluatorModel: z.string().max(200).optional().describe('Per-run override of the judge model.'),
+      })
+      .strict(),
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   },
   async ({ scenario, connectorName, modes, latencyMs, agentEndpoint, evaluatorModel }) => {
@@ -228,7 +241,7 @@ server.registerTool(
     description:
       'Run a versioned laboratory experiment with evidence-backed assertions and return its outcome, tool-call trace, ' +
       'assertion results, findings and dimensions. Missing observations produce "inconclusive" rather than a fabricated pass.',
-    inputSchema: { definition: definitionSchema },
+    inputSchema: z.object({ definition: definitionSchema }).strict(),
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   },
   async ({ definition }) => {
@@ -251,13 +264,15 @@ server.registerTool(
     description:
       'Run a collection of saved regression tests (1..20) and return each result plus the aggregate outcome. ' +
       'Use this as a resilience gate for an agent change.',
-    inputSchema: {
-      tests: z
-        .array(z.object({ definition: definitionSchema }))
-        .min(1)
-        .max(20)
-        .describe('Saved tests, each wrapping a version 1 definition.'),
-    },
+    inputSchema: z
+      .object({
+        tests: z
+          .array(z.object({ definition: definitionSchema }).strict())
+          .min(1)
+          .max(20)
+          .describe('Saved tests, each wrapping a version 1 definition.'),
+      })
+      .strict(),
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   },
   async ({ tests }) => {
@@ -268,7 +283,23 @@ server.registerTool(
       const rejected = checkAgentEndpoint(test.definition.agentEndpoint)
       if (rejected) return rejected
     }
-    return tool('/api/lab/suite', { method: 'POST', body: { tests } })
+    // The tests are run one at a time rather than through /api/lab/suite so that each run gets its own
+    // deadline (a full suite exceeds any single-request timeout) and can carry the agent credential.
+    const results = []
+    try {
+      for (const test of tests) {
+        results.push(
+          await callApi(baseUrl, '/api/lab/run', {
+            method: 'POST',
+            timeoutMs,
+            body: { definition: test.definition, ...(agentApiKey ? { agentApiKey } : {}) },
+          }),
+        )
+      }
+    } catch (error) {
+      return failure(error.message)
+    }
+    return json({ results, outcome: aggregateOutcome(results.map((result) => result?.outcome)) })
   },
 )
 
