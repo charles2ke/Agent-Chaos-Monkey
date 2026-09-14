@@ -282,6 +282,28 @@ reports; URL credentials and query strings are not reproducible inputs. Avoid pu
 secrets or personal data into scenarios, tool payloads or replies in the first place,
 and review exports before sharing them.
 
+### Connecting a connector or API
+
+There is no connector catalogue or OAuth flow. A "connector" is simply a named
+target that an operator maps to one exact HTTP endpoint:
+
+1. **Simulated (default).** Type any connector/operation name in the definition,
+   for example `ServiceNow` / `CreateIncident`. Nothing external is called and the
+   controlled demo boundary returns fixtures, so results are not evidence of real
+   tool execution.
+2. **Real API.** Declare the endpoint server-side as a `LabGateway:Operations`
+   entry (see the table below), set the definition's transport to `gateway`, and
+   reference the same connector/operation names. Every declared target needs
+   exactly one allowlisted mapping with a safe URL and fixed method, otherwise the
+   run is rejected.
+3. **Agent side.** The agent routes its tool call to the supplied `gateway.url`
+   using the ephemeral `gateway.capability` bearer token, as shown below. The
+   gateway injects the fault, forwards allowed calls upstream and records the trace.
+
+Anything reachable over plain HTTP can be a target; protocols or custom auth flows
+the gateway cannot express need a small proxy in front of them that is allowlisted
+instead.
+
 ### Opt-in gateway integration
 
 The gateway is disabled for external agents by default. A blank agent endpoint uses
