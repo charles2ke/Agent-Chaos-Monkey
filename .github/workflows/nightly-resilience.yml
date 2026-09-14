@@ -48,6 +48,7 @@ jobs:
             "$repository_root"/examples/*.json|"$repository_root"/suites/*.json) ;;
             *) echo "Suite must be a JSON file under examples/ or suites/." >&2; exit 2 ;;
           esac
+          suite_display=${suite_path#"$repository_root"/}
           SUITE_PATH="$suite_path" node --input-type=module - <<'NODE'
           import { readFile } from 'node:fs/promises'
 
@@ -75,7 +76,7 @@ jobs:
           done
           status=0
           node cli/run-suite.mjs "$suite_path" --output results --timeout-ms "$TIMEOUT_MS" || status=$?
-          node cli/summarize-results.mjs results/chaos-results.json --title "Nightly: $suite_path" >> "$GITHUB_STEP_SUMMARY"
+          node cli/summarize-results.mjs results/chaos-results.json --title "Nightly: $suite_display" >> "$GITHUB_STEP_SUMMARY"
           exit "$status"
       - name: Publish suite results as JUnit
         if: always()
