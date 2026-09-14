@@ -44,7 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$SUITE" in
-            /*|*'..'*) echo "Suite path must be relative and cannot contain '..'." >&2; exit 2 ;;
+            /*|..|../*|*/../*|*/..) echo "Suite path must be relative and cannot contain '..'." >&2; exit 2 ;;
           esac
           repository_root=$(realpath -e -- "$GITHUB_WORKSPACE")
           if ! suite_path=$(realpath -e -- "$repository_root/$SUITE"); then
@@ -65,8 +65,7 @@ jobs:
           }
           const hasAgentEndpoint = value => value && typeof value === 'object' &&
             Object.entries(value).some(([key, child]) =>
-              (key === 'agentEndpoint' && typeof child === 'string' && child.trim()) ||
-              hasAgentEndpoint(child))
+              key === 'agentEndpoint' || hasAgentEndpoint(child))
           const { tests, ...suiteOptions } = suite
           if (hasAgentEndpoint(suiteOptions)) {
             throw new Error('Nightly resilience suite must not define agentEndpoint.')
