@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { ChaosModeId, ExperimentResult } from '../api'
 import { AlertIcon, SendIcon, SparkleIcon } from './icons'
 import { ReportCard } from './ReportCard'
@@ -18,6 +19,7 @@ interface PreviewPaneProps {
   error: string | null
   connectorName: string
   selectedModes: ChaosModeId[]
+  assistant: ReactNode
 }
 
 export function PreviewPane(props: PreviewPaneProps) {
@@ -28,12 +30,14 @@ export function PreviewPane(props: PreviewPaneProps) {
           <h2 className="session__title">Preview</h2>
           <p className="session__target">Target · {props.targetLabel}</p>
         </div>
-        <button type="button" className="button button--ghost" onClick={props.onClear}>
+        <button type="button" className="button button--ghost" onClick={props.onClear} disabled={props.running}>
           Clear session
         </button>
       </div>
 
-      <div className="session__thread" role="log" aria-live="polite">
+      <div className="session__thread">
+        {props.assistant}
+        <div role="log" aria-live="polite">
         {props.turns.length === 0 && (
           <div className="banner">
             <span className="banner__mark" aria-hidden="true">
@@ -129,6 +133,7 @@ export function PreviewPane(props: PreviewPaneProps) {
             </div>
           </article>
         )}
+        </div>
       </div>
 
       {props.error && <p className="session__error">{props.error}</p>}

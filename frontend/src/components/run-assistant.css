@@ -1,0 +1,87 @@
+.run-assistant {
+  padding: 18px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--accent-soft), var(--surface));
+  overflow-wrap: anywhere;
+}
+
+.run-assistant__heading,
+.run-assistant__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.run-assistant__eyebrow {
+  color: var(--accent);
+  font: 11px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.run-assistant h3,
+.run-assistant h4 {
+  margin: 4px 0;
+}
+
+.run-assistant p {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.run-assistant summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.run-assistant summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.run-assistant__plan {
+  padding-left: 24px;
+  font-size: 12px;
+}
+
+.run-assistant__plan li {
+  padding: 5px 0;
+}
+
+.run-assistant__plan strong,
+.run-assistant__plan li > span + span {
+  margin-left: 12px;
+}
+
+.run-assistant__plan strong + span {
+  margin-left: 12px;
+}
+
+.run-assistant__regression {
+  color: var(--danger);
+}
+
+.run-assistant__actions {
+  justify-content: flex-start;
+  margin-top: 14px;
+}
+
+.run-assistant__results,
+.run-assistant__insight {
+  border-top: 1px solid var(--border-muted);
+  margin-top: 16px;
+  padding-top: 12px;
+}
+
+.run-assistant .run-assistant__status {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.run-assistant__context {
+  font-family: var(--mono);
+}

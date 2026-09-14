@@ -41,6 +41,24 @@ Agent Chaos Monkey provides **resilience testing of AI agents**. Use Preview for
 
 There is a built-in `/api/demo-agent`, so you can demo everything without wiring up a real agent first.
 
+### Guided runs in Preview
+
+The **Run assistant** turns your selected faults into an approval-based plan: one healthy baseline,
+then one check per fault. Isolating faults prevents a higher-priority failure from masking another.
+Review the plan and choose **Approve & run** to execute it sequentially with a snapshot of your
+current scenario, target, and settings. **Run chaos** still runs a single experiment as before.
+
+Progress shows each check's status and score difference from the baseline. After completion,
+rule-based guidance surfaces the lowest-scoring report's recommendation and offers to prepare a
+fault not covered by that plan. Preparing a follow-up only changes the selection; it never runs
+automatically. The assistant does not make additional LLM calls or change your agent.
+
+Use a sandbox target: each check sends a separate request and may cause real actions or costs.
+**Stop after current check** skips queued checks without cancelling the active request; request
+or transport errors also stop the plan. Runs stay in the current session's Activity history.
+Preview evaluates simulated connector results, not evidence of real tool execution; use Laboratory
+for tool-call evidence. The guided demo also works on GitHub Pages without a backend.
+
 ## 🧨 Chaos modes
 
 | Mode | What is injected |

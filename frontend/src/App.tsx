@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { api, extractReply } from './api'
-import type { ChaosModeId, ChaosModeInfo, EvaluatorInfo, ExperimentResult } from './api'
+import type { ChaosModeId, ChaosModeInfo, EvaluatorInfo, ExperimentRequest, ExperimentResult } from './api'
 import { ActivityPage } from './components/ActivityPage'
 import { ChaosPanel } from './components/ChaosPanel'
 import { InstructionsPage } from './components/InstructionsPage'
@@ -12,6 +12,9 @@ import { SideNav } from './components/SideNav'
 import { ToolsPage } from './components/ToolsPage'
 import { TopBar } from './components/TopBar'
 import { LaboratoryPage } from './components/LaboratoryPage'
+import { RunAssistant } from './components/RunAssistant'
+import { buildAssistantPlan } from './runAssistant'
+import type { AssistantRun } from './runAssistant'
 import type { TabId } from './tabs'
 
 const defaultScenario = 'Create a support ticket for my broken laptop'
@@ -31,6 +34,10 @@ export default function App() {
   const [history, setHistory] = useState<ExperimentResult[]>([])
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [assistantRun, setAssistantRun] = useState<AssistantRun | null>(null)
+  const [stopRequested, setStopRequested] = useState(false)
+  const executionLocked = useRef(false)
+  const stopAfterCurrent = useRef(false)
 
   useEffect(() => {
     api.chaosModes().then(setModes).catch(() => setModes([]))
@@ -54,25 +61,22 @@ export default function App() {
     )
   }
 
-  async function runExperiment() {
-    const prompt = scenario.trim()
-    if (!prompt || running) return
+  function currentRequest(): ExperimentRequest {
+    return {
+      agentEndpoint: agentEndpoint.trim() || undefined,
+      agentApiKey: agentApiKey.trim() || undefined,
+      scenario: scenario.trim(),
+      connectorName,
+      modes: [...selectedModes],
+      latencyMs,
+      evaluatorModel: evaluatorModel.trim() || undefined,
+    }
+  }
 
-    setRunning(true)
-    setError(null)
-    setTurns((current) => [...current, { kind: 'user', text: prompt }])
-
+  async function executeExperiment(request: ExperimentRequest) {
+    setTurns((current) => [...current, { kind: 'user', text: request.scenario }])
     try {
-      const result: ExperimentResult = await api.runExperiment({
-        agentEndpoint: agentEndpoint.trim() || undefined,
-        agentApiKey: agentApiKey.trim() || undefined,
-        scenario: prompt,
-        connectorName,
-        modes: selectedModes,
-        latencyMs,
-        evaluatorModel: evaluatorModel.trim() || undefined,
-      })
-
+      const result = await api.runExperiment(request)
       setTurns((current) => [
         ...current,
         {
@@ -82,11 +86,86 @@ export default function App() {
         },
       ])
       setHistory((current) => [result, ...current])
+      return result
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'The experiment failed.'
       setError(message)
       setTurns((current) => [...current, { kind: 'error', text: message }])
+      throw caught
+    }
+  }
+
+  async function runExperiment() {
+    if (!scenario.trim() || executionLocked.current) return
+    executionLocked.current = true
+    setRunning(true)
+    setError(null)
+    try {
+      await executeExperiment(currentRequest())
+    } catch {
+      // executeExperiment records errors in the transcript.
     } finally {
+      executionLocked.current = false
+      setRunning(false)
+    }
+  }
+
+  async function runAssistant() {
+    if (!scenario.trim() || selectedModes.length === 0 || executionLocked.current) return
+    executionLocked.current = true
+    stopAfterCurrent.current = false
+    setStopRequested(false)
+    setRunning(true)
+    setError(null)
+    const request = currentRequest()
+    const steps = buildAssistantPlan(selectedModes, modes)
+    setAssistantRun({
+      scenario: request.scenario,
+      connectorName: request.connectorName,
+      targetLabel,
+      status: 'running',
+      steps,
+    })
+    let status: AssistantRun['status'] = 'completed'
+
+    try {
+      for (let index = 0; index < steps.length; index++) {
+        if (stopAfterCurrent.current) {
+          status = 'stopped'
+          break
+        }
+        setAssistantRun((current) => current && ({
+          ...current,
+          steps: current.steps.map((step, i) => i === index ? { ...step, status: 'running' } : step),
+        }))
+        try {
+          const result = await executeExperiment({ ...request, modes: steps[index].modes })
+          setAssistantRun((current) => current && ({
+            ...current,
+            steps: current.steps.map((step, i) =>
+              i === index ? { ...step, status: result.agent.transportError ? 'failed' : 'completed', result } : step),
+          }))
+          if (result.agent.transportError) {
+            status = 'failed'
+            break
+          }
+        } catch {
+          status = 'failed'
+          setAssistantRun((current) => current && ({
+            ...current,
+            steps: current.steps.map((step, i) => i === index ? { ...step, status: 'failed' } : step),
+          }))
+          break
+        }
+      }
+    } finally {
+      setAssistantRun((current) => current && ({
+        ...current,
+        status,
+        steps: current.steps.map((step) =>
+          step.status === 'queued' ? { ...step, status: 'skipped' } : step),
+      }))
+      executionLocked.current = false
       setRunning(false)
     }
   }
@@ -124,10 +203,27 @@ export default function App() {
               onClear={() => {
                 setTurns([])
                 setError(null)
+                setAssistantRun(null)
               }}
               error={error}
               connectorName={connectorName}
               selectedModes={selectedModes}
+              assistant={
+                <RunAssistant
+                  modes={modes}
+                  selectedModes={selectedModes}
+                  running={running}
+                  canRun={Boolean(scenario.trim())}
+                  run={assistantRun}
+                  stopRequested={stopRequested}
+                  onRun={runAssistant}
+                  onStop={() => {
+                    stopAfterCurrent.current = true
+                    setStopRequested(true)
+                  }}
+                  onPrepareMode={(mode) => setSelectedModes([mode])}
+                />
+              }
             />
           </main>
         ) : activeTab !== 'Laboratory' ? (

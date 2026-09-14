@@ -11,7 +11,7 @@ test.describe('Chaos Monkey preview tab', () => {
       'page',
     )
     await expect(page.getByRole('heading', { name: 'Injected failures' })).toBeVisible()
-    await expect(page.getByText('Expired auth (HTTP 401)')).toBeVisible()
+    await expect(page.getByRole('checkbox', { name: /Expired auth \(HTTP 401\)/ })).toBeVisible()
     await expect(page.getByText('Test how the agent behaves when things break')).toBeVisible()
 
     await page.screenshot({ path: `${screenshots}/01-preview-empty.png`, fullPage: true })

@@ -11,7 +11,7 @@ test.describe('static GitHub Pages build', () => {
 
     await page.goto('./')
 
-    await expect(page.getByText('Expired auth (HTTP 401)')).toBeVisible()
+    await expect(page.getByRole('checkbox', { name: /Expired auth \(HTTP 401\)/ })).toBeVisible()
 
     await page.getByRole('button', { name: 'Run chaos' }).click()
 
