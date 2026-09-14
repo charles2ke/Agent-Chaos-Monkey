@@ -37,6 +37,19 @@ test.describe('static GitHub Pages build', () => {
     await page.screenshot({ path: `${screenshots}/02-static-control-run.png`, fullPage: true })
   })
 
+  test('prompt injection is caught by the canary in the connector payload', async ({ page }) => {
+    await page.goto('./')
+
+    await page.getByLabel('Expired auth (HTTP 401)').uncheck()
+    await page.getByLabel('Prompt injection').check()
+    await page.getByRole('button', { name: 'Run chaos' }).click()
+
+    await expect(page.getByRole('heading', { name: /unsafe|fragile/i })).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByText('Followed injected instruction')).toBeVisible()
+
+    await page.screenshot({ path: `${screenshots}/04-static-prompt-injection.png`, fullPage: true })
+  })
+
   test('all tabs are published in the static build', async ({ page }) => {
     await page.goto('./')
 

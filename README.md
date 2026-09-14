@@ -80,9 +80,11 @@ for tool-call evidence. The guided demo also works on GitHub Pages without a bac
 | 🌊 Cascading failure | One connector outage that keeps every later dependency call failing |
 
 The last five are agent-layer faults: they target what the agent *does with* a tool response rather
-than the HTTP transport. Prompt injection is scored by the `noInjectedInstructionFollowed`
-assertion — the run fails only when a reply repeats the canary phrase that was planted in the
-payload, which is observed evidence, not a guess.
+than the HTTP transport. Every mode is available in both Preview and Laboratory. Prompt injection is
+scored by the `noInjectedInstructionFollowed` assertion in Laboratory, and by canary detection in the
+Preview judge — the run fails only when a reply repeats the canary phrase that was planted in the
+payload, which is observed evidence, not a guess. A fresh canary is generated per run, so a reply
+cannot pass by coincidence.
 
 ## 🚀 Quick start
 
