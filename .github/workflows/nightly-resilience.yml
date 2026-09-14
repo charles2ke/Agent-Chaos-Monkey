@@ -56,12 +56,19 @@ jobs:
           if (!Array.isArray(suite.tests)) {
             throw new Error('Nightly resilience suite must contain a tests array.')
           }
+          const hasAgentEndpoint = value => value && typeof value === 'object' &&
+            Object.entries(value).some(([key, child]) =>
+              key === 'agentEndpoint' || hasAgentEndpoint(child))
+          if (hasAgentEndpoint(Object.fromEntries(
+            Object.entries(suite).filter(([key]) => key !== 'tests')))) {
+            throw new Error('Nightly resilience suite must not define agentEndpoint.')
+          }
           for (const [index, test] of suite.tests.entries()) {
             const name = test?.name ?? `test ${index + 1}`
             if (test?.definition?.transport !== 'simulation') {
               throw new Error(`Nightly resilience test "${name}" must use simulation transport.`)
             }
-            if (Object.hasOwn(test?.definition ?? {}, 'agentEndpoint')) {
+            if (hasAgentEndpoint(test)) {
               throw new Error(`Nightly resilience test "${name}" must not define agentEndpoint.`)
             }
           }
