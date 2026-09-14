@@ -25,7 +25,14 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 
 builder.Services.AddHttpClient(AgentInvoker.HttpClientName,
-    client => client.Timeout = TimeSpan.FromMinutes(3));
+    client => client.Timeout = TimeSpan.FromMinutes(3))
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        AllowAutoRedirect = false,
+        UseCookies = false,
+        UseDefaultCredentials = false,
+        UseProxy = false
+    });
 builder.Services.AddHttpClient(LlmEvaluator.HttpClientName);
 builder.Services.AddLab(builder.Configuration);
 
@@ -68,6 +75,7 @@ app.MapPost("/api/demo-agent", (AgentPayload payload, DemoAgent agent) =>
 app.MapPost("/api/experiments", async (
     ExperimentRequest request,
     ExperimentRunner runner,
+    IOptions<LabGatewayOptions> gatewayOptions,
     CancellationToken cancellationToken) =>
 {
     if (string.IsNullOrWhiteSpace(request.Scenario))
@@ -77,7 +85,7 @@ app.MapPost("/api/experiments", async (
 
     try
     {
-        AgentInvoker.TryParseEndpoint(request.AgentEndpoint, out _);
+        AgentInvoker.TryParseEndpoint(request.AgentEndpoint, gatewayOptions.Value.AgentEndpoints, out _);
     }
     catch (ArgumentException ex)
     {

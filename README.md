@@ -326,6 +326,30 @@ reports; URL credentials and query strings are not reproducible inputs. Avoid pu
 secrets or personal data into scenarios, tool payloads or replies in the first place,
 and review exports before sharing them.
 
+### Connecting a connector or API
+
+There is no connector catalogue or OAuth flow. A "connector" is simply a named
+target that an operator maps to one exact HTTP endpoint:
+
+1. **Simulated (default).** Type any connector/operation name in the definition,
+   for example `ServiceNow` / `CreateIncident`. No connector or upstream API is
+   called; if you configured an external `AgentEndpoint`, the runner still POSTs
+   the turn to that agent, but the controlled demo boundary returns fixtures. Those
+   results are not evidence of real tool execution.
+2. **Real API.** Declare the endpoint server-side as a `LabGateway:Operations`
+   entry (see the table below), set the definition's transport to `gateway`, and
+   reference the same connector/operation names. Every declared target needs
+   exactly one allowlisted mapping with a safe URL and fixed method, otherwise the
+   run is rejected.
+3. **Agent side.** The agent routes its tool call to the supplied `gateway.url`
+   using the ephemeral `gateway.capability` bearer token, as shown below. The
+   gateway injects the fault, forwards allowed calls upstream and records the trace.
+
+Any safe HTTP(S) endpoint can be a gateway target; Copilot Studio connectors are not
+connected by catalogue or OAuth here. Test one through an allowlisted Copilot Studio
+agent endpoint that uses the connector, or put a small allowlisted HTTPS proxy in
+front of protocols or custom auth flows the gateway cannot express.
+
 ### Opt-in gateway integration
 
 The gateway is disabled for external agents by default. A blank agent endpoint uses
@@ -337,7 +361,7 @@ server-side in the `LabGateway` configuration section:
 | --- | --- |
 | `LabGateway__Enabled=true` | Explicitly enable external gateway calls |
 | `LabGateway__PublicBaseUrl` | Trusted externally reachable URL of this API, never derived from a request Host header |
-| `LabGateway__AgentEndpoints__0` | Exact allowlisted agent URL, also required for external simulated-fixture runs |
+| `LabGateway__AgentEndpoints__0` | Exact safe allowlisted agent URL, required for all external agent calls |
 | `LabGateway__Operations__0__Connector` | Connector identifier, e.g. `ServiceNow` |
 | `LabGateway__Operations__0__Operation` | Operation identifier, e.g. `CreateIncident` |
 | `LabGateway__Operations__0__Url` | Exact disposable test upstream URL |
