@@ -29,6 +29,12 @@ cd ../..
 node cli/run-suite.mjs examples/gateway-suite.json --url http://127.0.0.1:5249 --output results/gateway
 ```
 
+The agent only ever calls the gateway origin it was configured with, which defaults to
+`http://127.0.0.1:5249`. Set `--gateway-base` (or `CHAOS_GATEWAY_BASE`) to match
+`LabGateway__PublicBaseUrl` when the API is hosted elsewhere. The turn payload supplies the run
+identifier; the host is never taken from the payload, so a tampered payload cannot redirect the
+agent's tool call at another service.
+
 Expected output:
 
 ```

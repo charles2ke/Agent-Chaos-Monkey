@@ -28,19 +28,38 @@ interface ChaosPayload {
   gateway?: ChaosGateway
 }
 
-// The gateway URL arrives in the activity payload, so it is validated before use: only the
-// laboratory callback path on an HTTPS host is called, without credentials, query or fragment.
-function safeGatewayUrl(value: string): string {
-  const url = new URL(value)
+// The gateway origin is trusted configuration, never taken from an activity payload.
+const gatewayOrigin = (() => {
+  const url = new URL(process.env.CHAOS_GATEWAY_BASE ?? 'https://localhost')
   const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
-  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback)) throw new Error('Unsupported gateway URL.')
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback)) throw new Error('Unsupported gateway base.')
+  if (url.username || url.password || url.search || url.hash) throw new Error('Unsupported gateway base.')
+  return url.origin
+})()
+
+// Only the run identifier is taken from the activity payload, and only once the payload's origin
+// matches the trusted gateway origin. The request URL itself is rebuilt from configuration, so no
+// attacker-chosen text can reach it.
+const runIdPattern = /^\/api\/lab\/gateway\/([a-f0-9]{1,64})$/
+function gatewayRunId(value: string): string {
+  const url = new URL(value)
+  if (url.origin !== gatewayOrigin) throw new Error('Unsupported gateway URL.')
   if (url.username || url.password || url.search || url.hash) throw new Error('Unsupported gateway URL.')
-  if (!/\/api\/lab\/gateway\/[a-f0-9]{1,64}$/.test(url.pathname)) throw new Error('Unsupported gateway URL.')
-  return url.toString()
+  const match = runIdPattern.exec(url.pathname)
+  if (match === null) throw new Error('Unsupported gateway URL.')
+  const alphabet = '0123456789abcdef'
+  let runId = ''
+  for (const character of match[1]) {
+    const index = alphabet.indexOf(character)
+    if (index < 0) throw new Error('Unsupported gateway URL.')
+    runId += alphabet[index]
+  }
+  return runId
 }
 
 async function callTool(gateway: ChaosGateway, args: Record<string, unknown>) {
-  const response = await fetch(safeGatewayUrl(gateway.url), {
+  const url = `${gatewayOrigin}/api/lab/gateway/${gatewayRunId(gateway.url)}`
+  const response = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: 'Bearer ' + gateway.capability },
     body: JSON.stringify({

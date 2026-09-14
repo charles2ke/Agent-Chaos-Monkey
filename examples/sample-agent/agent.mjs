@@ -7,17 +7,23 @@
 // produces observed evidence (real tool attempts, statuses and side-effect ids), not `inconclusive`.
 //
 // Usage: node examples/sample-agent/agent.mjs [--port 5250] [--profile resilient|naive|optimistic]
+//        [--gateway-base http://127.0.0.1:5249]
 import { createServer } from 'node:http'
 
+const usage =
+  'Usage: node examples/sample-agent/agent.mjs [--port 5250] [--profile resilient|naive|optimistic] ' +
+  '[--gateway-base http://127.0.0.1:5249]'
 const args = process.argv.slice(2)
 let port = 5250
 let profile = 'resilient'
+let gatewayBase = process.env.CHAOS_GATEWAY_BASE ?? 'http://127.0.0.1:5249'
 while (args.length) {
   const flag = args.shift()
   if (flag === '--port' && args.length) port = Number(args.shift())
   else if (flag === '--profile' && args.length) profile = args.shift()
+  else if (flag === '--gateway-base' && args.length) gatewayBase = args.shift()
   else {
-    console.error('Usage: node examples/sample-agent/agent.mjs [--port 5250] [--profile resilient|naive|optimistic]')
+    console.error(usage)
     process.exit(2)
   }
 }
@@ -30,15 +36,9 @@ if (!['resilient', 'naive', 'optimistic'].includes(profile)) {
   process.exit(2)
 }
 
-const clampDelay = (value, fallback) =>
-  Number.isInteger(value) && value >= 0 && value <= 5_000 ? value : fallback
-const sleep = (ms) => new Promise((done) => setTimeout(done, clampDelay(ms, 0)))
-const retryable = new Set([429, 500, 502, 503, 504])
-
-// The gateway URL arrives in the turn payload, so it is treated as untrusted input: only the
-// laboratory callback path on an HTTPS host (or loopback during development) is ever called, and
-// credentials, query strings and fragments are rejected.
-function safeGatewayUrl(value) {
+// The gateway origin is trusted configuration, never taken from a turn payload. It is normalised
+// once at start-up so every outbound tool call targets exactly this host.
+function trustedOrigin(value) {
   let url
   try {
     url = new URL(value)
@@ -48,15 +48,53 @@ function safeGatewayUrl(value) {
   const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
   if (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback)) return null
   if (url.username || url.password || url.search || url.hash) return null
-  if (url.pathname.includes('..') || !/\/api\/lab\/gateway\/[a-f0-9]{1,64}$/.test(url.pathname)) return null
-  return url.toString()
+  return url.origin
+}
+
+const gatewayOrigin = trustedOrigin(gatewayBase)
+if (gatewayOrigin === null) {
+  console.error('Gateway base must be an HTTPS origin, or an HTTP loopback origin, with no credentials.')
+  process.exit(2)
+}
+
+const clampDelay = (value, fallback) =>
+  Number.isInteger(value) && value >= 0 && value <= 5_000 ? value : fallback
+const sleep = (ms) => new Promise((done) => setTimeout(done, clampDelay(ms, 0)))
+const retryable = new Set([429, 500, 502, 503, 504])
+
+// The gateway URL arrives in the turn payload, so it is treated as untrusted input. Only the run
+// identifier is taken from it, and only after the payload's origin has been confirmed to be the
+// trusted gateway origin; the request URL itself is rebuilt from configuration.
+const runIdPattern = /^\/api\/lab\/gateway\/([a-f0-9]{1,64})$/
+function gatewayRunId(value) {
+  let url
+  try {
+    url = new URL(value)
+  } catch {
+    return null
+  }
+  if (url.origin !== gatewayOrigin) return null
+  if (url.username || url.password || url.search || url.hash) return null
+  const match = runIdPattern.exec(url.pathname)
+  if (match === null) return null
+  // Rebuilt character by character from a fixed alphabet so the outbound URL cannot carry any
+  // attacker-chosen text, even if the regular expression above were later relaxed.
+  const alphabet = '0123456789abcdef'
+  let runId = ''
+  for (const character of match[1]) {
+    const index = alphabet.indexOf(character)
+    if (index < 0) return null
+    runId += alphabet[index]
+  }
+  return runId
 }
 
 // Calls the laboratory tool boundary once. The capability is short lived, scoped to a single run,
 // and is never logged or echoed back to the user.
 async function callTool(gateway, toolArguments) {
-  const url = safeGatewayUrl(gateway.url)
-  if (url === null) throw new Error('Unsupported gateway URL.')
+  const runId = gatewayRunId(gateway.url)
+  if (runId === null) throw new Error('Unsupported gateway URL.')
+  const url = `${gatewayOrigin}/api/lab/gateway/${runId}`
   const headers = { 'content-type': 'application/json' }
   headers.authorization = 'Bearer ' + gateway.capability
   const response = await fetch(url, {
@@ -93,7 +131,7 @@ function sideEffectId(body) {
 
 export async function handleTurn(payload) {
   const gateway = payload?.gateway
-  if (!gateway?.url || !gateway?.capability || safeGatewayUrl(gateway.url) === null) {
+  if (!gateway?.url || !gateway?.capability || gatewayRunId(gateway.url) === null) {
     return 'No tool gateway was supplied, so I cannot perform the requested action and nothing was created.'
   }
   const maxRetries = Number.isInteger(payload.maxRetries) ? Math.min(payload.maxRetries, 5) : 2
