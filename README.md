@@ -51,7 +51,9 @@ current scenario, target, and settings. **Run chaos** still runs a single experi
 Progress shows each check's status and score difference from the baseline. After completion,
 rule-based guidance surfaces the lowest-scoring report's recommendation and offers to prepare a
 fault not covered by that plan. Preparing a follow-up only changes the selection; it never runs
-automatically. The assistant does not make additional LLM calls or change your agent.
+automatically. The assistant does not add a separate planning call, but each check (the baseline
+plus one per fault) still calls `/api/experiments`, so if an LLM evaluator is configured it is
+invoked once per check — N faults means N+1 evaluator calls, which affects latency and cost.
 
 Use a sandbox target: each check sends a separate request and may cause real actions or costs.
 **Stop after current check** skips queued checks without cancelling the active request; request
