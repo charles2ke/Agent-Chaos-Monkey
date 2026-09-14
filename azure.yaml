@@ -23,8 +23,7 @@ hooks:
       run: |
         $ErrorActionPreference = 'Stop'
         if ([string]::IsNullOrEmpty($env:SERVICE_API_URI)) {
-          Write-Error "SERVICE_API_URI is not set; cannot wire the frontend to the API."
-          exit 1
+          throw "SERVICE_API_URI is not set; cannot wire the frontend to the API."
         }
         Set-Content -Path frontend/.env.production -Value "VITE_API_BASE_URL=$env:SERVICE_API_URI"
       interactive: false

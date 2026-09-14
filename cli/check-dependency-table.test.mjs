@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { runCheck } from './check-dependency-table.mjs';
+import { runCheck, mergePackageReferences } from './check-dependency-table.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SCRATCH_ROOT = resolve(HERE, '.check-dependency-table-tests');
@@ -164,6 +164,60 @@ test('throws a clear error when the README has no dependency table', () => {
   });
   try {
     assert.throws(() => runCheck(fx.opts), /Could not find .* table/);
+  } finally {
+    fx.cleanup();
+  }
+});
+
+test('mergePackageReferences: combines packages declared in only one project', () => {
+  const merged = mergePackageReferences(
+    new Map([['xunit', '2.9.3']]),
+    new Map([['Azure.Identity', '1.21.0']])
+  );
+  assert.deepEqual(
+    [...merged.entries()].sort(),
+    [['Azure.Identity', '1.21.0'], ['xunit', '2.9.3']]
+  );
+});
+
+test('mergePackageReferences: agreeing versions for the same package are kept', () => {
+  const merged = mergePackageReferences(
+    new Map([['Azure.Identity', '1.21.0']]),
+    new Map([['Azure.Identity', '1.21.0']])
+  );
+  assert.equal(merged.get('Azure.Identity'), '1.21.0');
+});
+
+test('mergePackageReferences: throws when the two projects disagree on a version', () => {
+  assert.throws(
+    () =>
+      mergePackageReferences(
+        new Map([['Azure.Identity', '1.20.0']]),
+        new Map([['Azure.Identity', '1.21.0']])
+      ),
+    /conflicting versions.*1\.20\.0.*1\.21\.0/s
+  );
+});
+
+test('loadSources surfaces a version conflict between apiCsproj and testsCsproj', () => {
+  const fx = makeFixture('conflict', {
+    testsCsproj: `<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Azure.Identity" Version="1.20.0" />
+  </ItemGroup>
+</Project>
+`,
+    apiCsproj: `<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Azure.Identity" Version="1.21.0" />
+  </ItemGroup>
+</Project>
+`,
+  });
+  try {
+    assert.throws(() => runCheck(fx.opts), /conflicting versions/);
   } finally {
     fx.cleanup();
   }
