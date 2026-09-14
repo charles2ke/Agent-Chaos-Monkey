@@ -8,6 +8,9 @@ param apiImageName string
 param apiServiceName string
 param webServiceName string
 
+@description('Object ID of the principal running azd; granted AcrPush on the registry so a local image build can be pushed. Leave empty to skip.')
+param principalId string = ''
+
 var placeholderImage = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 var effectiveApiImage = empty(apiImageName) ? placeholderImage : apiImageName
 
@@ -54,6 +57,8 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' =
 
 // Built-in AcrPull role definition ID.
 var acrPullRoleId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
+// Built-in AcrPush role definition ID.
+var acrPushRoleId = '8311e382-0749-4cb8-b61a-304f252e45ec'
 
 resource acrPullAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(containerRegistry.id, apiIdentity.id, acrPullRoleId)
@@ -62,6 +67,17 @@ resource acrPullAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' 
     principalId: apiIdentity.properties.principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', acrPullRoleId)
+  }
+}
+
+// Grants the principal running `azd` permission to push the locally built image, so `azd up` can
+// complete without a separate manual role grant. Skipped when principalId is not supplied.
+resource acrPushAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(principalId)) {
+  name: guid(containerRegistry.id, principalId, acrPushRoleId)
+  scope: containerRegistry
+  properties: {
+    principalId: principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', acrPushRoleId)
   }
 }
 

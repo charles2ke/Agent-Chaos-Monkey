@@ -2,6 +2,21 @@ name: agent-chaos-monkey
 metadata:
   template: agent-chaos-monkey@1.0.0
 
+# Bakes the Container App's URL into the SPA build so `azd up` is a genuine one-command
+# deploy: no manual `azd env set` / `azd deploy web` steps are required afterwards. Vite
+# picks up `frontend/.env.production` automatically because `azd deploy` runs `npm run
+# build`, which defaults to production mode.
+hooks:
+  postprovision:
+    posix:
+      shell: sh
+      run: echo "VITE_API_BASE_URL=$SERVICE_API_URI" > frontend/.env.production
+      interactive: false
+    windows:
+      shell: pwsh
+      run: Set-Content -Path frontend/.env.production -Value "VITE_API_BASE_URL=$env:SERVICE_API_URI"
+      interactive: false
+
 services:
   api:
     project: ./backend/ChaosMonkey.Api

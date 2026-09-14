@@ -38,6 +38,7 @@ module resources 'core/resources.bicep' = {
     apiImageName: apiImageName
     apiServiceName: 'api'
     webServiceName: 'web'
+    principalId: principalId
   }
 }
 

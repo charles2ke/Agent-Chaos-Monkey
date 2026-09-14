@@ -61,6 +61,7 @@ async function callTool(gateway: ChaosGateway, args: Record<string, unknown>) {
   const url = `${gatewayOrigin}/api/lab/gateway/${gatewayRunId(gateway.url)}`
   const response = await fetch(url, {
     method: 'POST',
+    redirect: 'error',
     headers: { 'content-type': 'application/json', authorization: 'Bearer ' + gateway.capability },
     body: JSON.stringify({
       sessionId: gateway.sessionId,

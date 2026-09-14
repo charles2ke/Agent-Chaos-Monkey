@@ -1,4 +1,4 @@
-# Optional NuGet publish for the chaos engine library.
+# Optional NuGet publish for the ChaosMonkey.Api ASP.NET Core host assembly.
 #
 # This workflow is opt-in: it only runs on tags matching `nuget-v*` or on manual
 # workflow_dispatch, and it requires the repository secret `NUGET_API_KEY` to be
@@ -61,11 +61,11 @@ jobs:
           dotnet pack backend/ChaosMonkey.Api/ChaosMonkey.Api.csproj \
             --configuration Release \
             --output ./nupkgs \
-            -p:PackageId=AgentChaosMonkey.Engine \
+            -p:PackageId=AgentChaosMonkey.Api \
             -p:Version=${{ steps.version.outputs.value }} \
             -p:Authors="Charles Gomes" \
             -p:Company="Agent Chaos Monkey" \
-            -p:Description="Chaos engine and resilience gateway for AI agents." \
+            -p:Description="ASP.NET Core host assembly for the Agent Chaos Monkey resilience gateway and evaluator API (not a standalone class library)." \
             -p:PackageLicenseExpression=MIT \
             -p:PackageProjectUrl=https://github.com/charles2ke/Agent-Chaos-Monkey \
             -p:RepositoryUrl=https://github.com/charles2ke/Agent-Chaos-Monkey \

@@ -171,10 +171,14 @@ export function check(sources, rows) {
 }
 
 export function loadSources(opts) {
+  const testsPackages = parsePackageReferences(readFileSync(opts.testsCsproj, 'utf8'));
+  const apiXml = readFileSync(opts.apiCsproj, 'utf8');
+  const apiPackages = parsePackageReferences(apiXml);
+  const backendPackages = new Map([...testsPackages, ...apiPackages]);
   return {
     frontendLock: JSON.parse(readFileSync(opts.frontendLock, 'utf8')),
-    backendPackages: parsePackageReferences(readFileSync(opts.testsCsproj, 'utf8')),
-    targetFramework: parseTargetFramework(readFileSync(opts.apiCsproj, 'utf8')),
+    backendPackages,
+    targetFramework: parseTargetFramework(apiXml),
   };
 }
 

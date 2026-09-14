@@ -35,13 +35,7 @@ When it finishes, `azd` prints the two service URIs (`SERVICE_API_URI`, `SERVICE
 
 `frontend/src/api.ts` reads the API base URL from the Vite build-time env var **`VITE_API_BASE_URL`** (falling back to `''`, i.e. same-origin). Because Static Web Apps serves the built assets as-is, the value has to be baked in at build time.
 
-Set it once with `azd env set` before (or between) deploys so `npm run build` picks it up:
-
-```bash
-# After the first `azd up`, capture the API URL azd already discovered:
-azd env set VITE_API_BASE_URL "$(azd env get-value SERVICE_API_URI)"
-azd deploy web
-```
+`azure.yaml`'s `postprovision` hook writes `frontend/.env.production` with `VITE_API_BASE_URL` set to the freshly-provisioned `SERVICE_API_URI` as soon as `azd provision` finishes, so the subsequent `npm run build` (run by `azd deploy web`, including as part of `azd up`) picks it up automatically — no manual `azd env set` step required.
 
 On the API side, the Bicep template already injects `AllowedOrigins__0=https://<swa-default-hostname>` so the API's CORS policy trusts the Static Web App origin without any manual step.
 

@@ -34,8 +34,14 @@ Direct Line is host configuration only, never request input:
 | `LabGateway__AgentEndpoints__0` | An exact allowlist entry identifying the agent under test. |
 | `LabGateway__Operations__0__*` | The server-side connector mapping the gateway is allowed to forward to. |
 
-Prefer a secret store; in Azure Container Apps the `azd` deployment reads
-`LabGateway__DirectLine__Secret` from a Key Vault-backed secret (see [DEPLOY.md](DEPLOY.md)).
+Prefer a secret store: the `azd` template does not provision a Key Vault or wire this value
+automatically, so set it as a manual Container App secret after `azd up` (Container App →
+Settings → Secrets → add `directline-secret`, then bind it to the `LabGateway__DirectLine__Secret`
+environment variable, or run
+`az containerapp secret set --name <api-app> --resource-group <rg> --secrets directline-secret=<value>`
+followed by
+`az containerapp update --name <api-app> --resource-group <rg> --set-env-vars 'LabGateway__DirectLine__Secret=secretref:directline-secret'`).
+See [DEPLOY.md](DEPLOY.md).
 
 Check what the server will accept:
 
