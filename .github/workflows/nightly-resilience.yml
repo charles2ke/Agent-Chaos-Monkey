@@ -58,10 +58,10 @@ jobs:
           for (const [index, test] of suite.tests.entries()) {
             const name = test?.name ?? `test ${index + 1}`
             if (test?.definition?.transport !== 'simulation') {
-              throw new Error(`Nightly resilience suite ${name} must use simulation transport.`)
+              throw new Error(`Nightly resilience test "${name}" must use simulation transport.`)
             }
             if (Object.hasOwn(test?.definition ?? {}, 'agentEndpoint')) {
-              throw new Error(`Nightly resilience suite ${name} must not define agentEndpoint.`)
+              throw new Error(`Nightly resilience test "${name}" must not define agentEndpoint.`)
             }
           }
           NODE
@@ -75,7 +75,7 @@ jobs:
           done
           status=0
           node cli/run-suite.mjs "$suite_path" --output results --timeout-ms "$TIMEOUT_MS" || status=$?
-          node cli/summarize-results.mjs results/chaos-results.json --title "Nightly: $SUITE" >> "$GITHUB_STEP_SUMMARY"
+          node cli/summarize-results.mjs results/chaos-results.json --title "Nightly: $suite_path" >> "$GITHUB_STEP_SUMMARY"
           exit "$status"
       - name: Publish suite results as JUnit
         if: always()
