@@ -73,14 +73,15 @@ export function renderLeaderboard(rows, generatedAt) {
 
 async function waitForPort(url, timeoutMs) {
   const deadline = Date.now() + timeoutMs
-  while (Date.now() < deadline) {
+  do {
     try {
       await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
       return true
     } catch {
+      if (Date.now() >= deadline) return false
       await new Promise((done) => setTimeout(done, 200))
     }
-  }
+  } while (Date.now() < deadline)
   return false
 }
 
@@ -89,6 +90,10 @@ async function runTarget(target, baseUrl, timeoutMs) {
   let exited = null
   if (target.launch) {
     if (target.launch.command !== 'node') throw new Error('Only the node command may be launched by the benchmark.')
+    // A process already serving that address would silently benchmark the wrong agent.
+    if (target.launch.readyUrl && await waitForPort(target.launch.readyUrl, 0)) {
+      throw new Error(`${target.launch.readyUrl} is already in use; stop it before benchmarking ${target.id}.`)
+    }
     child = spawn('node', target.launch.args ?? [], { stdio: 'ignore' })
     exited = new Promise((done) => child.once('exit', done))
     let failed = false

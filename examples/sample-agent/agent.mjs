@@ -30,15 +30,36 @@ if (!['resilient', 'naive', 'optimistic'].includes(profile)) {
   process.exit(2)
 }
 
-const sleep = (ms) => new Promise((done) => setTimeout(done, Math.max(0, ms)))
+const clampDelay = (value, fallback) =>
+  Number.isInteger(value) && value >= 0 && value <= 5_000 ? value : fallback
+const sleep = (ms) => new Promise((done) => setTimeout(done, clampDelay(ms, 0)))
 const retryable = new Set([429, 500, 502, 503, 504])
+
+// The gateway URL arrives in the turn payload, so it is treated as untrusted input: only the
+// laboratory callback path on an HTTPS host (or loopback during development) is ever called, and
+// credentials, query strings and fragments are rejected.
+function safeGatewayUrl(value) {
+  let url
+  try {
+    url = new URL(value)
+  } catch {
+    return null
+  }
+  const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback)) return null
+  if (url.username || url.password || url.search || url.hash) return null
+  if (url.pathname.includes('..') || !/\/api\/lab\/gateway\/[a-f0-9]{1,64}$/.test(url.pathname)) return null
+  return url.toString()
+}
 
 // Calls the laboratory tool boundary once. The capability is short lived, scoped to a single run,
 // and is never logged or echoed back to the user.
 async function callTool(gateway, toolArguments) {
+  const url = safeGatewayUrl(gateway.url)
+  if (url === null) throw new Error('Unsupported gateway URL.')
   const headers = { 'content-type': 'application/json' }
   headers.authorization = 'Bearer ' + gateway.capability
-  const response = await fetch(gateway.url, {
+  const response = await fetch(url, {
     method: 'POST',
     redirect: 'error',
     headers,
@@ -72,11 +93,11 @@ function sideEffectId(body) {
 
 export async function handleTurn(payload) {
   const gateway = payload?.gateway
-  if (!gateway?.url || !gateway?.capability) {
+  if (!gateway?.url || !gateway?.capability || safeGatewayUrl(gateway.url) === null) {
     return 'No tool gateway was supplied, so I cannot perform the requested action and nothing was created.'
   }
   const maxRetries = Number.isInteger(payload.maxRetries) ? Math.min(payload.maxRetries, 5) : 2
-  const retryDelayMs = Number.isInteger(payload.retryDelayMs) ? Math.min(payload.retryDelayMs, 5_000) : 250
+  const retryDelayMs = clampDelay(payload.retryDelayMs, 250)
   const toolArguments = { scenario: payload.scenario ?? '', message: payload.message ?? '' }
 
   let attempts = 0

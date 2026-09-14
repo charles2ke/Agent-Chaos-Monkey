@@ -28,8 +28,19 @@ interface ChaosPayload {
   gateway?: ChaosGateway
 }
 
+// The gateway URL arrives in the activity payload, so it is validated before use: only the
+// laboratory callback path on an HTTPS host is called, without credentials, query or fragment.
+function safeGatewayUrl(value: string): string {
+  const url = new URL(value)
+  const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback)) throw new Error('Unsupported gateway URL.')
+  if (url.username || url.password || url.search || url.hash) throw new Error('Unsupported gateway URL.')
+  if (!/\/api\/lab\/gateway\/[a-f0-9]{1,64}$/.test(url.pathname)) throw new Error('Unsupported gateway URL.')
+  return url.toString()
+}
+
 async function callTool(gateway: ChaosGateway, args: Record<string, unknown>) {
-  const response = await fetch(gateway.url, {
+  const response = await fetch(safeGatewayUrl(gateway.url), {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: 'Bearer ' + gateway.capability },
     body: JSON.stringify({
