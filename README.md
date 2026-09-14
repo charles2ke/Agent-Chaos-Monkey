@@ -317,7 +317,7 @@ server-side in the `LabGateway` configuration section:
 | --- | --- |
 | `LabGateway__Enabled=true` | Explicitly enable external gateway calls |
 | `LabGateway__PublicBaseUrl` | Trusted externally reachable URL of this API, never derived from a request Host header |
-| `LabGateway__AgentEndpoints__0` | Exact allowlisted agent URL, also required for external simulated-fixture runs |
+| `LabGateway__AgentEndpoints__0` | Exact safe allowlisted agent URL, required for all external agent calls |
 | `LabGateway__Operations__0__Connector` | Connector identifier, e.g. `ServiceNow` |
 | `LabGateway__Operations__0__Operation` | Operation identifier, e.g. `CreateIncident` |
 | `LabGateway__Operations__0__Url` | Exact disposable test upstream URL |

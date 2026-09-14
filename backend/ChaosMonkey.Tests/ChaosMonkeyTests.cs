@@ -220,4 +220,17 @@ public class AgentInvokerEndpointTests
         Assert.True(AgentInvoker.TryParseEndpoint("https://example.com/api/agent", out var uri));
         Assert.Equal("https://example.com/api/agent", uri!.ToString());
     }
+
+    [Fact]
+    public void External_endpoints_must_be_exactly_allowlisted_and_safe()
+    {
+        var allowed = new[] { "https://example.com/api/agent" };
+
+        Assert.True(AgentInvoker.TryParseEndpoint(allowed[0], allowed, out _));
+        Assert.Throws<ArgumentException>(() =>
+            AgentInvoker.TryParseEndpoint("https://other.example/api/agent", allowed, out _));
+        Assert.Throws<ArgumentException>(() =>
+            AgentInvoker.TryParseEndpoint("https://example.com/api/agent?token=1",
+                ["https://example.com/api/agent?token=1"], out _));
+    }
 }

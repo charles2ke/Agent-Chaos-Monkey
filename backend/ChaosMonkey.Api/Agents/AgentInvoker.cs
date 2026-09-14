@@ -3,6 +3,8 @@ using System.Text;
 using System.Text.Json;
 using ChaosMonkey.Api.Chaos;
 using ChaosMonkey.Api.Models;
+using ChaosMonkey.Api.Lab;
+using Microsoft.Extensions.Options;
 
 namespace ChaosMonkey.Api.Agents;
 
@@ -14,12 +16,15 @@ public sealed class AgentInvoker
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly DemoAgent _demoAgent;
     private readonly ILogger<AgentInvoker> _logger;
+    private readonly string[] _allowedEndpoints;
 
-    public AgentInvoker(IHttpClientFactory httpClientFactory, DemoAgent demoAgent, ILogger<AgentInvoker> logger)
+    public AgentInvoker(IHttpClientFactory httpClientFactory, DemoAgent demoAgent, ILogger<AgentInvoker> logger,
+        IOptions<LabGatewayOptions> options)
     {
         _httpClientFactory = httpClientFactory;
         _demoAgent = demoAgent;
         _logger = logger;
+        _allowedEndpoints = options.Value.AgentEndpoints;
     }
 
     public static bool TryParseEndpoint(string? endpoint, out Uri? uri)
@@ -44,6 +49,15 @@ public sealed class AgentInvoker
         return true;
     }
 
+    public static bool TryParseEndpoint(string? endpoint, IEnumerable<string> allowedEndpoints, out Uri? uri)
+    {
+        if (!TryParseEndpoint(endpoint, out uri) || uri is null) return false;
+        if (!LabValidation.SafeUrl(endpoint) ||
+            !allowedEndpoints.Contains(endpoint!.Trim(), StringComparer.Ordinal))
+            throw new ArgumentException("The agent endpoint must be an exact server-side allowlisted URL.", nameof(endpoint));
+        return true;
+    }
+
     public async Task<AgentInteraction> InvokeAsync(
         ExperimentRequest request,
         ChaosPlan plan,
@@ -56,7 +70,7 @@ public sealed class AgentInvoker
             await Task.Delay(plan.LatencyMs, cancellationToken).ConfigureAwait(false);
         }
 
-        if (!TryParseEndpoint(request.AgentEndpoint, out var uri) || uri is null)
+        if (!TryParseEndpoint(request.AgentEndpoint, _allowedEndpoints, out var uri) || uri is null)
         {
             var demo = _demoAgent.Respond(payload);
             stopwatch.Stop();
