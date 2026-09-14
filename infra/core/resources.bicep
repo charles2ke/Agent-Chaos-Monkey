@@ -11,6 +11,9 @@ param webServiceName string
 @description('Object ID of the principal running azd; granted AcrPush on the registry so a local image build can be pushed. Leave empty to skip.')
 param principalId string = ''
 
+@description('AAD principal type of principalId (User, ServicePrincipal, Group, ...). Defaults to User, matching an interactive `azd auth login`; set to ServicePrincipal for CI/CD identities.')
+param principalType string = 'User'
+
 var placeholderImage = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 var effectiveApiImage = empty(apiImageName) ? placeholderImage : apiImageName
 
@@ -77,6 +80,7 @@ resource acrPushAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' 
   scope: containerRegistry
   properties: {
     principalId: principalId
+    principalType: principalType
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', acrPushRoleId)
   }
 }

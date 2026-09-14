@@ -9,8 +9,11 @@ param environmentName string
 @description('Azure region for all resources.')
 param location string
 
-@description('Object ID of the principal running azd (optional; unused for role assignments today).')
+@description('Object ID of the principal running azd; granted AcrPush so the local image push in `azd up` succeeds.')
 param principalId string = ''
+
+@description('AAD principal type of principalId (User, ServicePrincipal, Group, ...). Defaults to User, matching an interactive `azd auth login`; set to ServicePrincipal for CI/CD identities.')
+param principalType string = 'User'
 
 @description('Full container image reference for the API. Leave empty on first deploy; azd will build and push, then set this on subsequent deployments.')
 param apiImageName string = ''
@@ -39,6 +42,7 @@ module resources 'core/resources.bicep' = {
     apiServiceName: 'api'
     webServiceName: 'web'
     principalId: principalId
+    principalType: principalType
   }
 }
 
