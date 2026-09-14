@@ -17,6 +17,19 @@ The agent's own tool call is mapped onto the laboratory gateway: the payload car
 capability, and every connector call the agent makes through it is faulted, timed and recorded. That
 is what turns a run into observed evidence rather than `inconclusive`.
 
+## Where this lives
+
+The transport is code, not a wiring convention:
+
+| Concern | Source |
+| --- | --- |
+| Token exchange, conversation start, activity send and watermark receive | [`backend/ChaosMonkey.Api/Lab/DirectLineAdapter.cs`](../backend/ChaosMonkey.Api/Lab/DirectLineAdapter.cs) |
+| Transport selection per run (`transport: "directline"`) | [`backend/ChaosMonkey.Api/Lab/LabRunner.cs`](../backend/ChaosMonkey.Api/Lab/LabRunner.cs) |
+| Options and configuration validation | [`backend/ChaosMonkey.Api/Lab/LabModels.cs`](../backend/ChaosMonkey.Api/Lab/LabModels.cs), [`LabGateway.cs`](../backend/ChaosMonkey.Api/Lab/LabGateway.cs) |
+| Capability reporting (`transports.directLine`) | [`backend/ChaosMonkey.Api/Lab/LabEndpoints.cs`](../backend/ChaosMonkey.Api/Lab/LabEndpoints.cs) |
+| Agent-side handler that reads the chaos payload | [`examples/copilot-studio/agent-handler.ts`](../examples/copilot-studio/agent-handler.ts) |
+| Tests (handshake, turn exchange, config errors, secret redaction) | [`backend/ChaosMonkey.Tests/LabTests.cs`](../backend/ChaosMonkey.Tests/LabTests.cs) |
+
 ## Configure
 
 Direct Line is host configuration only, never request input:
