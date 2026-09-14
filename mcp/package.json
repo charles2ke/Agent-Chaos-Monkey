@@ -1,0 +1,19 @@
+{
+  "name": "agent-chaos-monkey-mcp",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "MCP server exposing the Agent Chaos Monkey resilience API as tools",
+  "bin": {
+    "agent-chaos-monkey-mcp": "server.mjs"
+  },
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^3.25.76"
+  }
+}

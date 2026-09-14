@@ -193,6 +193,7 @@ cd frontend && npm run lint && npm run build
 cd frontend && npm run test:e2e           # Playwright UI tests (boots both servers)
 cd frontend && npm run test:e2e:static    # Playwright against the static Pages build
 cd frontend && npm run record:walkthrough # re-records docs/videos/walkthrough.mp4
+cd mcp && npm test                        # MCP server unit and stdio round-trip tests
 ```
 
 ## 🌐 Published demo
@@ -350,6 +351,27 @@ frontend checks, both Playwright suites and the headless demo with no production
 credentials. Its `resilience-reports-and-screenshots` artifact includes JSON/JUnit,
 browser reports and screenshots. Set the workflow job as a required repository check
 if you want it to block merges.
+
+### MCP server
+
+[`mcp/`](mcp) ships an MCP server so any MCP client can drive chaos experiments
+as tools. Start the API, then:
+
+```bash
+cd mcp && npm install && npm start   # stdio MCP server, npm test for its tests
+```
+
+| Tool | Purpose |
+| --- | --- |
+| `get_health` / `list_chaos_modes` / `get_evaluator` | API liveness, injectable failures, configured judge |
+| `run_experiment` | Run one Preview experiment and return the resilience report |
+| `get_lab_capabilities` | Supported schema, execution modes, assertion kinds, gateway status and limits |
+| `run_lab_experiment` / `run_lab_suite` | Run a version 1 definition, or 1–20 saved regression tests |
+
+`CHAOS_API_URL`, `CHAOS_AGENT_API_KEY` and `CHAOS_TIMEOUT_MS` configure it.
+Credentials are environment-only and are never accepted as tool arguments, agent
+endpoints must be HTTPS (loopback HTTP allowed), and responses are redacted before
+they reach the model. See [`mcp/README.md`](mcp/README.md).
 
 > **Break → Observe → Judge → Generate Eval → Fix → Re-test → PR Gate.**
 
