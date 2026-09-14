@@ -61,6 +61,7 @@ body {
 .rail {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 20px;
   padding: 18px 14px;
   background: linear-gradient(180deg, var(--surface) 0%, var(--canvas) 100%);
@@ -320,7 +321,7 @@ body {
   }
 
   .workspace {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     padding: 16px;
   }
 }

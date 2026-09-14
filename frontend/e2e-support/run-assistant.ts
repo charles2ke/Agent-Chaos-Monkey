@@ -102,10 +102,17 @@ export function runAssistantTests(staticBuild: boolean) {
   })
 
   test('keeps the assistant usable on narrow screens', async ({ page }, testInfo) => {
-    await page.setViewportSize({ width: 390, height: 844 })
     const assistant = page.getByRole('region', { name: 'Run assistant' })
-    await expect(assistant.getByRole('button', { name: 'Approve & run 2 checks' })).toBeVisible()
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    for (const width of [320, 375, 390]) {
+      await page.setViewportSize({ width, height: 844 })
+      await expect(assistant.getByRole('button', { name: 'Approve & run 2 checks' })).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      expect(await assistant.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+      const settings = page.getByRole('button', { name: 'Settings', exact: true })
+      await settings.scrollIntoViewIfNeeded()
+      await expect(settings).toBeInViewport()
+      await page.getByRole('button', { name: 'Preview', exact: true }).scrollIntoViewIfNeeded()
+    }
     const path = `${screenshots}/22-run-assistant-mobile.png`
     await assistant.screenshot({ path })
     await testInfo.attach('Run assistant: mobile plan', { path, contentType: 'image/png' })
