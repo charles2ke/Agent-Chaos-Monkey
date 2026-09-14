@@ -10,11 +10,22 @@ hooks:
   postprovision:
     posix:
       shell: sh
-      run: echo "VITE_API_BASE_URL=$SERVICE_API_URI" > frontend/.env.production
+      run: |
+        set -eu
+        if [ -z "${SERVICE_API_URI:-}" ]; then
+          echo "SERVICE_API_URI is not set; cannot wire the frontend to the API." >&2
+          exit 1
+        fi
+        echo "VITE_API_BASE_URL=$SERVICE_API_URI" > frontend/.env.production
       interactive: false
     windows:
       shell: pwsh
-      run: Set-Content -Path frontend/.env.production -Value "VITE_API_BASE_URL=$env:SERVICE_API_URI"
+      run: |
+        if ([string]::IsNullOrEmpty($env:SERVICE_API_URI)) {
+          Write-Error "SERVICE_API_URI is not set; cannot wire the frontend to the API."
+          exit 1
+        }
+        Set-Content -Path frontend/.env.production -Value "VITE_API_BASE_URL=$env:SERVICE_API_URI"
       interactive: false
 
 services:

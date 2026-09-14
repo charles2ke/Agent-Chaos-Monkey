@@ -72,7 +72,7 @@ jobs:
           SUITE: ${{ inputs.suite }}
           API_URL: ${{ inputs.api-url }}
         run: |
-          set -uo pipefail
+          set -euo pipefail
           case "$SUITE" in
             /*|..|../*|*/../*|*/..) echo "Suite path must be relative and cannot contain '..'." >&2; exit 2 ;;
           esac
