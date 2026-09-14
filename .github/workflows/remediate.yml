@@ -73,9 +73,6 @@ jobs:
           API_URL: ${{ inputs.api-url }}
         run: |
           set -euo pipefail
-          case "$SUITE" in
-            /*|..|../*|*/../*|*/..) echo "Suite path must be relative and cannot contain '..'." >&2; exit 2 ;;
-          esac
           repository_root=$(realpath -e -- "$GITHUB_WORKSPACE")
           if ! suite_path=$(realpath -e -- "$repository_root/$SUITE"); then
             echo "Suite file not found: $SUITE" >&2
