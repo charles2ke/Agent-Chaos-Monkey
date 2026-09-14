@@ -7,7 +7,7 @@ export interface FaultStep { invocation: number; mode: typeof faultModes[number]
 export interface Assertion { id: string; kind: typeof assertionKinds[number]; expected?: number | boolean; severity: 'critical' | 'warning' }
 export interface ExperimentDefinition {
   schemaVersion: 1; name: string; scenario: string; connector: string; operation: string
-  executionMode: 'single' | 'matrix' | 'sequence'; transport: 'simulation' | 'gateway'
+  executionMode: 'single' | 'matrix' | 'sequence'; transport: 'simulation' | 'gateway' | 'directline'
   faults: FaultStep[]; latencyMs: number; toolTimeoutMs: number; maxRetries: number; retryDelayMs: number
   turns: { message: string; reauthenticate: boolean }[]; assertions: Assertion[]
   agentEndpoint?: string; agentVersion?: string; evaluator: { kind: 'evidence'; version: 1 }
@@ -164,7 +164,7 @@ export function validateDefinition(value: unknown): ExperimentDefinition {
     schemaVersion: 1, name: text(d.name, 120), scenario: text(d.scenario, 4000),
     connector: text(d.connector, 100), operation: text(d.operation, 100),
     executionMode: choice(d.executionMode, ['single', 'matrix', 'sequence']),
-    transport: choice(d.transport, ['simulation', 'gateway']), faults,
+    transport: choice(d.transport, ['simulation', 'gateway', 'directline']), faults,
     latencyMs: number(d.latencyMs, 30000), toolTimeoutMs: number(d.toolTimeoutMs, 30000, 1),
     maxRetries: number(d.maxRetries, 10), retryDelayMs: number(d.retryDelayMs, 5000),
     turns: list(d.turns, 10).map(value => { const t = object(value, ['message', 'reauthenticate']); return { message: text(t.message, 4000), reauthenticate: boolean(t.reauthenticate) } }),

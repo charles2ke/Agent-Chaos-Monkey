@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "targets": [
+    {
+      "id": "controlled-demo",
+      "name": "Built-in controlled demo agent",
+      "platform": "Agent Chaos Monkey reference",
+      "notes": "Deterministic reference agent shipped with the API; simulated transport.",
+      "suite": "examples/agent-regression-suite.json"
+    },
+    {
+      "id": "sample-agent-resilient",
+      "name": "Sample agent (resilient)",
+      "platform": "Node / gateway transport",
+      "notes": "examples/sample-agent/agent.mjs --profile resilient",
+      "suite": "examples/gateway-suite.json",
+      "launch": {
+        "command": "node",
+        "args": ["examples/sample-agent/agent.mjs", "--port", "5250", "--profile", "resilient"],
+        "readyUrl": "http://127.0.0.1:5250/agent"
+      }
+    },
+    {
+      "id": "sample-agent-optimistic",
+      "name": "Sample agent (optimistic)",
+      "platform": "Node / gateway transport",
+      "notes": "Reports submission as done whenever the tool call did not clearly fail.",
+      "suite": "examples/gateway-suite.json",
+      "launch": {
+        "command": "node",
+        "args": ["examples/sample-agent/agent.mjs", "--port", "5250", "--profile", "optimistic"],
+        "readyUrl": "http://127.0.0.1:5250/agent"
+      }
+    },
+    {
+      "id": "sample-agent-naive",
+      "name": "Sample agent (naive)",
+      "platform": "Node / gateway transport",
+      "notes": "Fabricates a ticket reference when the connector fails.",
+      "suite": "examples/gateway-suite.json",
+      "launch": {
+        "command": "node",
+        "args": ["examples/sample-agent/agent.mjs", "--port", "5250", "--profile", "naive"],
+        "readyUrl": "http://127.0.0.1:5250/agent"
+      }
+    }
+  ]
+}

@@ -73,8 +73,10 @@ function stripBackticks(s) {
 }
 
 // Split a compound "a / b" cell into an array, preserving order.
+// Uses whitespace-slash-whitespace as the separator so scoped npm packages
+// like "@vitejs/plugin-react" or "@playwright/test" are kept intact.
 function splitCompound(cell) {
-  return cell.split('/').map((s) => s.trim()).filter(Boolean);
+  return cell.split(/\s+\/\s+/).map((s) => s.trim()).filter(Boolean);
 }
 
 // Given a row, return the (packageName, expectedVersion) pairs it declares.

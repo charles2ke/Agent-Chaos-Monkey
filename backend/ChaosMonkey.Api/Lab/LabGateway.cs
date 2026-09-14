@@ -18,7 +18,7 @@ public sealed class LabRedactor(IEnumerable<string?> secrets)
         var value = text ?? "";
         foreach (var secret in _secrets) value = value.Replace(secret, "[REDACTED]", StringComparison.Ordinal);
         value = Regex.Replace(value, @"(?i)(bearer\s+)[^\s""\\,;]+", "$1[REDACTED]");
-        return Regex.Replace(value, """(?i)("(?:apiKey|api_key|authorization|password|access_token|refresh_token|secret|capability)"\s*:\s*")[^"]*""",
+        return Regex.Replace(value, """(?i)("(?:apiKey|api_key|authorization|password|access_token|refresh_token|secret|capability|token)"\s*:\s*")[^"]*""",
             "$1[REDACTED]");
     }
 }
@@ -35,9 +35,14 @@ public sealed class LabGateway(IHttpClientFactory clients, IOptions<LabGatewayOp
         if (string.IsNullOrEmpty(definition.AgentEndpoint)) return [];
         if (!Options.AgentEndpoints.Contains(definition.AgentEndpoint, StringComparer.Ordinal) ||
             !LabValidation.SafeUrl(definition.AgentEndpoint)) return ["Agent endpoint is not exactly allowlisted in LabGateway:AgentEndpoints."];
-        if (definition.Transport != "gateway") return [];
+        if (definition.Transport is not ("gateway" or "directline")) return [];
         if (!Options.Enabled) return ["External gateway transport is disabled."];
         if (!LabValidation.SafeUrl(Options.PublicBaseUrl)) return ["A trusted LabGateway:PublicBaseUrl is required."];
+        if (definition.Transport == "directline")
+        {
+            var directLineErrors = DirectLineAdapter.ConfigurationErrors(Options.DirectLine);
+            if (directLineErrors.Length > 0) return directLineErrors;
+        }
         var requestedTargets = definition.Faults.Select(f => (Connector: f.Connector ?? definition.Connector, Operation: f.Operation ?? definition.Operation))
             .Append((definition.Connector, definition.Operation)).Distinct();
         foreach (var requested in requestedTargets)
@@ -120,7 +125,8 @@ public sealed class BoundarySession
             .Append((definition.Connector, definition.Operation)).ToHashSet();
         _lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _lifetime.CancelAfter(TimeSpan.FromSeconds(90));
-        Redactor = new LabRedactor(options.Operations.Select(o => o.BearerToken).Append(apiKey).Append(Capability));
+        Redactor = new LabRedactor(options.Operations.Select(o => o.BearerToken)
+            .Append(apiKey).Append(Capability).Append(options.DirectLine.Secret));
         _faults.AddRange(active.Select(f => Evidence(f, "planned",
             $"Scheduled for {f.Connector ?? definition.Connector}.{f.Operation ?? definition.Operation} invocation {f.Invocation}.")));
         _faults.AddRange(skipped.Select(f => Evidence(f, "skipped", "Not selected: single execution applies only the first fault.")));

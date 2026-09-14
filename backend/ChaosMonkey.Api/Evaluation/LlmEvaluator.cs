@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using Azure.Identity;
 using System.Text;
 using System.Text.Json;
 using ChaosMonkey.Api.Chaos;
@@ -27,17 +28,20 @@ public sealed class LlmEvaluator : IResilienceEvaluator
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly LlmOptions _options;
     private readonly HeuristicEvaluator _fallback;
+    private readonly IEvaluatorCredential _credential;
     private readonly ILogger<LlmEvaluator> _logger;
 
     public LlmEvaluator(
         IHttpClientFactory httpClientFactory,
         IOptions<LlmOptions> options,
         HeuristicEvaluator fallback,
+        IEvaluatorCredential credential,
         ILogger<LlmEvaluator> logger)
     {
         _httpClientFactory = httpClientFactory;
         _options = options.Value;
         _fallback = fallback;
+        _credential = credential;
         _logger = logger;
     }
 
@@ -47,7 +51,9 @@ public sealed class LlmEvaluator : IResilienceEvaluator
         AgentInteraction interaction,
         CancellationToken cancellationToken)
     {
-        var model = string.IsNullOrWhiteSpace(request.EvaluatorModel) ? _options.Model : request.EvaluatorModel.Trim();
+        var model = string.IsNullOrWhiteSpace(request.EvaluatorModel)
+            ? (_options.IsAzure ? _options.DeploymentOrModel : _options.Model)
+            : request.EvaluatorModel.Trim();
 
         if (!_options.IsConfigured || interaction.TransportError is not null)
         {
@@ -66,7 +72,8 @@ public sealed class LlmEvaluator : IResilienceEvaluator
 
             _logger.LogWarning("Evaluator model {Model} returned an unparsable report.", model);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException
+                                       or InvalidOperationException or AuthenticationFailedException)
         {
             _logger.LogWarning(ex, "Evaluator model {Model} could not be reached; falling back to heuristics.", model);
         }
@@ -110,7 +117,7 @@ public sealed class LlmEvaluator : IResilienceEvaluator
         using var client = _httpClientFactory.CreateClient(HttpClientName);
         client.Timeout = TimeSpan.FromSeconds(Math.Clamp(_options.TimeoutSeconds, 5, 600));
 
-        using var message = new HttpRequestMessage(HttpMethod.Post, _options.ResolveEndpoint());
+        using var message = new HttpRequestMessage(HttpMethod.Post, _options.ResolveEndpoint(model));
 
         var payload = new
         {
@@ -122,7 +129,13 @@ public sealed class LlmEvaluator : IResilienceEvaluator
         message.Content = new StringContent(JsonSerializer.Serialize(payload, SerializerOptions), Encoding.UTF8,
             "application/json");
 
-        if (!string.IsNullOrWhiteSpace(_options.ApiKey))
+        if (_options.IsAzure)
+        {
+            // Entra ID only: an Azure deployment is never called with a raw API key.
+            var token = await _credential.GetTokenAsync(LlmOptions.AzureScope, cancellationToken).ConfigureAwait(false);
+            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+        else if (!string.IsNullOrWhiteSpace(_options.ApiKey))
         {
             if (_options.IsAnthropic)
             {

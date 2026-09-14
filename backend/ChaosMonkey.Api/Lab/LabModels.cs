@@ -76,6 +76,21 @@ public sealed class LabGatewayOptions
     public string? PublicBaseUrl { get; set; }
     public string[] AgentEndpoints { get; set; } = [];
     public UpstreamOperation[] Operations { get; set; } = [];
+    public DirectLineOptions DirectLine { get; set; } = new();
+}
+
+/// <summary>
+/// Direct Line channel settings for driving a Copilot Studio / Microsoft 365 Agents SDK agent.
+/// The secret is supplied by the host environment only; it is never accepted in a definition.
+/// </summary>
+public sealed class DirectLineOptions
+{
+    public bool Enabled { get; set; }
+    public string BaseUrl { get; set; } = "https://directline.botframework.com";
+    public string? Secret { get; set; }
+    public string UserId { get; set; } = "chaos-monkey";
+    public int PollIntervalMs { get; set; } = 500;
+    public int ReceiveTimeoutSeconds { get; set; } = 45;
 }
 
 public sealed class UpstreamOperation
@@ -106,7 +121,9 @@ public static class LabValidation
         if (string.IsNullOrWhiteSpace(d.Scenario) || d.Scenario.Length > 8000) errors.Add("scenario is required (max 8000).");
         if (!Identifier(d.Connector) || !Identifier(d.Operation)) errors.Add("connector and operation must be identifiers (max 100).");
         if (d.ExecutionMode is not ("single" or "matrix" or "sequence")) errors.Add("Invalid executionMode.");
-        if (d.Transport is not ("simulation" or "gateway")) errors.Add("Invalid transport.");
+        if (d.Transport is not ("simulation" or "gateway" or "directline")) errors.Add("Invalid transport.");
+        if (d.Transport == "directline" && string.IsNullOrEmpty(d.AgentEndpoint))
+            errors.Add("directline transport requires an allowlisted agentEndpoint identifying the agent under test.");
         if (d.LatencyMs is < 0 or > 30000 || d.ToolTimeoutMs is < 1 or > 30000 ||
             d.MaxRetries is < 0 or > 10 || d.RetryDelayMs is < 0 or > 5000) errors.Add("Timing or retry limit out of range.");
         if (d.Faults is null || d.Faults.Length > 20 || d.Faults.Any(f => f is null ||

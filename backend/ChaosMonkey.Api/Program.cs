@@ -12,8 +12,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<LlmOptions>(builder.Configuration.GetSection(LlmOptions.SectionName));
 builder.Services.PostConfigure<LlmOptions>(options =>
 {
-    options.ApiKey ??= Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")
-                       ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+    // The Azure provider authenticates with Entra ID, so an ambient key is never picked up for it.
+    options.ApiKey = options.IsAzure
+        ? null
+        : options.ApiKey ?? Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY")
+                         ?? Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 });
 
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -30,6 +33,7 @@ builder.Services.AddSingleton<ChaosEngine>();
 builder.Services.AddSingleton<DemoAgent>();
 builder.Services.AddSingleton<AgentInvoker>();
 builder.Services.AddSingleton<HeuristicEvaluator>();
+builder.Services.AddSingleton<IEvaluatorCredential, EntraIdEvaluatorCredential>();
 builder.Services.AddSingleton<IResilienceEvaluator, LlmEvaluator>();
 builder.Services.AddSingleton<ExperimentRunner>();
 
@@ -52,8 +56,10 @@ app.MapGet("/api/chaos-modes", () => Results.Ok(ChaosModeCatalog.All));
 app.MapGet("/api/evaluator", (IOptions<LlmOptions> options) => Results.Ok(new
 {
     provider = options.Value.Provider,
-    model = options.Value.Model,
-    configured = options.Value.IsConfigured
+    model = options.Value.IsAzure ? options.Value.DeploymentOrModel : options.Value.Model,
+    configured = options.Value.IsConfigured,
+    // Reported so a reviewer can confirm that no key is in play for the Azure provider.
+    authentication = options.Value.IsAzure ? "entra-id" : "api-key"
 }));
 
 app.MapPost("/api/demo-agent", (AgentPayload payload, DemoAgent agent) =>

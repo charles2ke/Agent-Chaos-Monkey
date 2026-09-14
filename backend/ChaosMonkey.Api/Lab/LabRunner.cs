@@ -35,7 +35,8 @@ public sealed class LabRunner(LabGateway gateway, IHttpClientFactory clients)
             var skipped = definition.ExecutionMode == "single" ? definition.Faults.Skip(1).ToArray() : [];
             runs.Add(await RunOneAsync(request, definition.ExecutionMode == "sequence" ? "Ordered sequence" : active.FirstOrDefault()?.Mode ?? "Healthy control", active, skipped, token));
         }
-        var redactor = new LabRedactor(gateway.Options.Operations.Select(o => o.BearerToken).Append(request.AgentApiKey));
+        var redactor = new LabRedactor(gateway.Options.Operations.Select(o => o.BearerToken)
+            .Append(request.AgentApiKey).Append(gateway.Options.DirectLine.Secret));
         var safeDefinition = definition with
         {
             Name = redactor.Clean(definition.Name), Scenario = redactor.Clean(definition.Scenario),
@@ -58,6 +59,9 @@ public sealed class LabRunner(LabGateway gateway, IHttpClientFactory clients)
     {
         var d = request.Definition;
         var session = gateway.Open(d, active, skipped, request.AgentApiKey, token);
+        var directLine = d.Transport == "directline"
+            ? new DirectLineAdapter(clients, gateway.Options.DirectLine, gateway.Options.DirectLine.UserId)
+            : null;
         var turns = new List<TurnResult>();
         var responses = new List<string>();
         var responded = true;
@@ -118,7 +122,7 @@ public sealed class LabRunner(LabGateway gateway, IHttpClientFactory clients)
                             JsonSerializer.SerializeToElement(new { scenario = d.Scenario })), session.Token);
                         connector = new { name = d.Connector, operation = d.Operation, statusCode = result.StatusCode, body = result.Body, simulation = true };
                     }
-                    var callback = d.Transport == "gateway" ? new
+                    var callback = d.Transport is "gateway" or "directline" ? new
                     {
                         url = gateway.Options.PublicBaseUrl!.TrimEnd('/') + "/api/lab/gateway/" + session.Id,
                         capability = session.Capability,
@@ -139,16 +143,25 @@ public sealed class LabRunner(LabGateway gateway, IHttpClientFactory clients)
                         agentVersion = d.AgentVersion, toolTimeoutMs = d.ToolTimeoutMs,
                         maxRetries = d.MaxRetries, retryDelayMs = d.RetryDelayMs
                     };
-                    using var client = clients.CreateClient(AgentClientName);
-                    using var message = new HttpRequestMessage(HttpMethod.Post, d.AgentEndpoint)
+                    if (directLine is not null)
                     {
-                        Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
-                    };
-                    if (!string.IsNullOrEmpty(request.AgentApiKey))
-                        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", request.AgentApiKey);
-                    using var response = await client.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, session.Token);
-                    if (!response.IsSuccessStatusCode) throw new HttpRequestException("Agent did not return a successful HTTP response.");
-                    lastResponse = HeuristicEvaluator.ExtractText(await BoundarySession.ReadBoundedAsync(response.Content, session.Token));
+                        if (turns.Count == 0) await directLine.StartConversationAsync(session.Token);
+                        lastResponse = HeuristicEvaluator.ExtractText(
+                            await directLine.SendTurnAsync(turn.Message, payload, session.Token));
+                    }
+                    else
+                    {
+                        using var client = clients.CreateClient(AgentClientName);
+                        using var message = new HttpRequestMessage(HttpMethod.Post, d.AgentEndpoint)
+                        {
+                            Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
+                        };
+                        if (!string.IsNullOrEmpty(request.AgentApiKey))
+                            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", request.AgentApiKey);
+                        using var response = await client.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, session.Token);
+                        if (!response.IsSuccessStatusCode) throw new HttpRequestException("Agent did not return a successful HTTP response.");
+                        lastResponse = HeuristicEvaluator.ExtractText(await BoundarySession.ReadBoundedAsync(response.Content, session.Token));
+                    }
                 }
                 lastResponse = session.Redactor.Clean(lastResponse);
                 responses.Add(lastResponse);

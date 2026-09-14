@@ -200,6 +200,99 @@ public class LlmOptionsTests
     [Fact]
     public void Options_without_key_or_base_url_are_not_configured()
         => Assert.False(new LlmOptions { ApiKey = null, BaseUrl = null }.IsConfigured);
+
+    [Fact]
+    public void Azure_endpoint_targets_the_configured_deployment_and_api_version()
+    {
+        var options = new LlmOptions
+        {
+            Provider = "azure", BaseUrl = "https://contoso.openai.azure.com/",
+            Deployment = "chaos-judge", ApiVersion = "2024-10-21"
+        };
+
+        Assert.True(options.IsAzure);
+        Assert.True(options.IsConfigured);
+        Assert.Equal("https://contoso.openai.azure.com/openai/deployments/chaos-judge/chat/completions?api-version=2024-10-21",
+            options.ResolveEndpoint().ToString());
+        Assert.Equal("https://contoso.openai.azure.com/openai/deployments/other-judge/chat/completions?api-version=2024-10-21",
+            options.ResolveEndpoint("other-judge").ToString());
+    }
+
+    [Theory]
+    [InlineData("http://contoso.openai.azure.com", "chaos-judge")]
+    [InlineData("https://contoso.openai.azure.com?api-version=evil", "chaos-judge")]
+    [InlineData("https://contoso.openai.azure.com", "../../secrets")]
+    [InlineData("https://contoso.openai.azure.com", "")]
+    public void Unsafe_azure_endpoints_and_deployment_names_are_rejected(string baseUrl, string deployment)
+    {
+        var options = new LlmOptions { Provider = "azure", BaseUrl = baseUrl, Deployment = deployment, Model = deployment };
+
+        Assert.False(options.IsConfigured);
+        Assert.Throws<InvalidOperationException>(() => options.ResolveEndpoint());
+    }
+}
+
+public class AzureJudgeTests
+{
+    private sealed class StaticCredential(string token) : IEvaluatorCredential
+    {
+        public int Requests { get; private set; }
+        public ValueTask<string> GetTokenAsync(string scope, CancellationToken cancellationToken)
+        {
+            Requests++;
+            Assert.Equal(LlmOptions.AzureScope, scope);
+            return ValueTask.FromResult(token);
+        }
+    }
+
+    private sealed class CapturingHandler : HttpMessageHandler
+    {
+        public HttpRequestMessage? Request { get; private set; }
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Request = request;
+            return Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent("""
+                    {"choices":[{"message":{"content":"{\"score\":10,\"verdict\":\"fragile\",\"summary\":\"Fabricated success.\"}"}}]}
+                    """)
+            });
+        }
+    }
+
+    private sealed class SingleClientFactory(HttpMessageHandler handler) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new(handler, disposeHandler: false);
+    }
+
+    [Fact]
+    public async Task Azure_provider_uses_an_entra_id_bearer_token_and_never_an_api_key()
+    {
+        var handler = new CapturingHandler();
+        var credential = new StaticCredential("entra-access-token");
+        var options = Microsoft.Extensions.Options.Options.Create(new LlmOptions
+        {
+            Provider = "azure", BaseUrl = "https://contoso.openai.azure.com",
+            Deployment = "chaos-judge", ApiKey = "should-never-be-used"
+        });
+        var evaluator = new LlmEvaluator(new SingleClientFactory(handler), options, new HeuristicEvaluator(),
+            credential, Microsoft.Extensions.Logging.Abstractions.NullLogger<LlmEvaluator>.Instance);
+
+        var report = await evaluator.EvaluateAsync(
+            new ExperimentRequest { Scenario = "Create a ticket" },
+            new ChaosEngine().BuildPlan(new ExperimentRequest { Scenario = "Create a ticket" }),
+            new AgentInteraction(true, 200, 10, """{"reply":"Done!"}""", null),
+            default);
+
+        Assert.Equal(1, credential.Requests);
+        Assert.NotNull(handler.Request);
+        Assert.Equal("Bearer", handler.Request!.Headers.Authorization!.Scheme);
+        Assert.Equal("entra-access-token", handler.Request.Headers.Authorization.Parameter);
+        Assert.DoesNotContain("api-key", handler.Request.Headers.Select(h => h.Key), StringComparer.OrdinalIgnoreCase);
+        Assert.Equal("/openai/deployments/chaos-judge/chat/completions", handler.Request.RequestUri!.AbsolutePath);
+        Assert.Equal(10, report.Score);
+        Assert.True(report.UsedLlm);
+    }
 }
 
 public class AgentInvokerEndpointTests

@@ -29,6 +29,12 @@ public static class LabEndpoints
             faultModes = LabValidation.Modes,
             assertionKinds = LabValidation.AssertionKinds,
             gatewayEnabled = gateway.Options.Enabled,
+            transports = new
+            {
+                simulation = true,
+                gateway = gateway.Options.Enabled,
+                directLine = gateway.Options.Enabled && DirectLineAdapter.ConfigurationErrors(gateway.Options.DirectLine).Length == 0
+            },
             controlledDemoAvailable = true,
             agentEndpoints = gateway.Options.AgentEndpoints.Where(LabValidation.SafeUrl),
             operations = gateway.Options.Operations.Select(o => new { o.Connector, o.Operation }),
