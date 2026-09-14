@@ -43,8 +43,11 @@ jobs:
           OPENAI_API_KEY: ''
         run: |
           set -euo pipefail
-          repository_root=$(pwd -P)
-          if ! suite_path=$(realpath -e -- "$SUITE"); then
+          case "$SUITE" in
+            /*|*'..'*) echo "Suite path must be relative and cannot contain '..'." >&2; exit 2 ;;
+          esac
+          repository_root=$(realpath -e -- "$GITHUB_WORKSPACE")
+          if ! suite_path=$(realpath -e -- "$repository_root/$SUITE"); then
             echo "Suite file not found: $SUITE" >&2
             exit 2
           fi
