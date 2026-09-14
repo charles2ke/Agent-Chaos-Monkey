@@ -24,7 +24,6 @@ concurrency:
 jobs:
   regression:
     runs-on: ubuntu-latest
-    environment: nightly-resilience
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -39,17 +38,26 @@ jobs:
         env:
           SUITE: ${{ inputs.suite || 'examples/agent-regression-suite.json' }}
           TIMEOUT_MS: ${{ inputs.timeout-ms || '60000' }}
-          # Supplied only for live-agent drift detection; the committed suite runs credential-free.
-          CHAOS_AGENT_API_KEY: ${{ secrets.CHAOS_AGENT_API_KEY }}
           Llm__ApiKey: ''
           ANTHROPIC_API_KEY: ''
           OPENAI_API_KEY: ''
-          LabGateway__Enabled: ${{ vars.CHAOS_LAB_GATEWAY_ENABLED || 'false' }}
         run: |
-          case "$SUITE" in
-            examples/*.json|suites/*.json) ;;
+          repository_root=$(pwd -P)
+          suite_path=$(realpath -e -- "$SUITE")
+          case "$suite_path" in
+            "$repository_root"/examples/*.json|"$repository_root"/suites/*.json) ;;
             *) echo "Suite must be a JSON file under examples/ or suites/." >&2; exit 2 ;;
           esac
+          node --input-type=module - "$suite_path" <<'NODE'
+          import { readFile } from 'node:fs/promises'
+
+          const suite = JSON.parse(await readFile(process.argv[2], 'utf8'))
+          if (!Array.isArray(suite.tests) || suite.tests.some(test =>
+            test?.definition?.transport !== 'simulation' ||
+            Object.hasOwn(test?.definition ?? {}, 'agentEndpoint'))) {
+            throw new Error('Nightly resilience runs support simulation-only suites.')
+          }
+          NODE
           dotnet run --project backend/ChaosMonkey.Api --no-launch-profile --urls http://localhost:5249 > /tmp/chaos-api.log 2>&1 &
           api_pid=$!
           trap 'kill "$api_pid" 2>/dev/null || true' EXIT
@@ -59,7 +67,7 @@ jobs:
             sleep 1
           done
           status=0
-          node cli/run-suite.mjs "$SUITE" --output results --timeout-ms "$TIMEOUT_MS" || status=$?
+          node cli/run-suite.mjs "$suite_path" --output results --timeout-ms "$TIMEOUT_MS" || status=$?
           node cli/summarize-results.mjs results/chaos-results.json --title "Nightly: $SUITE" >> "$GITHUB_STEP_SUMMARY"
           exit "$status"
       - name: Publish suite results as JUnit

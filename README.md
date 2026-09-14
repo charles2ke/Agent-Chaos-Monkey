@@ -398,13 +398,8 @@ which dimension regressed.
 
 [The nightly workflow](.github/workflows/nightly-resilience.yml) runs the same baseline
 on a schedule (and on demand, optionally against another committed suite) for drift
-detection, keeping pull request runs credential-free. To point a nightly run at a real
-agent instead of the controlled demo boundary, commit a suite whose definitions carry an
-allowlisted `agentEndpoint`, configure `LabGateway__*` server-side against a disposable
-test upstream, and store the agent token as the `CHAOS_AGENT_API_KEY` secret in a
-protected environment. Model output is not deterministic: gate on assertion outcomes, and
-treat `inconclusive` (the agent never called the gateway) as an integration defect to fix
-rather than something to allow with `--allow-inconclusive`.
+detection. It is simulation-only: dispatched suites must reside under `examples/` or
+`suites/`, use the `simulation` transport, and must not define an `agentEndpoint`.
 
 ### MCP server
 
