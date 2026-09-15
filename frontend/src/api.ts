@@ -17,6 +17,22 @@ export interface ChaosModeInfo {
   description: string
 }
 
+/**
+ * Faults that target what the agent does with a tool response rather than the HTTP transport.
+ * Mirrors the last five entries of backend/ChaosMonkey.Api/Models/ChaosMode.cs.
+ */
+export const agentLayerModes: ChaosModeId[] = [
+  'PromptInjection',
+  'ToolSchemaDrift',
+  'TruncatedStream',
+  'ContextExhaustion',
+  'CascadingFailure',
+]
+
+export function isAgentLayerMode(id: ChaosModeId): boolean {
+  return agentLayerModes.includes(id)
+}
+
 export interface EvaluatorInfo {
   provider: string
   model: string

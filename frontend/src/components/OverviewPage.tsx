@@ -1,3 +1,4 @@
+import { isAgentLayerMode } from '../api'
 import type { ChaosModeInfo, EvaluatorInfo } from '../api'
 import { connectorCatalogue } from '../connectors'
 
@@ -29,6 +30,20 @@ const expectations = [
   },
 ]
 
+function ModeCards({ modes }: { modes: ChaosModeInfo[] }) {
+  return (
+    <ul className="cards">
+      {modes.map((mode) => (
+        <li key={mode.id} className="card">
+          <span className="card__badge">{mode.id}</span>
+          <strong className="card__title">{mode.name}</strong>
+          <p className="card__detail">{mode.description}</p>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 interface OverviewPageProps {
   modes: ChaosModeInfo[]
   evaluator: EvaluatorInfo | null
@@ -42,6 +57,9 @@ export function OverviewPage({
   connectorName,
   onConnectorNameChange,
 }: OverviewPageProps) {
+  const transportModes = modes.filter((mode) => !isAgentLayerMode(mode.id))
+  const agentModes = modes.filter((mode) => isAgentLayerMode(mode.id))
+
   return (
     <section className="page" aria-label="Overview">
       <header className="page__header">
@@ -81,15 +99,29 @@ export function OverviewPage({
       {modes.length === 0 ? (
         <p className="page__empty">No chaos modes loaded. Start the backend to fetch the catalogue.</p>
       ) : (
-        <ul className="cards">
-          {modes.map((mode) => (
-            <li key={mode.id} className="card">
-              <span className="card__badge">{mode.id}</span>
-              <strong className="card__title">{mode.name}</strong>
-              <p className="card__detail">{mode.description}</p>
-            </li>
-          ))}
-        </ul>
+        <>
+          {transportModes.length > 0 && (
+            <>
+              <h4 className="page__subtitle">Transport faults</h4>
+              <ModeCards modes={transportModes} />
+            </>
+          )}
+
+          {agentModes.length > 0 && (
+            <>
+              <h4 className="page__subtitle">Agent-layer faults</h4>
+              <div className="note">
+                <p>
+                  These target what the agent does with a tool response rather than the HTTP
+                  transport. Preview and the default/static Laboratory run use the deterministic
+                  simulator; live gateway or Direct Line runs provide the tool-boundary evidence —
+                  timing, retries and side-effect receipts — for a real agent.
+                </p>
+              </div>
+              <ModeCards modes={agentModes} />
+            </>
+          )}
+        </>
       )}
 
       <h3 className="page__subtitle">Resilience judge</h3>
