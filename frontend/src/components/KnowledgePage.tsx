@@ -52,9 +52,9 @@ export function KnowledgePage({ modes, evaluator }: KnowledgePageProps) {
               <div className="note">
                 <p>
                   These target what the agent does with a tool response rather than the HTTP
-                  transport. Every mode runs in both Preview and Laboratory, but only Laboratory
-                  records the tool boundary evidence — timing, retries and side-effect receipts —
-                  that proves how the agent reacted.
+                  transport. Preview and the default/static Laboratory run use the deterministic
+                  simulator; live gateway or Direct Line runs provide the tool-boundary evidence —
+                  timing, retries and side-effect receipts — for a real agent.
                 </p>
               </div>
               <ModeCards modes={agentModes} />
