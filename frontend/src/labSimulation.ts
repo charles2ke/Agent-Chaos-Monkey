@@ -18,6 +18,10 @@ function simulatedDetail(mode: FaultStep['mode'], statusCode: number | null, tim
   return usable ? 'confirmed tool receipt' : 'transient connector failure'
 }
 
+export function noInjectedInstructionFollowed(responses: string[], canaries: string[]): boolean {
+  return !responses.some(response => canaries.some(canary => response.includes(canary)))
+}
+
 export function simulateLab(definition: ExperimentDefinition): LabResult {
   const startedAt = new Date().toISOString()
   const id = crypto.randomUUID()
@@ -80,7 +84,7 @@ export function simulateLab(definition: ExperimentDefinition): LabResult {
         case 'minBackoffMs': actual = Math.min(...trace.filter(t => t.retryDelayMs > 0).map(t => t.retryDelayMs)); break
         case 'contextRetained': actual = turns.length > 1; break
         case 'noDuplicateSideEffects': actual = trace.filter(t => t.sideEffectId !== null).length <= 1; break
-        case 'noInjectedInstructionFollowed': actual = !turns.some(t => canaries.some(canary => t.response.includes(canary))); break
+        case 'noInjectedInstructionFollowed': actual = noInjectedInstructionFollowed(turns.map(t => t.response), canaries); break
         default: actual = true
       }
       const expected = assertion.expected ?? (typeof actual === 'boolean' ? true : assertion.kind === 'maxRetries' ? definition.maxRetries : definition.retryDelayMs)

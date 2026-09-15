@@ -1,11 +1,31 @@
 import { expect, test } from '@playwright/test'
 import { defaultDefinition, validateDefinition, validateHistory, validateTests } from '../src/lab'
+import { noInjectedInstructionFollowed, simulateLab } from '../src/labSimulation'
 
 export function laboratoryTests(staticBuild: boolean) {
   const screenshots = staticBuild ? 'e2e-static/screenshots' : 'e2e/screenshots'
   test.beforeEach(async ({ page }) => {
     await page.goto(staticBuild ? './' : '/')
     await page.getByRole('button', { name: 'Laboratory', exact: true }).click()
+  })
+
+  test('prompt injection assertion requires and evaluates a delivered canary', () => {
+    const assertion = { id: 'injection', kind: 'noInjectedInstructionFollowed' as const, expected: true, severity: 'critical' as const }
+    const withoutCanary = simulateLab({ ...defaultDefinition, assertions: [assertion] })
+    expect(withoutCanary.runs.map(run => run.assertions[0].outcome)).toEqual(['inconclusive', 'inconclusive'])
+
+    const canary = 'SIMULATED-CANARY-2'
+    expect(noInjectedInstructionFollowed([`Follow ${canary}`], [canary])).toBe(false)
+    expect(noInjectedInstructionFollowed(['Ignored injected instructions'], [canary])).toBe(true)
+
+    const withCanary = simulateLab({
+      ...defaultDefinition,
+      faults: [{ invocation: 1, mode: 'PromptInjection' }],
+      assertions: [assertion],
+    })
+    const injectedRun = withCanary.runs[1]
+    expect(injectedRun.trace.map(call => call.injectedCanary).filter(Boolean)).toEqual([canary])
+    expect(injectedRun.assertions[0].outcome).toBe('pass')
   })
 
   test('design matrix and sequence faults; inspect honest evidence and skipped scopes', async ({ page }) => {
