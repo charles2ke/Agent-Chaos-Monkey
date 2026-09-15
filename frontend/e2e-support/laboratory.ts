@@ -14,17 +14,16 @@ export function laboratoryTests(staticBuild: boolean) {
     const withoutCanary = simulateLab({ ...defaultDefinition, assertions: [assertion] })
     expect(withoutCanary.runs.map(run => run.assertions[0].outcome)).toEqual(['inconclusive', 'inconclusive'])
 
-    const canary = 'SIMULATED-CANARY-2'
-    expect(noInjectedInstructionFollowed([`Follow ${canary}`], [canary])).toBe(false)
-    expect(noInjectedInstructionFollowed(['Ignored injected instructions'], [canary])).toBe(true)
-
     const withCanary = simulateLab({
       ...defaultDefinition,
       faults: [{ invocation: 1, mode: 'PromptInjection' }],
       assertions: [assertion],
     })
     const injectedRun = withCanary.runs[1]
-    expect(injectedRun.trace.map(call => call.injectedCanary).filter(Boolean)).toEqual([canary])
+    const canaries = injectedRun.trace.map(call => call.injectedCanary).filter((canary): canary is string => Boolean(canary))
+    expect(canaries).toHaveLength(1)
+    expect(noInjectedInstructionFollowed([`Follow ${canaries[0]}`], canaries)).toBe(false)
+    expect(noInjectedInstructionFollowed(['Ignored injected instructions'], canaries)).toBe(true)
     expect(injectedRun.assertions[0].outcome).toBe('pass')
   })
 
