@@ -10,7 +10,7 @@
 [![Coverage](https://github.com/charles2ke/Agent-Chaos-Monkey/actions/workflows/coverage.yml/badge.svg)](https://github.com/charles2ke/Agent-Chaos-Monkey/actions/workflows/coverage.yml)
 [![Backend coverage 73%](https://img.shields.io/badge/backend%20coverage-73%25-yellow)](.github/workflows/coverage.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)](backend)
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](backend)
 [![React 19 + Vite](https://img.shields.io/badge/React-19%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](frontend)
 
 [Live demo](https://charles2ke.github.io/Agent-Chaos-Monkey/) · [Evaluate in 3 minutes](docs/JUDGES.md) · [Quick start](#-quick-start) · [Leaderboard](docs/LEADERBOARD.md) · [Copilot Studio](docs/COPILOT_STUDIO.md) · [GitHub Action](docs/ACTION.md) · [Deploy to Azure](docs/DEPLOY.md) · [Resilience laboratory](#-resilience-laboratory)
@@ -88,7 +88,7 @@ cannot pass by coincidence.
 
 ## 🚀 Quick start
 
-> **Prerequisites:** [.NET 8 SDK](https://dotnet.microsoft.com/download) and [Node.js 20.19+ or 22.12+](https://nodejs.org) (required by Vite 8).
+> **Prerequisites:** [.NET 10 SDK](https://dotnet.microsoft.com/download) and [Node.js 20.19+ or 22.12+](https://nodejs.org) (required by Vite 8).
 
 ```bash
 # Backend → http://localhost:5249
@@ -183,7 +183,7 @@ All packages are kept on their latest stable releases.
 
 | Area | Package | Version |
 | --- | --- | --- |
-| Backend | .NET target framework | `net8.0` |
+| Backend | .NET target framework | `net10.0` |
 | Backend | Microsoft.NET.Test.Sdk | `18.10.0` |
 | Backend | xunit / xunit.runner.visualstudio | `2.9.3` / `4.0.0` |
 | Backend | coverlet.collector | `10.0.1` |
