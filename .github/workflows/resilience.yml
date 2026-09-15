@@ -88,7 +88,7 @@ jobs:
           fail_on_failure: false
       - name: Upload reports and screenshot evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: resilience-reports-and-screenshots
           path: |
@@ -147,7 +147,7 @@ jobs:
           cat results/benchmark/leaderboard.md >> "$GITHUB_STEP_SUMMARY"
       - name: Upload gateway evidence
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: gateway-evidence
           path: |
