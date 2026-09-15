@@ -180,14 +180,14 @@ All packages are kept on their latest stable releases.
 | Area | Package | Version |
 | --- | --- | --- |
 | Backend | .NET target framework | `net10.0` |
-| Backend | Microsoft.NET.Test.Sdk | `18.10.0` |
+| Backend | Microsoft.NET.Test.Sdk | `18.10.1` |
 | Backend | xunit / xunit.runner.visualstudio | `2.9.3` / `4.0.0` |
 | Backend | coverlet.collector | `10.0.1` |
 | Backend | Azure.Identity | `1.21.0` |
 | Frontend | react / react-dom | `19.3.0` |
 | Frontend | vite / @vitejs/plugin-react | `8.3.0` / `6.1.1` |
 | Frontend | typescript | `7.0.2` |
-| Frontend | oxlint | `1.82.0` |
+| Frontend | oxlint | `1.83.0` |
 | Frontend | @playwright/test | `1.63.0` |
 
 ### API surface

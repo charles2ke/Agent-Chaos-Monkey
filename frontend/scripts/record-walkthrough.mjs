@@ -37,7 +37,10 @@ const steps = [
   {
     text: 'This is the Preview screen. On the left you pick the connector to sabotage and the chaos modes: latency spikes, server errors, empty or malformed payloads, throttling and expired auth.',
     run: async (page) => {
-      await page.getByText('Expired auth (HTTP 401)').scrollIntoViewIfNeeded()
+      await page
+        .getByRole('complementary', { name: 'Chaos configuration' })
+        .getByText('Expired auth (HTTP 401)')
+        .scrollIntoViewIfNeeded()
     },
   },
   {
