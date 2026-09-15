@@ -3,13 +3,11 @@ import { api, extractReply } from './api'
 import type { ChaosModeId, ChaosModeInfo, EvaluatorInfo, ExperimentRequest, ExperimentResult } from './api'
 import { ActivityPage } from './components/ActivityPage'
 import { ChaosPanel } from './components/ChaosPanel'
-import { InstructionsPage } from './components/InstructionsPage'
-import { KnowledgePage } from './components/KnowledgePage'
+import { OverviewPage } from './components/OverviewPage'
 import { PreviewPane } from './components/PreviewPane'
 import type { PreviewTurn } from './components/PreviewPane'
 import { SettingsPage } from './components/SettingsPage'
 import { SideNav } from './components/SideNav'
-import { ToolsPage } from './components/ToolsPage'
 import { TopBar } from './components/TopBar'
 import { LaboratoryPage } from './components/LaboratoryPage'
 import { RunAssistant } from './components/RunAssistant'
@@ -228,10 +226,13 @@ export default function App() {
           </main>
         ) : activeTab !== 'Laboratory' ? (
           <main className="workspace workspace--single">
-            {activeTab === 'Instructions' && <InstructionsPage />}
-            {activeTab === 'Knowledge' && <KnowledgePage modes={modes} evaluator={evaluator} />}
-            {activeTab === 'Tools' && (
-              <ToolsPage connectorName={connectorName} onConnectorNameChange={setConnectorName} />
+            {activeTab === 'Overview' && (
+              <OverviewPage
+                modes={modes}
+                evaluator={evaluator}
+                connectorName={connectorName}
+                onConnectorNameChange={setConnectorName}
+              />
             )}
             {activeTab === 'Activity' && (
               <ActivityPage history={history} onClear={() => setHistory([])} />

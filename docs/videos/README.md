@@ -1,8 +1,7 @@
 # Video walkthrough
 
 - `walkthrough.mp4` — narrated tour of every screen (Preview, resilience
-  report, Activity, Instructions, Knowledge, Tools, Settings), capped at two
-  minutes.
+  report, Activity, Overview, Settings), capped at two minutes.
 
 Recorded from the static demo build by
 `cd frontend && npm run record:walkthrough`

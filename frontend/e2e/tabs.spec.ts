@@ -6,19 +6,14 @@ test.describe('agent tabs', () => {
   test('every tab is published and navigable', async ({ page }) => {
     await page.goto('/')
 
-    await page.getByRole('button', { name: 'Instructions' }).click()
-    await expect(page.getByRole('heading', { name: 'Instructions' })).toBeVisible()
+    await page.getByRole('button', { name: 'Overview' }).click()
+    await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible()
     await expect(page.getByText('Never fabricate tool success')).toBeVisible()
-    await page.screenshot({ path: `${screenshots}/05-instructions.png`, fullPage: true })
-
-    await page.getByRole('button', { name: 'Knowledge' }).click()
     await expect(page.getByRole('heading', { name: 'Chaos catalogue' })).toBeVisible()
     await expect(page.getByText('Expired auth (HTTP 401)')).toBeVisible()
-    await page.screenshot({ path: `${screenshots}/06-knowledge.png`, fullPage: true })
-
-    await page.getByRole('button', { name: 'Tools' }).click()
+    await expect(page.getByRole('heading', { name: 'Resilience judge' })).toBeVisible()
     await expect(page.getByRole('radio', { name: /MCP\.FileSearch/ })).toBeVisible()
-    await page.screenshot({ path: `${screenshots}/07-tools.png`, fullPage: true })
+    await page.screenshot({ path: `${screenshots}/05-overview.png`, fullPage: true })
 
     await page.getByRole('button', { name: 'Activity' }).click()
     await expect(page.getByText('No runs yet.')).toBeVisible()
@@ -32,12 +27,12 @@ test.describe('agent tabs', () => {
     await expect(page.getByRole('heading', { name: 'Injected failures' })).toBeVisible()
   })
 
-  test('the tool picked on Tools is the connector that fails, and the run lands in Activity', async ({
+  test('the tool picked on Overview is the connector that fails, and the run lands in Activity', async ({
     page,
   }) => {
     await page.goto('/')
 
-    await page.getByRole('button', { name: 'Tools' }).click()
+    await page.getByRole('button', { name: 'Overview' }).click()
     await page.getByRole('radio', { name: /GraphAPI\.SendMail/ }).check()
 
     await page.getByRole('button', { name: 'Preview' }).click()

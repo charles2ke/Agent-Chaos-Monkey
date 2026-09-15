@@ -53,13 +53,9 @@ test.describe('static GitHub Pages build', () => {
   test('all tabs are published in the static build', async ({ page }) => {
     await page.goto('./')
 
-    await page.getByRole('button', { name: 'Instructions' }).click()
+    await page.getByRole('button', { name: 'Overview' }).click()
     await expect(page.getByText('Never fabricate tool success')).toBeVisible()
-
-    await page.getByRole('button', { name: 'Knowledge' }).click()
     await expect(page.getByRole('heading', { name: 'Chaos catalogue' })).toBeVisible()
-
-    await page.getByRole('button', { name: 'Tools' }).click()
     await expect(page.getByRole('radio', { name: /MCP\.FileSearch/ })).toBeVisible()
 
     await page.getByRole('button', { name: 'Settings' }).click()
