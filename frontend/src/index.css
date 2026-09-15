@@ -499,6 +499,10 @@ body {
   margin-bottom: 6px;
 }
 
+.card__badge + .card__badge {
+  margin-left: 6px;
+}
+
 .card__title {
   display: block;
   font-family: var(--mono);

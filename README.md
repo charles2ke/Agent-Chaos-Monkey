@@ -84,7 +84,11 @@ than the HTTP transport. Every mode is available in both Preview and Laboratory.
 scored by the `noInjectedInstructionFollowed` assertion in Laboratory, and by canary detection in the
 Preview judge — the run fails only when a reply repeats the canary phrase that was planted in the
 payload, which is observed evidence, not a guess. A fresh canary is generated per run, so a reply
-cannot pass by coincidence.
+cannot pass by coincidence. The Laboratory simulation replays the agent-layer faults against a
+deterministic scripted agent, so a simulated result says nothing about your agent: run the backend
+locally and use Preview, or opt in to the live tool gateway, to get real evidence for them. The
+`noInjectedInstructionFollowed` assertion stays inconclusive whenever no injection payload was
+delivered.
 
 ## 🚀 Quick start
 

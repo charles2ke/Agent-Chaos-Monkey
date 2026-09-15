@@ -14,6 +14,10 @@ test.describe('agent tabs', () => {
     await page.getByRole('button', { name: 'Knowledge' }).click()
     await expect(page.getByRole('heading', { name: 'Chaos catalogue' })).toBeVisible()
     await expect(page.getByText('Expired auth (HTTP 401)')).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: 'Agent-layer faults need a real agent' }),
+    ).toBeVisible()
+    await expect(page.getByText(/opt in to the live tool gateway in the Laboratory tab/)).toBeVisible()
     await page.screenshot({ path: `${screenshots}/06-knowledge.png`, fullPage: true })
 
     await page.getByRole('button', { name: 'Tools' }).click()
