@@ -10,7 +10,7 @@ proposing changes to the backend.
 
 You need the following installed locally:
 
-- **.NET SDK 8.0** — for the API and unit tests.
+- **.NET SDK 10.0** — for the API and unit tests.
 - **Node.js 20+** — for the frontend, the MCP server, and the headless CLI.
 - **Playwright browsers** — installed on demand by the frontend tests
   (`npx playwright install --with-deps chromium`).
