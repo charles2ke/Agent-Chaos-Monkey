@@ -53,10 +53,8 @@ test.describe('static GitHub Pages build', () => {
   test('all tabs are published in the static build', async ({ page }) => {
     await page.goto('./')
 
-    await page.getByRole('button', { name: 'Instructions' }).click()
+    await page.getByRole('button', { name: 'Overview' }).click()
     await expect(page.getByText('Never fabricate tool success')).toBeVisible()
-
-    await page.getByRole('button', { name: 'Knowledge' }).click()
     await expect(page.getByRole('heading', { name: 'Chaos catalogue' })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Agent-layer faults' })).toBeVisible()
     await expect(page.getByText('Prompt injection', { exact: true })).toBeVisible()
@@ -64,9 +62,8 @@ test.describe('static GitHub Pages build', () => {
     await expect(page.getByText('Truncated stream', { exact: true })).toBeVisible()
     await expect(page.getByText('Context exhaustion', { exact: true })).toBeVisible()
     await expect(page.getByText('Cascading failure', { exact: true })).toBeVisible()
-    await page.screenshot({ path: `${screenshots}/05-static-knowledge-catalogue.png`, fullPage: true })
+    await page.screenshot({ path: `${screenshots}/05-static-overview-catalogue.png`, fullPage: true })
 
-    await page.getByRole('button', { name: 'Tools' }).click()
     await expect(page.getByRole('radio', { name: /MCP\.FileSearch/ })).toBeVisible()
 
     await page.getByRole('button', { name: 'Settings' }).click()

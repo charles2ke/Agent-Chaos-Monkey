@@ -1,7 +1,5 @@
 export const tabs = [
-  'Instructions',
-  'Knowledge',
-  'Tools',
+  'Overview',
   'Preview',
   'Laboratory',
   'Activity',

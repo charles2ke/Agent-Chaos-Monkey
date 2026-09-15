@@ -37,7 +37,10 @@ const steps = [
   {
     text: 'This is the Preview screen. On the left you pick the connector to sabotage and the chaos modes: latency spikes, server errors, empty or malformed payloads, throttling and expired auth.',
     run: async (page) => {
-      await page.getByText('Expired auth (HTTP 401)').scrollIntoViewIfNeeded()
+      await page
+        .getByRole('complementary', { name: 'Chaos configuration' })
+        .getByText('Expired auth (HTTP 401)')
+        .scrollIntoViewIfNeeded()
     },
   },
   {
@@ -62,22 +65,15 @@ const steps = [
     },
   },
   {
-    text: 'Instructions holds the system prompt under test. Rules like never fabricate tool success are exactly what chaos runs verify.',
+    text: 'Overview holds the resilience contract under test. Rules like never fabricate tool success are exactly what chaos runs verify.',
     run: async (page) => {
-      await page.getByRole('button', { name: 'Instructions' }).click()
+      await page.getByRole('button', { name: 'Overview' }).click()
     },
   },
   {
-    text: 'Knowledge documents the chaos catalogue and how the resilience judge scores each response.',
+    text: 'The same page documents the chaos catalogue, how the resilience judge scores each response, and which connector chaos targets.',
     run: async (page) => {
-      await page.getByRole('button', { name: 'Knowledge' }).click()
-      await page.mouse.wheel(0, 300)
-    },
-  },
-  {
-    text: 'Tools lists the connectors available to the agent, and lets you choose which one chaos targets.',
-    run: async (page) => {
-      await page.getByRole('button', { name: 'Tools' }).click()
+      await page.mouse.wheel(0, 900)
     },
   },
   {

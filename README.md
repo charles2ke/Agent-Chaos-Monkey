@@ -13,7 +13,7 @@
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](backend)
 [![React 19 + Vite](https://img.shields.io/badge/React-19%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](frontend)
 
-[Live demo](https://charles2ke.github.io/Agent-Chaos-Monkey/) · [Evaluate in 3 minutes](docs/JUDGES.md) · [Quick start](#-quick-start) · [Leaderboard](docs/LEADERBOARD.md) · [Copilot Studio](docs/COPILOT_STUDIO.md) · [GitHub Action](docs/ACTION.md) · [Deploy to Azure](docs/DEPLOY.md) · [Resilience laboratory](#-resilience-laboratory)
+[Live demo](https://charles2ke.github.io/Agent-Chaos-Monkey/) · [Getting started](GETTING_STARTED.md) · [Evaluate in 3 minutes](docs/JUDGES.md) · [Quick start](#-quick-start) · [Leaderboard](docs/LEADERBOARD.md) · [Copilot Studio](docs/COPILOT_STUDIO.md) · [GitHub Action](docs/ACTION.md) · [Deploy to Azure](docs/DEPLOY.md) · [Resilience laboratory](#-resilience-laboratory)
 
 </div>
 
@@ -88,6 +88,8 @@ cannot pass by coincidence.
 
 ## 🚀 Quick start
 
+> New here? [**GETTING_STARTED.md**](GETTING_STARTED.md) walks through the first run end to end.
+
 > **Prerequisites:** [.NET 10 SDK](https://dotnet.microsoft.com/download) and [Node.js 20.19+ or 22.12+](https://nodejs.org) (required by Vite 8).
 
 ```bash
@@ -123,9 +125,7 @@ The UI is styled after an agent in the new GitHub harness experience of Copilot 
 
 | Tab | Purpose |
 | --- | --- |
-| **Instructions** | The resilience contract every experiment is scored against |
-| **Knowledge** | The injectable chaos catalogue and the configured judge |
-| **Tools** | The connector / tool boundary chaos is injected at |
+| **Overview** | The resilience contract, the injectable chaos catalogue, the configured judge and the connector / tool boundary chaos is injected at |
 | **Preview** | Chat preview pane with the connector trace and resilience report |
 | **Activity** | History of the experiments run in this session |
 | **Settings** | Agent endpoint and token, injected latency, evaluator model |
@@ -135,11 +135,7 @@ The UI is styled after an agent in the new GitHub harness experience of Copilot 
 <summary><strong>Screenshots of every tab</strong></summary>
 
 <p align="center">
-  <img src="docs/images/tab-instructions.png" alt="Instructions tab listing the resilience contract the agent is scored against" width="49%">
-  <img src="docs/images/tab-knowledge.png" alt="Knowledge tab showing the injectable chaos catalogue and the configured judge" width="49%">
-</p>
-<p align="center">
-  <img src="docs/images/tab-tools.png" alt="Tools tab for picking the connector boundary chaos is injected at" width="49%">
+  <img src="docs/images/tab-overview.png" alt="Overview tab with the resilience contract, the chaos catalogue, the judge and the connector picker" width="49%">
   <img src="docs/images/tab-activity.png" alt="Activity tab listing the experiments run in this session with their scores" width="49%">
 </p>
 <p align="center">
@@ -184,14 +180,14 @@ All packages are kept on their latest stable releases.
 | Area | Package | Version |
 | --- | --- | --- |
 | Backend | .NET target framework | `net10.0` |
-| Backend | Microsoft.NET.Test.Sdk | `18.10.0` |
+| Backend | Microsoft.NET.Test.Sdk | `18.10.1` |
 | Backend | xunit / xunit.runner.visualstudio | `2.9.3` / `4.0.0` |
 | Backend | coverlet.collector | `10.0.1` |
 | Backend | Azure.Identity | `1.21.0` |
 | Frontend | react / react-dom | `19.3.0` |
 | Frontend | vite / @vitejs/plugin-react | `8.3.0` / `6.1.1` |
 | Frontend | typescript | `7.0.2` |
-| Frontend | oxlint | `1.82.0` |
+| Frontend | oxlint | `1.83.0` |
 | Frontend | @playwright/test | `1.63.0` |
 
 ### API surface

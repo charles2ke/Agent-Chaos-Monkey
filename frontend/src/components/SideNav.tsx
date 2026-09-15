@@ -4,17 +4,14 @@ import { tabs } from '../tabs'
 import type { TabId } from '../tabs'
 import {
   ActivityIcon,
-  InstructionsIcon,
-  KnowledgeIcon,
+  OverviewIcon,
   PreviewIcon,
   SettingsIcon,
   ToolsIcon,
 } from './icons'
 
 const tabIcons = {
-  Instructions: InstructionsIcon,
-  Knowledge: KnowledgeIcon,
-  Tools: ToolsIcon,
+  Overview: OverviewIcon,
   Preview: PreviewIcon,
   Laboratory: ToolsIcon,
   Activity: ActivityIcon,
