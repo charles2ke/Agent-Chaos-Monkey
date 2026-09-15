@@ -1,6 +1,13 @@
 import { expect, test } from '@playwright/test'
 
 const screenshots = 'e2e-static/screenshots'
+const agentLayerModes = [
+  'PromptInjection',
+  'ToolSchemaDrift',
+  'TruncatedStream',
+  'ContextExhaustion',
+  'CascadingFailure',
+]
 
 test.describe('static GitHub Pages build', () => {
   test('runs a chaos experiment entirely in the browser', async ({ page }) => {
@@ -58,6 +65,11 @@ test.describe('static GitHub Pages build', () => {
 
     await page.getByRole('button', { name: 'Knowledge' }).click()
     await expect(page.getByRole('heading', { name: 'Chaos catalogue' })).toBeVisible()
+    for (const mode of agentLayerModes) {
+      await expect(
+        page.locator('li.card', { hasText: mode }).getByText('Agent-layer', { exact: true }),
+      ).toBeVisible()
+    }
     await expect(
       page.getByRole('heading', { name: 'Agent-layer faults need a real agent' }),
     ).toBeVisible()
