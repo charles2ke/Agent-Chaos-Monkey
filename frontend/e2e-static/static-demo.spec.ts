@@ -58,6 +58,10 @@ test.describe('static GitHub Pages build', () => {
 
     await page.getByRole('button', { name: 'Knowledge' }).click()
     await expect(page.getByRole('heading', { name: 'Chaos catalogue' })).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: 'Agent-layer faults need a real agent' }),
+    ).toBeVisible()
+    await expect(page.getByText(/Neither is available in the published/)).toBeVisible()
 
     await page.getByRole('button', { name: 'Tools' }).click()
     await expect(page.getByRole('radio', { name: /MCP\.FileSearch/ })).toBeVisible()
