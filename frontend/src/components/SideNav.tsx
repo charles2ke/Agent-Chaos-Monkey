@@ -30,6 +30,12 @@ interface SideNavProps {
   onClose: () => void
 }
 
+function isVisible(element: HTMLElement) {
+  return typeof element.checkVisibility === 'function'
+    ? element.checkVisibility({ visibilityProperty: true })
+    : element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden'
+}
+
 export function SideNav({
   evaluator,
   activeTab,
@@ -54,13 +60,9 @@ export function SideNav({
 
       const focusable = Array.from(
         navRef.current?.querySelectorAll<HTMLElement>(
-          'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+          'button:not(:disabled):not([tabindex="-1"]), [href]:not([tabindex="-1"]), input:not(:disabled):not([tabindex="-1"]), select:not(:disabled):not([tabindex="-1"]), textarea:not(:disabled):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])',
         ) ?? [],
-      ).filter((element) =>
-        typeof element.checkVisibility === 'function'
-          ? element.checkVisibility({ visibilityProperty: true })
-          : element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden',
-      )
+      ).filter(isVisible)
       if (!focusable.length) return
 
       const first = focusable[0]
