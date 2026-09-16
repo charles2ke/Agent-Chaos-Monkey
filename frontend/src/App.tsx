@@ -39,6 +39,7 @@ export default function App() {
   const [stopRequested, setStopRequested] = useState(false)
   const executionLocked = useRef(false)
   const stopAfterCurrent = useRef(false)
+  const workspaceInert = navOpen || undefined
 
   useEffect(() => {
     api.chaosModes().then(setModes).catch(() => setModes([]))
@@ -223,7 +224,7 @@ export default function App() {
           menuButtonRef={menuButtonRef}
         />
         {activeTab === 'Preview' ? (
-          <main className="workspace" inert={navOpen ? true : undefined}>
+          <main className="workspace" inert={workspaceInert}>
             <ChaosPanel
               modes={modes}
               selectedModes={selectedModes}
@@ -274,7 +275,7 @@ export default function App() {
             />
           </main>
         ) : activeTab !== 'Laboratory' ? (
-          <main className="workspace workspace--single" inert={navOpen ? true : undefined}>
+          <main className="workspace workspace--single" inert={workspaceInert}>
             {activeTab === 'Overview' && (
               <OverviewPage
                 modes={modes}
@@ -305,7 +306,7 @@ export default function App() {
         <main
           className="workspace workspace--single"
           hidden={activeTab !== 'Laboratory'}
-          inert={navOpen ? true : undefined}
+          inert={workspaceInert}
         >
           <LaboratoryPage />
         </main>
