@@ -120,7 +120,7 @@ and fails if the result would run longer than two minutes.
 
 Navigation lives behind the **hamburger menu** in the top left; **Settings** sits behind the
 **gear icon** in the top right. Every control carries a descriptive tooltip on hover or keyboard
-focus, and **Overview** has sub-menus for its four sections.
+focus, and **Overview** has sub-menus for its three sections.
 
 | Screen | Purpose |
 | --- | --- |
