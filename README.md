@@ -125,7 +125,7 @@ The UI is styled after an agent in the new GitHub harness experience of Copilot 
 
 | Tab | Purpose |
 | --- | --- |
-| **Overview** | The resilience contract, the injectable chaos catalogue, the configured judge and the connector / tool boundary chaos is injected at |
+| **Overview** | The resilience contract, the injectable chaos catalogue, the configured judge and the connector / tool boundary where chaos is injected |
 | **Preview** | Chat preview pane with the connector trace and resilience report |
 | **Activity** | History of the experiments run in this session |
 | **Settings** | Agent endpoint and token, injected latency, evaluator model |
