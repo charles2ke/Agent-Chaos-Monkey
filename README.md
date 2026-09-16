@@ -125,30 +125,56 @@ and fails if the result would run longer than two minutes.
 
 ## 🧭 The UI
 
-The UI uses a GitHub-style agent harness layout, and every tab is a real page:
+Navigation lives behind the **hamburger menu** in the top left; **Settings** sits behind the
+**gear icon** in the top right. Every control carries a descriptive tooltip on hover or keyboard
+focus, and **Overview** has sub-menus for its four sections.
 
-| Tab | Purpose |
+| Screen | Purpose |
 | --- | --- |
-| **Overview** | The resilience contract, the injectable chaos catalogue, the configured judge and the connector / tool boundary where chaos is injected |
+| **Overview** | The resilience contract, the injectable chaos catalogue, the configured judge and the connector / tool boundary where chaos is injected. Sub-menus: Instructions, Chaos catalogue, Resilience judge, Tools |
 | **Preview** | Chat preview pane with the connector trace and resilience report |
 | **Activity** | History of the experiments run in this session |
-| **Settings** | Agent endpoint and token, injected latency, evaluator model |
 | **Laboratory** | Versioned experiments, schedules, traces, saved tests, persistent history and comparisons |
+| **Settings** (gear icon) | Agent endpoint and token, injected latency, evaluator model |
 
-<details>
-<summary><strong>Screenshots of every tab</strong></summary>
+### Screenshots
+
+**Navigation** — the hamburger menu with Overview sub-menus, and a single Overview section opened
+from one of them:
 
 <p align="center">
-  <img src="docs/images/tab-overview.png" alt="Overview tab with the resilience contract, the chaos catalogue, the judge and the connector picker" width="49%">
-  <img src="docs/images/tab-activity.png" alt="Activity tab listing the experiments run in this session with their scores" width="49%">
+  <img src="docs/images/navigation-menu.png" alt="Hamburger navigation menu open, showing Overview with its Instructions, Chaos catalogue, Resilience judge and Tools sub-menus, plus Preview, Laboratory and Activity" width="49%">
+  <img src="docs/images/overview-tools-section.png" alt="The Tools sub-menu of Overview, showing only the connector picker" width="49%">
+</p>
+
+**Preview and the resilience report** — a scenario replayed with an expired-auth fault injected:
+
+<p align="center">
+  <img src="docs/images/preview-empty.png" alt="Preview screen before a run, with the chaos configuration panel and the run assistant" width="49%">
+  <img src="docs/images/resilience-report.png" alt="Resilience report after injecting an expired-auth HTTP 401 failure" width="49%">
+</p>
+
+**Overview, Activity and Laboratory**:
+
+<p align="center">
+  <img src="docs/images/tab-overview.png" alt="Overview screen with the resilience contract, the chaos catalogue, the judge and the connector picker" width="49%">
+  <img src="docs/images/tab-activity.png" alt="Activity screen listing the experiments run in this session with their scores" width="49%">
 </p>
 <p align="center">
-  <img src="docs/images/tab-settings.png" alt="Settings tab with the agent endpoint, injected latency and evaluator model" width="49%">
+  <img src="docs/images/tab-laboratory.png" alt="Laboratory screen with a versioned experiment definition and its evidence report" width="49%">
+  <img src="docs/images/tab-settings.png" alt="Settings screen, opened from the gear icon, with the agent endpoint, injected latency and evaluator model" width="49%">
 </p>
 
-Every image is a Playwright screenshot, refreshed by `npm run test:e2e`.
+**Tooltips and small screens** — every panel, field and table column explains itself, and the same
+menu drives navigation on a phone:
 
-</details>
+<p align="center">
+  <img src="docs/images/tooltips.png" alt="A descriptive tooltip explaining the injected failures panel" width="49%">
+  <img src="docs/images/mobile-navigation.png" alt="The navigation drawer open on a 390 pixel wide phone viewport" width="32%">
+</p>
+
+Every image is a Playwright screenshot, refreshed by `cd frontend && npm run test:e2e` and
+`npm run test:e2e:static`.
 
 ## 🏗️ Architecture
 
