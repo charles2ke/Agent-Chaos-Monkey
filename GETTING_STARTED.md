@@ -78,11 +78,11 @@ actions or costs. For Copilot Studio agents, see
 ## 7. Validate a change
 
 ```bash
-cd backend && dotnet test                 # chaos engine, evaluator, laboratory
-cd frontend && npm run lint && npm run build
-cd frontend && npm run test:e2e           # Playwright UI tests (boots both servers)
-cd frontend && npm run test:e2e:static    # Playwright against the static Pages build
-cd mcp && npm test                        # MCP server tests
+(cd backend && dotnet test)                # chaos engine, evaluator, laboratory
+(cd frontend && npm run lint && npm run build)
+(cd frontend && npm run test:e2e)          # Playwright UI tests (boots both servers)
+(cd frontend && npm run test:e2e:static)   # Playwright against the static Pages build
+(cd mcp && npm test)                       # MCP server tests
 node --test cli/*.test.mjs                # CLI tests
 ```
 
