@@ -25,12 +25,14 @@ export function TopBar({ evaluator, activeTab, targetLabel }: TopBarProps) {
       <div className="topbar__meta">
         <span className="chip chip--target" title={targetLabel}>
           <span className="chip__label">Target</span>
-          {targetLabel}
+          <span className="chip__text">{targetLabel}</span>
         </span>
         <span className="chip">
           <SparkleIcon className="chip__icon" />
-          {evaluator ? evaluator.model : 'no judge'}
-          {evaluator && !evaluator.configured ? ' · heuristic' : ''}
+          <span className="chip__text">
+            {evaluator ? evaluator.model : 'no judge'}
+            {evaluator && !evaluator.configured ? ' · heuristic' : ''}
+          </span>
         </span>
       </div>
     </header>

@@ -45,4 +45,4 @@
 .lab-error, .lab-warning { margin-top: 16px; padding: 14px; border: 1px solid var(--danger); border-radius: 8px; }.lab-warning { border-color: var(--warning); }
 .lab-comparison { padding: 14px; background: var(--accent-soft); border-radius: 8px; }
 @media (max-width: 1100px) { .lab-layout { grid-template-columns: 1fr; } }
-@media (max-width: 600px) { .lab-card { padding: 14px; }.lab-fields, .lab-fault { grid-template-columns: 1fr; }.lab-saved { flex-wrap: wrap; }.lab-saved > div { flex-basis: 100%; } }
+@media (max-width: 600px) { .lab-card { padding: 14px; }.lab-fields, .lab-fault { grid-template-columns: 1fr; }.lab-metrics { grid-template-columns: 1fr; }.lab-saved { flex-wrap: wrap; }.lab-saved > div { flex-basis: 100%; }.lab-upload { max-width: 100%; }.lab button { min-height: 44px; }.lab-outcome { margin-left: 0; } }

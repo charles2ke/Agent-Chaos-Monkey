@@ -90,4 +90,37 @@ test.describe('static GitHub Pages build', () => {
 
     await page.screenshot({ path: `${screenshots}/03-static-tabs.png`, fullPage: true })
   })
+
+  test('navigation stays usable on a phone viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('./')
+
+    const rail = page.locator('.rail')
+    await expect(rail).toBeVisible()
+
+    for (const tab of ['Laboratory', 'Activity', 'Settings', 'Overview', 'Preview']) {
+      const button = page.getByRole('button', { name: tab, exact: true })
+      await button.click()
+      // The active tab must be scrolled into view inside the horizontal rail.
+      const inView = await button.evaluate((element) => {
+        const box = element.getBoundingClientRect()
+        return box.left >= 0 && box.right <= window.innerWidth
+      })
+      expect(inView, `${tab} tab is visible in the rail`).toBe(true)
+      // No page-level horizontal scrolling.
+      expect(
+        await page.evaluate(() => ({
+          scrollWidth: document.documentElement.scrollWidth,
+          clientWidth: document.documentElement.clientWidth,
+        })),
+      ).toEqual({ scrollWidth: 390, clientWidth: 390 })
+    }
+
+    // The rail is sticky, so navigation is reachable after scrolling a long page.
+    await page.getByRole('button', { name: 'Overview', exact: true }).click()
+    await page.mouse.wheel(0, 2000)
+    await expect(page.getByRole('button', { name: 'Preview', exact: true })).toBeInViewport()
+
+    await page.screenshot({ path: `${screenshots}/06-static-mobile-navigation.png` })
+  })
 })

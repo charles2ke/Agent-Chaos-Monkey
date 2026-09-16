@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import type { ReactElement } from 'react'
 import type { EvaluatorInfo } from '../api'
 import { tabs } from '../tabs'
@@ -25,6 +26,12 @@ interface SideNavProps {
 }
 
 export function SideNav({ evaluator, activeTab, onSelectTab }: SideNavProps) {
+  const activeRef = useRef<HTMLButtonElement | null>(null)
+
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: 'nearest', inline: 'center' })
+  }, [activeTab])
+
   return (
     <nav className="rail" aria-label="Agent sections">
       <div className="rail__brand">
@@ -45,6 +52,7 @@ export function SideNav({ evaluator, activeTab, onSelectTab }: SideNavProps) {
             <li key={tab}>
               <button
                 type="button"
+                ref={tab === activeTab ? activeRef : undefined}
                 className={`rail__item ${tab === activeTab ? 'rail__item--active' : ''}`}
                 aria-current={tab === activeTab ? 'page' : undefined}
                 onClick={() => onSelectTab(tab)}
