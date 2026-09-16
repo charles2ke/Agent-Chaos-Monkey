@@ -62,6 +62,8 @@ body {
 }
 
 .shell {
+  --topbar-height: 0px;
+
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -471,6 +473,7 @@ body {
 
 @media (max-width: 1000px) {
   .shell {
+    /* Rendered height of the wrapped responsive top bar. */
     --topbar-height: 84px;
   }
 
@@ -520,6 +523,7 @@ body {
 
 @media (max-width: 700px) {
   .shell {
+    /* The phone layout adds a full-width metadata row to the top bar. */
     --topbar-height: 136px;
   }
 
