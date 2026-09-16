@@ -100,7 +100,10 @@ test.describe('static GitHub Pages build', () => {
 
     for (const tab of ['Laboratory', 'Activity', 'Settings', 'Overview', 'Preview']) {
       const button = page.getByRole('button', { name: tab, exact: true })
-      await button.click()
+      // Dispatch the click directly so Playwright's actionability scrolling
+      // doesn't mask a regression in the app's own scrollIntoView behavior.
+      await button.evaluate((element) => (element as HTMLElement).click())
+      await expect(button).toHaveClass(/rail__item--active/)
       // The active tab must be scrolled into view inside the horizontal rail.
       const inView = await button.evaluate((element) => {
         const box = element.getBoundingClientRect()
