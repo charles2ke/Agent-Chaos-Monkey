@@ -182,10 +182,10 @@ test.describe('static GitHub Pages build', () => {
     expect(pinnedRunBox).not.toBeNull()
     expect(pinnedRunBox!.y).toBeGreaterThanOrEqual(topBarBox!.y + topBarBox!.height)
 
+    const scrollY = await page.evaluate(() => window.scrollY)
     await page.mouse.wheel(0, 200)
-    await expect
-      .poll(async () => Math.abs((await run.boundingBox())!.y - pinnedRunBox!.y))
-      .toBeLessThanOrEqual(1)
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThanOrEqual(scrollY + 200)
+    expect(Math.abs((await run.boundingBox())!.y - pinnedRunBox!.y)).toBeLessThanOrEqual(1)
 
     await page.screenshot({ path: `${screenshots}/11-static-mobile-run-chaos.png` })
 

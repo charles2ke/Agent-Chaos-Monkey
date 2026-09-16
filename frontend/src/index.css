@@ -470,6 +470,10 @@ body {
 }
 
 @media (max-width: 1000px) {
+  .shell {
+    --topbar-height: 84px;
+  }
+
   .rail__item,
   .rail__subitem {
     min-height: 44px;
@@ -508,14 +512,17 @@ body {
   .composer {
     order: -1;
     position: sticky;
-    /* Clear the content-driven top bar at each responsive layout. */
-    top: 84px;
+    top: var(--topbar-height);
     z-index: 1;
     background: var(--surface);
   }
 }
 
 @media (max-width: 700px) {
+  .shell {
+    --topbar-height: 136px;
+  }
+
   .rail__brand {
     padding: 0;
   }
@@ -544,10 +551,6 @@ body {
 
   .session {
     min-height: 60vh;
-  }
-
-  .composer {
-    top: 136px;
   }
 
   .session__header {
