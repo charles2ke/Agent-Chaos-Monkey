@@ -208,7 +208,7 @@ export default function App() {
         onSelectOverviewSection={selectOverviewSection}
         onClose={closeNav}
       />
-      <div className="shell" inert={navOpen ? true : undefined}>
+      <div className="shell">
         <TopBar
           evaluator={evaluator}
           activeTab={activeTab}
@@ -222,6 +222,7 @@ export default function App() {
           }}
           menuButtonRef={menuButtonRef}
         />
+        <div className="shell__content" inert={navOpen ? true : undefined}>
         {activeTab === 'Preview' ? (
           <main className="workspace">
             <ChaosPanel
@@ -305,6 +306,7 @@ export default function App() {
         <main className="workspace workspace--single" hidden={activeTab !== 'Laboratory'}>
           <LaboratoryPage />
         </main>
+        </div>
       </div>
     </div>
   )

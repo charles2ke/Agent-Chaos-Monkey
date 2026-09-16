@@ -67,6 +67,10 @@ body {
   min-width: 0;
 }
 
+.shell__content {
+  display: contents;
+}
+
 /* Navigation drawer ---------------------------------------------------- */
 .rail {
   display: flex;

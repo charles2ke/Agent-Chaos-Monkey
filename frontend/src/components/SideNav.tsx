@@ -52,9 +52,11 @@ export function SideNav({
       }
       if (event.key !== 'Tab') return
 
-      const focusable = navRef.current?.querySelectorAll<HTMLElement>(
-        'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
-      )
+      const focusable = Array.from(
+        navRef.current?.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => element.offsetParent !== null)
       if (!focusable?.length) return
 
       const first = focusable[0]
