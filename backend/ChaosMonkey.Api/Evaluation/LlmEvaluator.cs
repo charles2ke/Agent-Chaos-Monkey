@@ -215,10 +215,7 @@ public sealed class LlmEvaluator : IResilienceEvaluator
             var judgement = JsonSerializer.Deserialize<LlmJudgement>(
                 completion[start..(end + 1)], SerializerOptions);
 
-            if (judgement is null)
-            {
-                return null;
-            }
+            if (judgement is null) return null;
 
             return new ResilienceReport(
                 Math.Clamp(judgement.Score, 0, 100),

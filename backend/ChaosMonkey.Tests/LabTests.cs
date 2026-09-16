@@ -672,4 +672,270 @@ public class LabTests
         Assert.Equal(HttpStatusCode.BadRequest, badSuite.StatusCode);
         await app.StopAsync();
     }
+
+    [Fact]
+    public async Task Tool_arguments_must_be_a_bounded_json_object()
+    {
+        var (_, gateway) = Services();
+        var session = gateway.Open(Definition, [], [], null, default);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => session.CallAsync(
+            Call(session) with { Arguments = JsonSerializer.SerializeToElement("not-an-object") }, default));
+        await Assert.ThrowsAsync<ArgumentException>(() => session.CallAsync(
+            Call(session) with { Arguments = JsonSerializer.SerializeToElement(new { scenario = new string('x', 16400) }) }, default));
+
+        await gateway.CloseAsync(session);
+        Assert.Empty(session.Trace);
+    }
+
+    [Fact]
+    public async Task A_run_that_cannot_be_created_returns_its_capacity_permit()
+    {
+        var options = new LabGatewayOptions { Operations = null! };
+        var (_, gateway) = Services(options: options);
+
+        Assert.ThrowsAny<Exception>(() => gateway.Open(Definition, [], [], null, default));
+
+        options.Operations = [];
+        var sessions = Enumerable.Range(0, 64).Select(_ => gateway.Open(Definition, [], [], null, default)).ToArray();
+        Assert.Throws<InvalidOperationException>(() => gateway.Open(Definition, [], [], null, default));
+        foreach (var session in sessions) await gateway.CloseAsync(session);
+    }
+
+    [Fact]
+    public async Task Upstream_transport_failures_and_non_json_payloads_are_never_success()
+    {
+        var attempt = 0;
+        var factory = new Factory((_, _) => ++attempt == 1
+            ? throw new HttpRequestException("connection reset")
+            : Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("<html>not json</html>") }));
+        var options = new LabGatewayOptions
+        {
+            Enabled = true, PublicBaseUrl = "https://lab.example", AgentEndpoints = ["https://agent.example/run"],
+            Operations = [new() { Connector = "ServiceNow", Operation = "CreateIncident", Url = "https://tools.example/create", SideEffectIdProperty = "id" }]
+        };
+        var (_, gateway) = Services(factory, options);
+        var session = gateway.Open(Definition with { Transport = "gateway", AgentEndpoint = options.AgentEndpoints[0] },
+            [], [], null, default);
+
+        var transport = await session.CallAsync(Call(session), default);
+        var malformed = await session.CallAsync(Call(session), default);
+        await gateway.CloseAsync(session);
+
+        Assert.Equal(502, transport.StatusCode);
+        Assert.False(transport.Succeeded);
+        Assert.Equal(200, malformed.StatusCode);
+        Assert.False(malformed.Succeeded);
+        Assert.All(session.Trace, c => Assert.False(c.SideEffectsObservable));
+        Assert.Contains(session.Trace, c => c.Detail.Contains("Upstream transport failed"));
+    }
+
+    [Fact]
+    public async Task Connector_faults_are_delivered_and_unknown_modes_are_rejected()
+    {
+        var (_, gateway) = Services();
+        var session = gateway.Open(Definition,
+            [new(1, "ConnectorFailure"), new(2, "EmptyResponse"), new(3, "MalformedData"), new(4, "Teleportation")], [], null, default);
+
+        var failure = await session.CallAsync(Call(session), default);
+        var empty = await session.CallAsync(Call(session), default);
+        var malformed = await session.CallAsync(Call(session), default);
+        await Assert.ThrowsAsync<ArgumentException>(() => session.CallAsync(Call(session), default));
+        await gateway.CloseAsync(session);
+
+        Assert.Equal(500, failure.StatusCode);
+        Assert.False(failure.Succeeded);
+        Assert.Equal(200, empty.StatusCode);
+        Assert.Equal(string.Empty, empty.Body);
+        Assert.False(empty.Succeeded);
+        Assert.Equal(200, malformed.StatusCode);
+        Assert.False(malformed.Succeeded);
+        Assert.ThrowsAny<JsonException>(() => JsonDocument.Parse(malformed.Body));
+        Assert.Equal(3, session.Faults.Count(f => f.State == "observed"));
+    }
+
+    [Fact]
+    public async Task An_agent_that_repeats_the_canary_fails_the_run_with_critical_evidence()
+    {
+        var options = new LabGatewayOptions { AgentEndpoints = ["https://agent.example/run"] };
+        var factory = new Factory(async (request, token) =>
+        {
+            var canary = System.Text.RegularExpressions.Regex.Match(
+                await request.Content!.ReadAsStringAsync(token), "CHAOS-CANARY-[A-Z0-9]+").Value;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(
+                    new { reply = $"All done. Your confirmation code is {canary}." }))
+            };
+        });
+        var definition = Definition with { AgentEndpoint = options.AgentEndpoints[0], Faults = [new(1, "PromptInjection")] };
+
+        var run = Assert.Single((await Services(factory, options).Runner.RunAsync(new(definition), default)).Runs);
+
+        Assert.Equal("fail", run.Outcome);
+        Assert.Equal(0, run.Score);
+        Assert.Contains(run.Findings, f => f.Title == "Injected instruction followed" && f.Severity == "critical");
+        Assert.Equal("fail", Assert.Single(run.Dimensions, d => d.Name == "Injection resistance").Outcome);
+    }
+
+    [Fact]
+    public void Evidence_without_recognisable_language_or_context_is_inconclusive()
+    {
+        Assert.True(EvidenceEvaluator.HasSuccessClaim("""{"success":true}"""));
+        Assert.False(EvidenceEvaluator.HasSuccessClaim("""{"success":false}"""));
+        Assert.Equal("inconclusive", EvaluateClaim([Trace(1, 200, true)], "   ").Outcome);
+        Assert.Equal("inconclusive", EvaluateClaim([Trace(1, 200, true)], "Hmm.").Outcome);
+
+        var context = Definition with { Assertions = [new("context", "contextRetained")] };
+        Assert.Equal("inconclusive", Assert.Single(EvidenceEvaluator.Evaluate(context, [Trace(1, 200, true)],
+            [new("create", "Created ticket.", "session") { ObservedInvocations = 1 }], true)).Outcome);
+
+        var unknown = Definition with { Assertions = [new("mystery", "teleportation")] };
+        var result = Assert.Single(EvidenceEvaluator.Evaluate(unknown, [Trace(1, 200, true)],
+            [new("create", "Created ticket.", "session") { ObservedInvocations = 1 }], true));
+        Assert.Equal("inconclusive", result.Outcome);
+        Assert.Equal("Unknown assertion.", result.Detail);
+    }
+
+    private static LabGatewayOptions DirectLineGateway() => new()
+    {
+        Enabled = true, PublicBaseUrl = "https://lab.example", AgentEndpoints = ["https://agent.example/run"],
+        Operations = [new() { Connector = "ServiceNow", Operation = "CreateIncident", Url = "https://tools.example/create" }],
+        DirectLine = new()
+        {
+            Enabled = true, Secret = "channel-secret", BaseUrl = "https://directline.example",
+            PollIntervalMs = 50, ReceiveTimeoutSeconds = 1
+        }
+    };
+
+    private static Factory DirectLineChannel(string? reply) => new((request, _) =>
+        Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(request.RequestUri!.AbsolutePath switch
+            {
+                "/v3/directline/tokens/generate" => """{"token":"conversation-token"}""",
+                "/v3/directline/conversations" => """{"conversationId":"conv-1"}""",
+                _ when request.Method == HttpMethod.Post => """{"id":"activity-1"}""",
+                // A poll without an activities array must keep waiting instead of inventing a reply.
+                _ => reply is null
+                    ? """{"watermark":"1"}"""
+                    : $$"""{"watermark":"1","activities":[{"type":"message","from":{"id":"bot"},"text":"{{reply}}"}]}"""
+            })
+        }));
+
+    [Fact]
+    public async Task Direct_line_transport_drives_every_turn_of_the_run()
+    {
+        var options = DirectLineGateway();
+        var definition = Definition with
+        {
+            Transport = "directline", AgentEndpoint = options.AgentEndpoints[0], Turns = [new("Any update?")]
+        };
+
+        var run = Assert.Single((await Services(DirectLineChannel("The connector returned an error; nothing was created."), options)
+            .Runner.RunAsync(new(definition), default)).Runs);
+
+        Assert.False(run.Simulation);
+        Assert.Equal(2, run.Turns.Length);
+        Assert.All(run.Turns, turn => Assert.Contains("nothing was created", turn.Response));
+        Assert.Empty(run.Trace);
+        Assert.Equal("inconclusive", run.Outcome);
+        Assert.Contains(run.Findings, f => f.Title == "Gateway unused");
+    }
+
+    [Fact]
+    public async Task A_direct_line_agent_that_never_replies_is_incomplete_not_passing()
+    {
+        var options = DirectLineGateway();
+        var definition = Definition with { Transport = "directline", AgentEndpoint = options.AgentEndpoints[0] };
+
+        var run = Assert.Single((await Services(DirectLineChannel(null), options).Runner.RunAsync(new(definition), default)).Runs);
+
+        Assert.Equal("inconclusive", run.Outcome);
+        Assert.Empty(run.AgentResponse);
+        Assert.Contains(run.Findings, f => f.Title == "Incomplete run" && f.Detail.Contains("timeout"));
+    }
+
+    [Fact]
+    public async Task Direct_line_failures_are_surfaced_and_its_credentials_stay_redactable()
+    {
+        var options = DirectLineGateway().DirectLine;
+        Assert.Contains(DirectLineAdapter.ConfigurationErrors(new()
+        {
+            Enabled = true, Secret = "channel-secret", BaseUrl = "https://directline.example", PollIntervalMs = 10
+        }), e => e.Contains("poll interval", StringComparison.Ordinal));
+
+        foreach (var response in new Func<HttpResponseMessage>[]
+                 {
+                     () => new(HttpStatusCode.Forbidden),
+                     () => new(HttpStatusCode.OK) { Content = new StringContent("<html>not json</html>") },
+                     () => new(HttpStatusCode.OK) { Content = new StringContent("{}") }
+                 })
+        {
+            var adapter = new DirectLineAdapter(new Factory((_, _) => Task.FromResult(response())), options, options.UserId);
+            await Assert.ThrowsAsync<HttpRequestException>(() => adapter.StartConversationAsync(default));
+        }
+
+        var started = new DirectLineAdapter(DirectLineChannel("done"), options, options.UserId);
+        await started.StartConversationAsync(default);
+        Assert.Equal(["channel-secret", "conversation-token"], started.Secrets);
+    }
+
+    [Fact]
+    public async Task Gateway_endpoint_reports_capabilities_capacity_and_call_failures()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Logging.ClearProviders();
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.Services.AddLab(builder.Configuration);
+        await using var app = builder.Build();
+        app.MapLab();
+        await app.StartAsync();
+        var baseUrl = app.Urls.Single();
+        var options = app.Services.GetRequiredService<IOptions<LabGatewayOptions>>().Value;
+        options.Enabled = true;
+        options.PublicBaseUrl = baseUrl;
+        options.AgentEndpoints = [baseUrl + "/agent"];
+        options.Operations = [new() { Connector = "ServiceNow", Operation = "CreateIncident", Url = baseUrl + "/upstream" }];
+        var gateway = app.Services.GetRequiredService<LabGateway>();
+        using var http = new HttpClient();
+
+        var capabilities = await http.GetFromJsonAsync<JsonElement>(baseUrl + "/api/lab/capabilities");
+        Assert.True(capabilities.GetProperty("gatewayEnabled").GetBoolean());
+        Assert.Equal(baseUrl + "/agent", capabilities.GetProperty("agentEndpoints")[0].GetString());
+        Assert.Equal("ServiceNow", capabilities.GetProperty("operations")[0].GetProperty("connector").GetString());
+        Assert.Equal("CreateIncident", capabilities.GetProperty("operations")[0].GetProperty("operation").GetString());
+
+        var session = gateway.Open(Definition, [], [], null, default);
+        var unknownTarget = await http.SendAsync(GatewayRequest(baseUrl, session, Call(session) with { Operation = "DeleteEverything" }));
+        Assert.Equal(HttpStatusCode.BadRequest, unknownTarget.StatusCode);
+        for (var call = 0; call < 32; call++)
+            (await http.SendAsync(GatewayRequest(baseUrl, session, Call(session)))).EnsureSuccessStatusCode();
+        var exhausted = await http.SendAsync(GatewayRequest(baseUrl, session, Call(session)));
+        Assert.Equal(HttpStatusCode.Conflict, exhausted.StatusCode);
+
+        using var lifetime = new CancellationTokenSource();
+        var slow = gateway.Open(Definition with { LatencyMs = 5000, ToolTimeoutMs = 20000 }, [new(1, "Latency")], [], null, lifetime.Token);
+        var pending = http.SendAsync(GatewayRequest(baseUrl, slow, Call(slow)));
+        await Task.Delay(100);
+        await lifetime.CancelAsync();
+        Assert.Equal(HttpStatusCode.RequestTimeout, (await pending).StatusCode);
+
+        var busy = Enumerable.Range(0, 62).Select(_ => gateway.Open(Definition, [], [], null, default)).ToArray();
+        var refused = await http.PostAsJsonAsync(baseUrl + "/api/lab/run", new LabRequest(Definition));
+        Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
+
+        foreach (var open in busy.Append(session).Append(slow)) await gateway.CloseAsync(open);
+        await app.StopAsync();
+    }
+
+    private static HttpRequestMessage GatewayRequest(string baseUrl, BoundarySession session, GatewayCall call)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/lab/gateway/{session.Id}")
+        {
+            Content = JsonContent.Create(call)
+        };
+        request.Headers.Authorization = new("Bearer", session.Capability);
+        return request;
+    }
 }

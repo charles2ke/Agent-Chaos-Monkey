@@ -8,7 +8,7 @@
 [![Pages](https://github.com/charles2ke/Agent-Chaos-Monkey/actions/workflows/pages.yml/badge.svg)](https://github.com/charles2ke/Agent-Chaos-Monkey/actions/workflows/pages.yml)
 [![CodeQL](https://github.com/charles2ke/Agent-Chaos-Monkey/actions/workflows/codeql.yml/badge.svg)](https://github.com/charles2ke/Agent-Chaos-Monkey/actions/workflows/codeql.yml)
 [![Coverage](https://github.com/charles2ke/Agent-Chaos-Monkey/actions/workflows/coverage.yml/badge.svg)](https://github.com/charles2ke/Agent-Chaos-Monkey/actions/workflows/coverage.yml)
-[![Backend coverage 73%](https://img.shields.io/badge/backend%20coverage-73%25-yellow)](.github/workflows/coverage.yml)
+[![Backend coverage 100%](https://img.shields.io/badge/backend%20coverage-100%25-brightgreen)](.github/workflows/coverage.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](backend)
 [![React 19 + Vite](https://img.shields.io/badge/React-19%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](frontend)
@@ -250,7 +250,7 @@ node cli/export-azure-eval.mjs results/chaos-results.json --output results/azure
 ## 🧪 Tests
 
 ```bash
-cd backend && dotnet test                 # chaos engine, evaluator and parsing unit tests
+cd backend && dotnet test                 # API host, chaos engine, evaluator and laboratory tests
 cd frontend && npm run lint && npm run build
 cd frontend && npm run test:e2e           # Playwright UI tests (boots both servers)
 cd frontend && npm run test:e2e:static    # Playwright against the static Pages build
@@ -261,7 +261,7 @@ node cli/check-dependency-table.mjs       # verifies the dependency table below 
 ```
 
 Backend line coverage is measured by [`.github/workflows/coverage.yml`](.github/workflows/coverage.yml)
-(coverlet, currently **73%**, floor 70%).
+(coverlet, currently **100%**, floor 100%).
 
 ## 🌐 Published demo
 
