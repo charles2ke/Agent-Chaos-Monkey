@@ -63,6 +63,22 @@ test.describe('agent tabs', () => {
     await expect(page.getByRole('radio', { name: /MCP\.FileSearch/ })).toBeHidden()
   })
 
+  test('the open menu traps keyboard focus and updates its trigger tooltip', async ({ page }) => {
+    await page.goto('/')
+
+    await openMenu(page)
+    const menuButton = page.locator('.topbar__menu')
+    await expect(menuButton).toHaveAttribute(
+      'title',
+      'Close the navigation menu and return to the current screen',
+    )
+
+    await page.keyboard.press('Shift+Tab')
+    await expect(page.locator('.rail').getByRole('button', { name: 'Activity', exact: true })).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(page.locator('.rail__close')).toBeFocused()
+  })
+
   test('the tool picked on Overview is the connector that fails, and the run lands in Activity', async ({
     page,
   }) => {

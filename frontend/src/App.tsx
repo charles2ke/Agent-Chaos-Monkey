@@ -195,6 +195,7 @@ export default function App() {
           type="button"
           className="app__scrim"
           aria-label="Close navigation menu"
+          tabIndex={-1}
           onClick={closeNav}
         />
       )}
@@ -207,7 +208,7 @@ export default function App() {
         onSelectOverviewSection={selectOverviewSection}
         onClose={closeNav}
       />
-      <div className="shell">
+      <div className="shell" inert={navOpen ? true : undefined}>
         <TopBar
           evaluator={evaluator}
           activeTab={activeTab}

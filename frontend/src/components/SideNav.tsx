@@ -39,13 +39,33 @@ export function SideNav({
   onSelectOverviewSection,
   onClose,
 }: SideNavProps) {
+  const navRef = useRef<HTMLElement | null>(null)
   const closeRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     if (!open) return
     closeRef.current?.focus()
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const focusable = navRef.current?.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+      )
+      if (!focusable?.length) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
@@ -54,6 +74,7 @@ export function SideNav({
   return (
     <nav
       id="app-navigation"
+      ref={navRef}
       className={`rail ${open ? 'rail--open' : ''}`}
       aria-label="Agent sections"
       aria-hidden={open ? undefined : true}

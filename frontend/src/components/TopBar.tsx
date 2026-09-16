@@ -35,7 +35,11 @@ export function TopBar({
         aria-label={navOpen ? 'Close navigation menu' : 'Open navigation menu'}
         aria-expanded={navOpen}
         aria-controls="app-navigation"
-        title="Open the navigation menu: Overview and its sections, Preview, Laboratory and Activity"
+        title={
+          navOpen
+            ? 'Close the navigation menu and return to the current screen'
+            : 'Open the navigation menu: Overview and its sections, Preview, Laboratory and Activity'
+        }
       >
         <MenuIcon />
       </button>
