@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, extractReply } from './api'
 import type { ChaosModeId, ChaosModeInfo, EvaluatorInfo, ExperimentRequest, ExperimentResult } from './api'
 import { ActivityPage } from './components/ActivityPage'
@@ -51,10 +51,10 @@ export default function App() {
       .catch(() => setEvaluator(null))
   }, [])
 
-  function closeNav() {
+  const closeNav = useCallback(() => {
     setNavOpen(false)
     menuButtonRef.current?.focus()
-  }
+  }, [])
 
   function selectTab(tab: TabId) {
     setActiveTab(tab)
