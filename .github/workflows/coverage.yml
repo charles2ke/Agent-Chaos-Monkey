@@ -83,8 +83,8 @@ jobs:
             `Minimum required line coverage: **${min}%**`,
             '',
             meetsThreshold
-              ? `:white_check_mark: Line coverage ${linesCovered}/${linesValid} meets the ${min}% threshold.`
-              : `:x: Line coverage ${linesCovered}/${linesValid} is below the ${min}% threshold.`,
+              ? `:white_check_mark: Line coverage ${linesCovered}/${linesValid} (${linePct}%) meets the ${min}% threshold.`
+              : `:x: Line coverage ${linesCovered}/${linesValid} (${linePct}%) is below the ${min}% threshold.`,
             '',
           ].join('\n');
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary + '\n');
