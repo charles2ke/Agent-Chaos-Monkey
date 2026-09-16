@@ -40,7 +40,7 @@ export function ActivityPage({ history, onClear }: ActivityPageProps) {
 
       {history.length === 0 ? (
         <p className="page__empty">
-          No runs yet. Go to the Preview tab and run chaos to populate the activity log.
+          No runs yet. Go to the Run tab and run chaos to populate the activity log.
         </p>
       ) : (
         <table className="activity">

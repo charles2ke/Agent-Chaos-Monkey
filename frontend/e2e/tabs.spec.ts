@@ -31,7 +31,6 @@ test.describe('agent tabs', () => {
       page.getByRole('heading', { name: 'Agent-layer faults need a real agent' }),
     ).toBeVisible()
     await expect(page.getByText(/opt in to the live tool gateway in the Laboratory tab/)).toBeVisible()
-    await expect(page.getByRole('radio', { name: /MCP\.FileSearch/ })).toBeVisible()
     await page.screenshot({ path: `${screenshots}/05-overview.png`, fullPage: true })
 
     await goToTab(page, 'Activity')
@@ -42,20 +41,20 @@ test.describe('agent tabs', () => {
     await expect(page.getByRole('heading', { name: 'Resilience judge' })).toBeVisible()
     await page.screenshot({ path: `${screenshots}/09-settings.png`, fullPage: true })
 
-    await goToTab(page, 'Preview')
+    await goToTab(page, 'Run')
     await expect(page.getByRole('heading', { name: 'Injected failures' })).toBeVisible()
   })
 
-  test('Overview sub-menus open a single section', async ({ page }) => {
+  test('Run and Overview sub-menus open a single section', async ({ page }) => {
     await page.goto('/')
 
     await openMenu(page)
     await page.locator('.rail').getByRole('button', { name: 'Tools', exact: true }).click()
 
     await expect(page.getByRole('heading', { name: 'Tools' })).toBeVisible()
-    await expect(page.getByText('Never fabricate tool success')).toBeHidden()
+    await expect(page.getByRole('heading', { name: 'Injected failures' })).toBeHidden()
     await expect(page.getByRole('radio', { name: /MCP\.FileSearch/ })).toBeVisible()
-    await page.screenshot({ path: `${screenshots}/07-overview-tools-section.png`, fullPage: true })
+    await page.screenshot({ path: `${screenshots}/07-run-tools-section.png`, fullPage: true })
 
     await openMenu(page)
     await page.locator('.rail').getByRole('button', { name: 'Instructions', exact: true }).click()
@@ -79,15 +78,16 @@ test.describe('agent tabs', () => {
     await expect(page.locator('.rail__close')).toBeFocused()
   })
 
-  test('the tool picked on Overview is the connector that fails, and the run lands in Activity', async ({
+  test('the tool picked under Run is the connector that fails, and the run lands in Activity', async ({
     page,
   }) => {
     await page.goto('/')
 
-    await goToTab(page, 'Overview')
+    await openMenu(page)
+    await page.locator('.rail').getByRole('button', { name: 'Tools', exact: true }).click()
     await page.getByRole('radio', { name: /GraphAPI\.SendMail/ }).check()
 
-    await goToTab(page, 'Preview')
+    await goToTab(page, 'Run')
     await page.getByRole('button', { name: 'Run chaos' }).click()
 
     await expect(page.getByText('GraphAPI.SendMail → HTTP 401')).toBeVisible({ timeout: 30_000 })

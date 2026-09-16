@@ -2,13 +2,13 @@ import { expect, test } from '@playwright/test'
 
 const screenshots = 'e2e/screenshots'
 
-test.describe('Chaos Monkey preview tab', () => {
+test.describe('Chaos Monkey run tab', () => {
   test('renders the agent preview shell', async ({ page }) => {
     await page.goto('/')
 
     await page.getByRole('button', { name: 'Open navigation menu' }).click()
     await expect(
-      page.locator('.rail').getByRole('button', { name: 'Preview', exact: true }),
+      page.locator('.rail').getByRole('button', { name: 'Run', exact: true }),
     ).toHaveAttribute('aria-current', 'page')
     await page.keyboard.press('Escape')
     await expect(page.locator('.rail')).toBeHidden()

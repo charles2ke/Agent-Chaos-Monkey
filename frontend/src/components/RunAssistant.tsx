@@ -41,7 +41,7 @@ export function RunAssistant(props: RunAssistantProps) {
         Establish a baseline, then test each selected fault separately so one failure cannot mask
         another. Nothing runs until you approve.
       </p>
-      <p>Preview uses simulated connector results. Use Laboratory for tool-call evidence.</p>
+      <p>Run uses simulated connector results. Use Laboratory for tool-call evidence.</p>
       <details open={!run}>
         <summary>Review next plan · {plan.length} checks</summary>
         <ol className="run-assistant__plan">

@@ -1,6 +1,5 @@
 import { isAgentLayerMode } from '../api'
 import type { ChaosModeInfo, EvaluatorInfo } from '../api'
-import { connectorCatalogue } from '../connectors'
 import { overviewSectionDescriptions } from '../tabs'
 import type { OverviewSectionId } from '../tabs'
 import { InfoTip, TipHeading } from './Tooltip'
@@ -58,19 +57,11 @@ function ModeCards({ modes }: { modes: ChaosModeInfo[] }) {
 interface OverviewPageProps {
   modes: ChaosModeInfo[]
   evaluator: EvaluatorInfo | null
-  connectorName: string
-  onConnectorNameChange: (value: string) => void
   /** When set, only that sub-section is rendered; otherwise the whole page is shown. */
   section: OverviewSectionId | null
 }
 
-export function OverviewPage({
-  modes,
-  evaluator,
-  connectorName,
-  onConnectorNameChange,
-  section,
-}: OverviewPageProps) {
+export function OverviewPage({ modes, evaluator, section }: OverviewPageProps) {
   const transportModes = modes.filter((mode) => !isAgentLayerMode(mode.id))
   const agentModes = modes.filter((mode) => isAgentLayerMode(mode.id))
   const shows = (id: OverviewSectionId) => section === null || section === id
@@ -95,7 +86,7 @@ export function OverviewPage({
         <p className="page__lead">
           {section
             ? overviewSectionDescriptions[section]
-            : 'Everything the harness knows about the agent under test: the resilience contract it is scored against, the failure catalogue that can be injected, the judge that grades the recovery, and the tool boundary chaos is aimed at.'}
+            : 'Everything the harness knows about the agent under test: the resilience contract it is scored against, the failure catalogue that can be injected, and the judge that grades the recovery.'}
         </p>
       </header>
 
@@ -164,8 +155,8 @@ export function OverviewPage({
                       harness, never about your agent.
                     </p>
                     <p>
-                      For real evidence on these five modes, run the backend locally and use Preview,
-                      or opt in to the live tool gateway in the Laboratory tab. Neither is available
+                      For real evidence on these five modes, run the backend locally and use Run, or
+                      opt in to the live tool gateway in the Laboratory tab. Neither is available
                       in the published GitHub Pages demo, where every Laboratory run is simulated in
                       the browser.
                     </p>
@@ -197,53 +188,6 @@ export function OverviewPage({
               changes.
             </p>
           </div>
-        </>
-      )}
-
-      {shows('Tools') && (
-        <>
-          {heading('Tools')}
-          <p className="page__lead">
-            Pick the tool boundary chaos is injected at. The selected connector is the one that fails
-            during the next experiment.
-          </p>
-          <ul className="cards">
-            {connectorCatalogue.map((connector) => {
-              const selected = connector.name === connectorName
-              return (
-                <li key={connector.name}>
-                  <label
-                    className={`card card--selectable ${selected ? 'card--on' : ''}`}
-                    title={`${connector.description} Select it to make ${connector.name} the tool that fails.`}
-                  >
-                    <input
-                      type="radio"
-                      name="chaos-target"
-                      checked={selected}
-                      onChange={() => onConnectorNameChange(connector.name)}
-                    />
-                    <span>
-                      <span className="card__badge">{connector.kind}</span>
-                      <strong className="card__title">{connector.name}</strong>
-                      <span className="card__detail">{connector.description}</span>
-                    </span>
-                  </label>
-                </li>
-              )
-            })}
-          </ul>
-
-          <label
-            className="field field--wide"
-            title="Type the exact name of your own connector or tool to aim chaos at it."
-          >
-            <span className="field__label">Custom connector / tool</span>
-            <input
-              className="field__input"
-              value={connectorName}
-              onChange={(event) => onConnectorNameChange(event.target.value)}
-            />
-          </label>
         </>
       )}
     </section>

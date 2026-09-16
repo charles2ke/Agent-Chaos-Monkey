@@ -1,13 +1,14 @@
 import type { Ref } from 'react'
 import type { EvaluatorInfo } from '../api'
 import { tabDescriptions } from '../tabs'
-import type { OverviewSectionId, TabId } from '../tabs'
+import type { OverviewSectionId, RunSectionId, TabId } from '../tabs'
 import { MenuIcon, SettingsIcon, SparkleIcon } from './icons'
 
 interface TopBarProps {
   evaluator: EvaluatorInfo | null
   activeTab: TabId
   overviewSection: OverviewSectionId | null
+  runSection: RunSectionId | null
   targetLabel: string
   navOpen: boolean
   onToggleNav: () => void
@@ -19,6 +20,7 @@ export function TopBar({
   evaluator,
   activeTab,
   overviewSection,
+  runSection,
   targetLabel,
   navOpen,
   onToggleNav,
@@ -38,7 +40,7 @@ export function TopBar({
         title={
           navOpen
             ? 'Close the navigation menu and return to the current screen'
-            : 'Open the navigation menu: Overview and its sections, Preview, Laboratory and Activity'
+            : 'Open the navigation menu: Run and its tools, Overview and its sections, Laboratory and Activity'
         }
       >
         <MenuIcon />
@@ -61,6 +63,14 @@ export function TopBar({
               /
             </span>
             <span className="topbar__current">{overviewSection}</span>
+          </>
+        )}
+        {activeTab === 'Run' && runSection && (
+          <>
+            <span className="topbar__separator" aria-hidden="true">
+              /
+            </span>
+            <span className="topbar__current">{runSection}</span>
           </>
         )}
       </div>

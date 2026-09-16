@@ -13,13 +13,15 @@ import { LaboratoryPage } from './components/LaboratoryPage'
 import { RunAssistant } from './components/RunAssistant'
 import { buildAssistantPlan } from './runAssistant'
 import type { AssistantRun } from './runAssistant'
-import type { OverviewSectionId, TabId } from './tabs'
+import { ToolsPage } from './components/ToolsPage'
+import type { OverviewSectionId, RunSectionId, TabId } from './tabs'
 
 const defaultScenario = 'Create a support ticket for my broken laptop'
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<TabId>('Preview')
+  const [activeTab, setActiveTab] = useState<TabId>('Run')
   const [overviewSection, setOverviewSection] = useState<OverviewSectionId | null>(null)
+  const [runSection, setRunSection] = useState<RunSectionId | null>(null)
   const [navOpen, setNavOpen] = useState(false)
   const menuButtonRef = useRef<HTMLButtonElement | null>(null)
   const [modes, setModes] = useState<ChaosModeInfo[]>([])
@@ -60,12 +62,19 @@ export default function App() {
   function selectTab(tab: TabId) {
     setActiveTab(tab)
     if (tab === 'Overview') setOverviewSection(null)
+    if (tab === 'Run') setRunSection(null)
     closeNav()
   }
 
   function selectOverviewSection(section: OverviewSectionId | null) {
     setActiveTab('Overview')
     setOverviewSection(section)
+    closeNav()
+  }
+
+  function selectRunSection(section: RunSectionId | null) {
+    setActiveTab('Run')
+    setRunSection(section)
     closeNav()
   }
 
@@ -204,9 +213,11 @@ export default function App() {
         evaluator={evaluator}
         activeTab={activeTab}
         overviewSection={overviewSection}
+        runSection={runSection}
         open={navOpen}
         onSelectTab={selectTab}
         onSelectOverviewSection={selectOverviewSection}
+        onSelectRunSection={selectRunSection}
         onClose={closeNav}
       />
       <div className="shell">
@@ -214,6 +225,7 @@ export default function App() {
           evaluator={evaluator}
           activeTab={activeTab}
           overviewSection={overviewSection}
+          runSection={runSection}
           targetLabel={targetLabel}
           navOpen={navOpen}
           onToggleNav={() => setNavOpen((open) => !open)}
@@ -223,7 +235,7 @@ export default function App() {
           }}
           menuButtonRef={menuButtonRef}
         />
-        {activeTab === 'Preview' ? (
+        {activeTab === 'Run' && runSection === null ? (
           <main className="workspace" inert={workspaceInert}>
             <ChaosPanel
               modes={modes}
@@ -276,14 +288,14 @@ export default function App() {
           </main>
         ) : activeTab !== 'Laboratory' ? (
           <main className="workspace workspace--single" inert={workspaceInert}>
-            {activeTab === 'Overview' && (
-              <OverviewPage
-                modes={modes}
-                evaluator={evaluator}
+            {activeTab === 'Run' && runSection === 'Tools' && (
+              <ToolsPage
                 connectorName={connectorName}
                 onConnectorNameChange={setConnectorName}
-                section={overviewSection}
               />
+            )}
+            {activeTab === 'Overview' && (
+              <OverviewPage modes={modes} evaluator={evaluator} section={overviewSection} />
             )}
             {activeTab === 'Activity' && (
               <ActivityPage history={history} onClear={() => setHistory([])} />

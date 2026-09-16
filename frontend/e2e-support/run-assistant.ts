@@ -36,7 +36,7 @@ export function runAssistantTests(staticBuild: boolean) {
     await testInfo.attach('Run assistant: results and follow-up', { path, contentType: 'image/png' })
     await goToTab(page, 'Activity')
     await expect(page.getByRole('table').getByRole('row')).toHaveCount(3)
-    await goToTab(page, 'Preview')
+    await goToTab(page, 'Run')
     await expect(assistant.getByRole('status')).toHaveText('Plan completed · 2/2 checks completed')
     await page.getByRole('button', { name: 'Clear session' }).click()
     await expect(assistant.getByRole('status')).toHaveCount(0)

@@ -1,8 +1,15 @@
 import { useEffect, useRef } from 'react'
 import type { ReactElement } from 'react'
 import type { EvaluatorInfo } from '../api'
-import { menuTabs, overviewSectionDescriptions, overviewSections, tabDescriptions } from '../tabs'
-import type { OverviewSectionId, TabId } from '../tabs'
+import {
+  menuTabs,
+  overviewSectionDescriptions,
+  overviewSections,
+  runSectionDescriptions,
+  runSections,
+  tabDescriptions,
+} from '../tabs'
+import type { OverviewSectionId, RunSectionId, TabId } from '../tabs'
 import {
   ActivityIcon,
   CloseIcon,
@@ -13,8 +20,8 @@ import {
 } from './icons'
 
 const tabIcons = {
+  Run: PreviewIcon,
   Overview: OverviewIcon,
-  Preview: PreviewIcon,
   Laboratory: ToolsIcon,
   Activity: ActivityIcon,
   Settings: SettingsIcon,
@@ -24,9 +31,11 @@ interface SideNavProps {
   evaluator: EvaluatorInfo | null
   activeTab: TabId
   overviewSection: OverviewSectionId | null
+  runSection: RunSectionId | null
   open: boolean
   onSelectTab: (tab: TabId) => void
   onSelectOverviewSection: (section: OverviewSectionId | null) => void
+  onSelectRunSection: (section: RunSectionId | null) => void
   onClose: () => void
 }
 
@@ -40,9 +49,11 @@ export function SideNav({
   evaluator,
   activeTab,
   overviewSection,
+  runSection,
   open,
   onSelectTab,
   onSelectOverviewSection,
+  onSelectRunSection,
   onClose,
 }: SideNavProps) {
   const navRef = useRef<HTMLElement | null>(null)
@@ -124,6 +135,27 @@ export function SideNav({
                 <TabIcon className="rail__glyph" />
                 {tab}
               </button>
+
+              {tab === 'Run' && (
+                <ul className="rail__sublist" aria-label="Run sections">
+                  {runSections.map((section) => {
+                    const sectionActive = activeTab === 'Run' && runSection === section
+                    return (
+                      <li key={section}>
+                        <button
+                          type="button"
+                          className={`rail__subitem ${sectionActive ? 'rail__subitem--active' : ''}`}
+                          aria-current={sectionActive ? 'page' : undefined}
+                          title={runSectionDescriptions[section]}
+                          onClick={() => onSelectRunSection(section)}
+                        >
+                          {section}
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
 
               {tab === 'Overview' && (
                 <ul className="rail__sublist" aria-label="Overview sections">

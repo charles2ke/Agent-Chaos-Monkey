@@ -81,6 +81,8 @@ test.describe('static GitHub Pages build', () => {
     await expect(page.getByText('Cascading failure', { exact: true })).toBeVisible()
     await page.screenshot({ path: `${screenshots}/05-static-overview-catalogue.png`, fullPage: true })
 
+    await openMenu(page)
+    await page.locator('.rail').getByRole('button', { name: 'Tools', exact: true }).click()
     await expect(page.getByRole('radio', { name: /MCP\.FileSearch/ })).toBeVisible()
 
     // Settings is reached through the gear icon in the top right, not the menu.
@@ -94,17 +96,17 @@ test.describe('static GitHub Pages build', () => {
     await page.screenshot({ path: `${screenshots}/03-static-tabs.png`, fullPage: true })
   })
 
-  test('the hamburger menu lists every section, with sub-menus under Overview', async ({ page }) => {
+  test('the hamburger menu lists every section, with sub-menus under Run and Overview', async ({ page }) => {
     await page.goto('./')
 
     const rail = page.locator('.rail')
     await expect(rail).toBeHidden()
 
     await openMenu(page)
-    for (const tab of ['Overview', 'Preview', 'Laboratory', 'Activity']) {
+    for (const tab of ['Run', 'Overview', 'Laboratory', 'Activity']) {
       await expect(rail.getByRole('button', { name: tab, exact: true })).toBeVisible()
     }
-    for (const section of ['Instructions', 'Chaos catalogue', 'Resilience judge', 'Tools']) {
+    for (const section of ['Tools', 'Instructions', 'Chaos catalogue', 'Resilience judge']) {
       await expect(rail.getByRole('button', { name: section, exact: true })).toBeVisible()
     }
     await page.screenshot({ path: `${screenshots}/08-static-navigation-menu.png`, fullPage: true })
@@ -138,7 +140,7 @@ test.describe('static GitHub Pages build', () => {
     const rail = page.locator('.rail')
     await expect(rail).toBeHidden()
 
-    for (const tab of ['Laboratory', 'Activity', 'Overview', 'Preview']) {
+    for (const tab of ['Laboratory', 'Activity', 'Overview', 'Run']) {
       await openMenu(page)
       const button = rail.getByRole('button', { name: tab, exact: true })
       await button.click()
