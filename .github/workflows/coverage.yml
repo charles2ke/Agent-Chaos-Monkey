@@ -67,9 +67,11 @@ jobs:
           const linesValid = parseInt(attrs['lines-valid'] || '0', 10);
           const branchesCovered = parseInt(attrs['branches-covered'] || '0', 10);
           const branchesValid = parseInt(attrs['branches-valid'] || '0', 10);
-          const linePct = +(lineRate * 100).toFixed(2);
+          const exactLinePct = linesValid > 0 ? (linesCovered / linesValid) * 100 : lineRate * 100;
+          const linePct = +exactLinePct.toFixed(2);
           const branchPct = +(branchRate * 100).toFixed(2);
           const min = parseFloat(process.env.MIN_LINE_COVERAGE);
+          const meetsThreshold = exactLinePct >= min;
           const summary = [
             '## Backend coverage',
             '',
@@ -80,14 +82,14 @@ jobs:
             '',
             `Minimum required line coverage: **${min}%**`,
             '',
-            linePct >= min
-              ? `:white_check_mark: Line coverage ${linePct}% meets the ${min}% threshold.`
-              : `:x: Line coverage ${linePct}% is below the ${min}% threshold.`,
+            meetsThreshold
+              ? `:white_check_mark: Line coverage ${linesCovered}/${linesValid} meets the ${min}% threshold.`
+              : `:x: Line coverage ${linesCovered}/${linesValid} is below the ${min}% threshold.`,
             '',
           ].join('\n');
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary + '\n');
           console.log(summary);
-          if (linePct < min) {
+          if (!meetsThreshold) {
             process.exit(1);
           }
           NODE
