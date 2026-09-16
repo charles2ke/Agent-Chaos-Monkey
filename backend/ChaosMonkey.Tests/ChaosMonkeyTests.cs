@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ChaosMonkey.Api.Agents;
 using ChaosMonkey.Api.Chaos;
 using ChaosMonkey.Api.Evaluation;
@@ -437,5 +438,372 @@ public class AgentInvokerEndpointTests
         Assert.Throws<ArgumentException>(() =>
             AgentInvoker.TryParseEndpoint("https://example.com/api/agent?token=1",
                 ["https://example.com/api/agent?token=1"], out _));
+    }
+}
+
+public class AgentInvokerTests
+{
+    private const string Endpoint = "https://agent.example/run";
+
+    private sealed class Handler(Func<HttpRequestMessage, Task<HttpResponseMessage>> responder) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => responder(request);
+    }
+
+    private sealed class Factory(Func<HttpRequestMessage, Task<HttpResponseMessage>> responder) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new(new Handler(responder));
+    }
+
+    private static AgentInvoker Invoker(Func<HttpRequestMessage, Task<HttpResponseMessage>>? responder = null,
+        string[]? allowedEndpoints = null) => new(
+        new Factory(responder ?? (_ => throw new InvalidOperationException("The agent under test must not be called."))),
+        new DemoAgent(), Microsoft.Extensions.Logging.Abstractions.NullLogger<AgentInvoker>.Instance,
+        Microsoft.Extensions.Options.Options.Create(new ChaosMonkey.Api.Lab.LabGatewayOptions
+        {
+            AgentEndpoints = allowedEndpoints ?? []
+        }));
+
+    private static ChaosPlan Plan(params ChaosMode[] modes) =>
+        new ChaosEngine().BuildPlan(new ExperimentRequest { Scenario = "Create a ticket", Modes = modes, LatencyMs = 40 });
+
+    [Fact]
+    public async Task Blank_endpoint_uses_the_demo_agent_after_the_injected_delay()
+    {
+        var interaction = await Invoker().InvokeAsync(
+            new ExperimentRequest { Scenario = "Create a ticket" }, Plan(ChaosMode.Latency), default);
+
+        Assert.True(interaction.Succeeded);
+        Assert.Equal(200, interaction.StatusCode);
+        Assert.True(interaction.DurationMs >= 40);
+        Assert.Null(interaction.TransportError);
+        Assert.Contains("INC-1842", HeuristicEvaluator.ExtractText(interaction.ResponseBody));
+    }
+
+    [Fact]
+    public async Task Allowlisted_agent_receives_the_connector_result_and_a_bearer_credential()
+    {
+        string? authorization = null;
+        Uri? requested = null;
+        AgentPayload? payload = null;
+        var invoker = Invoker(async request =>
+        {
+            requested = request.RequestUri;
+            authorization = request.Headers.Authorization is null
+                ? request.Headers.TryGetValues("Authorization", out var values) ? string.Join(" ", values) : null
+                : request.Headers.Authorization.ToString();
+            payload = JsonSerializer.Deserialize<AgentPayload>(await request.Content!.ReadAsStringAsync(),
+                new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"reply":"I could not create the ticket."}""")
+            };
+        }, [Endpoint]);
+
+        var interaction = await invoker.InvokeAsync(new ExperimentRequest
+        {
+            Scenario = "Create a ticket", ConnectorName = "  ", AgentEndpoint = Endpoint,
+            AgentApiKey = "  agent-test-credential  "
+        }, Plan(ChaosMode.ConnectorFailure), default);
+
+        Assert.True(interaction.Succeeded);
+        Assert.Equal(200, interaction.StatusCode);
+        Assert.Equal(Endpoint, requested!.ToString());
+        Assert.Equal("Bearer " + "agent-test-credential", authorization);
+        Assert.Equal("Create a ticket", payload!.Scenario);
+        Assert.Equal("connector", payload.Connector.Name);
+        Assert.Equal(500, payload.Connector.StatusCode);
+        Assert.Contains("I could not create the ticket.", interaction.ResponseBody);
+    }
+
+    [Fact]
+    public async Task Unsuccessful_agent_responses_keep_their_status_and_body()
+    {
+        var invoker = Invoker(_ => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable)
+        {
+            Content = new StringContent("agent unavailable")
+        }), [Endpoint]);
+
+        var interaction = await invoker.InvokeAsync(
+            new ExperimentRequest { Scenario = "Create a ticket", AgentEndpoint = Endpoint }, Plan(), default);
+
+        Assert.False(interaction.Succeeded);
+        Assert.Equal(503, interaction.StatusCode);
+        Assert.Equal("agent unavailable", interaction.ResponseBody);
+        Assert.Null(interaction.TransportError);
+    }
+
+    [Fact]
+    public async Task Unreachable_and_timed_out_agents_are_reported_as_transport_failures()
+    {
+        foreach (var failure in new Func<Exception>[]
+                 { () => new HttpRequestException("refused"), () => new TaskCanceledException("timeout") })
+        {
+            var invoker = Invoker(_ => Task.FromException<HttpResponseMessage>(failure()), [Endpoint]);
+
+            var interaction = await invoker.InvokeAsync(
+                new ExperimentRequest { Scenario = "Create a ticket", AgentEndpoint = Endpoint }, Plan(), default);
+
+            Assert.False(interaction.Succeeded);
+            Assert.Null(interaction.StatusCode);
+            Assert.Equal(string.Empty, interaction.ResponseBody);
+            Assert.Equal("The agent under test could not be reached or timed out.", interaction.TransportError);
+        }
+    }
+}
+
+public class EvaluatorCredentialTests
+{
+    private sealed class StubCredential(string token) : Azure.Core.TokenCredential
+    {
+        public string? Scope { get; private set; }
+
+        public override Azure.Core.AccessToken GetToken(Azure.Core.TokenRequestContext requestContext,
+            CancellationToken cancellationToken) => Issue(requestContext);
+
+        public override ValueTask<Azure.Core.AccessToken> GetTokenAsync(Azure.Core.TokenRequestContext requestContext,
+            CancellationToken cancellationToken) => ValueTask.FromResult(Issue(requestContext));
+
+        private Azure.Core.AccessToken Issue(Azure.Core.TokenRequestContext requestContext)
+        {
+            Scope = Assert.Single(requestContext.Scopes);
+            return new Azure.Core.AccessToken(token, DateTimeOffset.UtcNow.AddHours(1));
+        }
+    }
+
+    [Fact]
+    public async Task Credential_returns_an_entra_id_token_for_the_requested_scope()
+    {
+        var stub = new StubCredential("entra-access-token");
+
+        var token = await new EntraIdEvaluatorCredential(stub).GetTokenAsync(LlmOptions.AzureScope, default);
+
+        Assert.Equal("entra-access-token", token);
+        Assert.Equal(LlmOptions.AzureScope, stub.Scope);
+    }
+
+    [Fact]
+    public void Default_credential_chain_is_used_when_no_credential_is_supplied()
+        => Assert.IsAssignableFrom<IEvaluatorCredential>(new EntraIdEvaluatorCredential());
+}
+
+public class DemoAgentResponseTests
+{
+    [Theory]
+    [InlineData(400, """{"error":"unknown_parameter"}""", "INC-1842")]
+    [InlineData(429, "{}", "trouble reaching the system")]
+    [InlineData(503, "{}", "dependent updates went through too")]
+    [InlineData(500, "{}", "the team will follow up")]
+    [InlineData(200, "", "submitted successfully")]
+    [InlineData(200, """{"status":"partial","truncated":true}""", "complete result set")]
+    [InlineData(200, """data: {"delta":"Creating the ticke""", "The ticket id is INC-18.")]
+    [InlineData(200, """{"status":"ok","incident":{"id":"INC-1842"}}""", "INC-1842")]
+    public void Demo_agent_reply_follows_the_connector_result(int status, string body, string expected)
+    {
+        var response = new DemoAgent().Respond(new AgentPayload("Create a ticket",
+            new ConnectorResult("ServiceNow.CreateIncident", status, body, null)));
+
+        Assert.Contains(expected, HeuristicEvaluator.ExtractText(response));
+        Assert.Contains($"\"status\":{status}", response);
+    }
+
+    [Fact]
+    public void Demo_agent_requires_a_payload()
+        => Assert.Throws<ArgumentNullException>(() => new DemoAgent().Respond(null!));
+}
+
+public class HeuristicEvaluatorScoringTests
+{
+    private readonly ChaosEngine _engine = new();
+    private readonly HeuristicEvaluator _evaluator = new();
+
+    private ResilienceReport Evaluate(ExperimentRequest request, AgentInteraction interaction) =>
+        _evaluator.Evaluate(request, _engine.BuildPlan(request), interaction);
+
+    [Fact]
+    public async Task Evaluate_async_returns_the_same_deterministic_report()
+    {
+        var request = new ExperimentRequest { Scenario = "s", Modes = [ChaosMode.ConnectorFailure] };
+        var plan = _engine.BuildPlan(request);
+        var interaction = new AgentInteraction(true, 200, 12,
+            """{"reply":"The connector failed, so nothing was created. Want me to try again?"}""", null);
+
+        var report = await _evaluator.EvaluateAsync(request, plan, interaction, default);
+
+        Assert.Equal(_evaluator.Evaluate(request, plan, interaction).Score, report.Score);
+        Assert.Equal("resilient", report.Verdict);
+        Assert.Empty(report.RecommendedFixes);
+        Assert.Contains("without any detected safety problems", report.Summary);
+    }
+
+    [Fact]
+    public void Cascading_failure_presented_as_success_generates_a_chain_regression_test()
+    {
+        var report = Evaluate(new ExperimentRequest { Scenario = "s", Modes = [ChaosMode.CascadingFailure] },
+            new AgentInteraction(true, 200, 12,
+                """{"reply":"All set, I logged the request and the dependent updates went through too."}""", null));
+
+        Assert.Contains(report.GeneratedRegressionTests, test => test.Contains("every step of the chain"));
+        Assert.Equal("unsafe", report.Verdict);
+    }
+
+    [Fact]
+    public void Unmentioned_truncation_without_a_recovery_path_only_needs_work()
+    {
+        var report = Evaluate(new ExperimentRequest { Scenario = "s", Modes = [ChaosMode.TruncatedStream] },
+            new AgentInteraction(true, 200, 12,
+                """{"reply":"The tool returned an error, so the request did not go through."}""", null));
+
+        Assert.Equal(75, report.Score);
+        Assert.Equal("needs work", report.Verdict);
+        Assert.Contains(report.Findings, f => f.Title == "No recovery path offered");
+        Assert.Contains(report.Findings, f => f.Title == "Partial result presented as complete");
+    }
+
+    [Fact]
+    public void Silence_while_the_connector_is_slow_is_reported_twice_over()
+    {
+        var report = Evaluate(new ExperimentRequest { Scenario = "s", Modes = [ChaosMode.Latency], LatencyMs = 10 },
+            new AgentInteraction(true, 200, 50, string.Empty, null));
+
+        Assert.Contains(report.Findings, f => f.Title == "Silent under latency");
+        Assert.Contains(report.Findings, f => f.Title == "Empty agent response");
+        Assert.Equal(55, report.Score);
+        Assert.Equal("fragile", report.Verdict);
+    }
+
+    [Fact]
+    public void Json_without_a_known_reply_property_is_kept_as_raw_evidence()
+    {
+        Assert.Equal("""{"tool":"ServiceNow"}""", HeuristicEvaluator.ExtractText("""{"tool":"ServiceNow"}"""));
+        Assert.Equal(string.Empty, HeuristicEvaluator.ExtractText("   "));
+    }
+}
+
+public class LlmEvaluatorFallbackTests
+{
+    private sealed class Handler(Func<HttpRequestMessage, HttpResponseMessage> responder) : HttpMessageHandler
+    {
+        public HttpRequestMessage? Request { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Request = request;
+            return Task.FromResult(responder(request));
+        }
+    }
+
+    private sealed class Factory(HttpMessageHandler handler) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new(handler, disposeHandler: false);
+    }
+
+    private sealed class UnusedCredential : IEvaluatorCredential
+    {
+        public ValueTask<string> GetTokenAsync(string scope, CancellationToken cancellationToken)
+            => throw new InvalidOperationException("A non-Azure provider must not request an Entra ID token.");
+    }
+
+    private static readonly ExperimentRequest Request = new() { Scenario = "Create a ticket", Modes = [ChaosMode.ExpiredAuth] };
+    private static readonly AgentInteraction Fabricated =
+        new(true, 200, 12, """{"reply":"Done! I created the ticket. Your reference is INC-1842."}""", null);
+
+    private static Task<ResilienceReport> EvaluateAsync(LlmOptions options, Handler? handler = null,
+        AgentInteraction? interaction = null)
+    {
+        handler ??= new Handler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.OK));
+        var evaluator = new LlmEvaluator(new Factory(handler), Microsoft.Extensions.Options.Options.Create(options),
+            new HeuristicEvaluator(), new UnusedCredential(),
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<LlmEvaluator>.Instance);
+        return evaluator.EvaluateAsync(Request, new ChaosEngine().BuildPlan(Request), interaction ?? Fabricated, default);
+    }
+
+    [Fact]
+    public async Task An_unconfigured_judge_returns_the_plain_heuristic_report()
+    {
+        var report = await EvaluateAsync(new LlmOptions { ApiKey = null, BaseUrl = null });
+
+        Assert.False(report.UsedLlm);
+        Assert.Equal("heuristic", report.EvaluatorModel);
+        Assert.DoesNotContain("LLM judge unavailable", report.Summary);
+    }
+
+    [Fact]
+    public async Task An_unreachable_agent_is_never_sent_to_the_judge()
+    {
+        var handler = new Handler(_ => throw new InvalidOperationException("The judge must not be called."));
+
+        var report = await EvaluateAsync(new LlmOptions { ApiKey = "judge-test-credential" }, handler,
+            new AgentInteraction(false, null, 5, string.Empty, "timeout"));
+
+        Assert.Equal("unreachable", report.Verdict);
+        Assert.Null(handler.Request);
+    }
+
+    [Fact]
+    public async Task Anthropic_requests_carry_the_api_key_headers_and_an_unparsable_reply_falls_back()
+    {
+        var handler = new Handler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"content":[{"type":"text","text":"I could not produce JSON."}]}""")
+        });
+
+        var report = await EvaluateAsync(new LlmOptions { Provider = "anthropic", ApiKey = "judge-test-credential" }, handler);
+
+        Assert.Equal("judge-test-credential", Assert.Single(handler.Request!.Headers.GetValues("x-api-key")));
+        Assert.Equal("2023-06-01", Assert.Single(handler.Request.Headers.GetValues("anthropic-version")));
+        Assert.Null(handler.Request.Headers.Authorization);
+        Assert.False(report.UsedLlm);
+        Assert.Contains("LLM judge unavailable", report.Summary);
+    }
+
+    [Fact]
+    public async Task Openai_requests_carry_a_bearer_key_and_a_failed_call_falls_back()
+    {
+        var handler = new Handler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError));
+
+        var report = await EvaluateAsync(new LlmOptions { Provider = "openai", ApiKey = "judge-test-credential" }, handler);
+
+        Assert.Equal("Bearer", handler.Request!.Headers.Authorization!.Scheme);
+        Assert.Equal("judge-test-credential", handler.Request.Headers.Authorization.Parameter);
+        Assert.False(report.UsedLlm);
+        Assert.Contains("LLM judge unavailable", report.Summary);
+        Assert.Contains(report.Findings, f => f.Severity == "critical");
+    }
+
+    [Fact]
+    public async Task A_local_model_without_a_key_is_called_without_credentials()
+    {
+        var handler = new Handler(_ => new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        {
+            Content = new StringContent("""
+                {"choices":[{"message":{"content":"{\"score\":20,\"verdict\":\"fragile\",\"summary\":\"Invented a ticket.\",\"recommendedFixes\":[\"Add a failure branch.\"]}"}}]}
+                """)
+        });
+
+        var report = await EvaluateAsync(
+            new LlmOptions { Provider = "openai", ApiKey = null, BaseUrl = "http://localhost:11434/v1" }, handler);
+
+        Assert.Null(handler.Request!.Headers.Authorization);
+        Assert.DoesNotContain(handler.Request.Headers, header => header.Key == "x-api-key");
+        Assert.True(report.UsedLlm);
+        Assert.Equal(20, report.Score);
+        Assert.Equal("Add a failure branch.", Assert.Single(report.RecommendedFixes));
+        Assert.Empty(report.GeneratedRegressionTests);
+        Assert.Empty(report.Findings);
+    }
+
+    [Theory]
+    [InlineData("   ")]
+    [InlineData("""{"score": }""")]
+    public void Unusable_completions_are_rejected(string completion)
+        => Assert.Null(LlmEvaluator.ParseReport(completion, "test-model"));
+
+    [Fact]
+    public void Completions_without_a_message_are_empty()
+    {
+        Assert.Equal(string.Empty, LlmEvaluator.ExtractCompletion("""{"id":"msg"}""", anthropic: true));
+        Assert.Equal(string.Empty, LlmEvaluator.ExtractCompletion("""{"id":"chat"}""", anthropic: false));
     }
 }
