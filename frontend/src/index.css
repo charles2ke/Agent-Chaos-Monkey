@@ -501,9 +501,14 @@ body {
   }
 
   /* Keep the composer (and its Run chaos button) pinned while the run pane is on screen. */
+  .session > .session__header {
+    order: -2;
+  }
+
   .composer {
+    order: -1;
     position: sticky;
-    bottom: 0;
+    top: 84px;
     z-index: 1;
     background: var(--surface);
   }
@@ -538,6 +543,10 @@ body {
 
   .session {
     min-height: 60vh;
+  }
+
+  .composer {
+    top: 136px;
   }
 
   .session__header {

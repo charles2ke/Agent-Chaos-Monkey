@@ -171,9 +171,19 @@ test.describe('static GitHub Pages build', () => {
     const run = page.getByRole('button', { name: 'Run chaos' })
     await expect(run).toBeInViewport()
 
-    // It stays pinned while the run pane is on screen.
-    await page.mouse.wheel(0, 400)
+    // It stays pinned below the top bar while the run pane is on screen.
+    await page.mouse.wheel(0, 700)
     await expect(run).toBeInViewport()
+    const [topBarBox, pinnedRunBox] = await Promise.all([
+      page.locator('.topbar').boundingBox(),
+      run.boundingBox(),
+    ])
+    expect(topBarBox).not.toBeNull()
+    expect(pinnedRunBox).not.toBeNull()
+    expect(pinnedRunBox!.y).toBeGreaterThanOrEqual(topBarBox!.y + topBarBox!.height)
+
+    await page.mouse.wheel(0, 200)
+    expect((await run.boundingBox())!.y).toBeCloseTo(pinnedRunBox!.y, 0)
 
     await page.screenshot({ path: `${screenshots}/11-static-mobile-run-chaos.png` })
 
