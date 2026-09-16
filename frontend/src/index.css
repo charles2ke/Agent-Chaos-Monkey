@@ -493,6 +493,20 @@ body {
     grid-template-columns: minmax(0, 1fr);
     padding: 16px;
   }
+
+  /* Stacked layout: show the run pane first so "Run chaos" is not buried
+     below the whole configuration panel. */
+  .workspace > .session {
+    order: -1;
+  }
+
+  /* Keep the composer (and its Run chaos button) pinned while the run pane is on screen. */
+  .composer {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    background: var(--surface);
+  }
 }
 
 @media (max-width: 700px) {

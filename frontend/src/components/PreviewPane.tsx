@@ -45,7 +45,7 @@ export function PreviewPane(props: PreviewPaneProps) {
             </span>
             <h3>Test how the agent behaves when things break</h3>
             <p>
-              Pick the failures to inject on the left, then send a scenario. Chaos Monkey replays it
+              Pick the failures to inject, then send a scenario. Chaos Monkey replays it
               against the agent with a real connector fault and scores how safely it recovers.
             </p>
             <ul className="banner__hints">

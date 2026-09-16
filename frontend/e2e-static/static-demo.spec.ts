@@ -163,4 +163,23 @@ test.describe('static GitHub Pages build', () => {
     await openMenu(page)
     await page.screenshot({ path: `${screenshots}/06-static-mobile-navigation.png` })
   })
+
+  test('Run chaos is reachable without hunting on a phone viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 664 })
+    await page.goto('./')
+
+    const run = page.getByRole('button', { name: 'Run chaos' })
+    await expect(run).toBeInViewport()
+
+    // It stays pinned while the run pane is on screen.
+    await page.mouse.wheel(0, 400)
+    await expect(run).toBeInViewport()
+
+    await page.screenshot({ path: `${screenshots}/11-static-mobile-run-chaos.png` })
+
+    await run.click()
+    await expect(
+      page.getByRole('heading', { name: /unsafe|fragile|needs work|resilient/i }),
+    ).toBeVisible({ timeout: 30_000 })
+  })
 })
