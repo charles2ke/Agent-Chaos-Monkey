@@ -508,6 +508,7 @@ body {
   .composer {
     order: -1;
     position: sticky;
+    /* Clear the content-driven top bar at each responsive layout. */
     top: 84px;
     z-index: 1;
     background: var(--surface);
