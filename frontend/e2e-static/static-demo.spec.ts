@@ -103,9 +103,7 @@ test.describe('static GitHub Pages build', () => {
     await expect(rail).toBeHidden()
 
     await openMenu(page)
-    for (const tab of ['Run', 'Overview', 'Laboratory', 'Activity']) {
-      await expect(rail.getByRole('button', { name: tab, exact: true })).toBeVisible()
-    }
+    await expect(rail.locator('.rail__item')).toHaveText(['Run', 'Overview', 'Laboratory', 'Activity'])
     for (const section of ['Tools', 'Instructions', 'Chaos catalogue', 'Resilience judge']) {
       await expect(rail.getByRole('button', { name: section, exact: true })).toBeVisible()
     }

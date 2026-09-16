@@ -38,8 +38,8 @@ npm run dev                           # → http://localhost:5173
 1. Open <http://localhost:5173>. The app starts on **Run**.
 2. Open **Overview** to see the resilience contract the agent is scored
    against, the catalogue of faults that can be injected and the judge that
-   grades the recovery. Open **Run › Tools** to choose the connector chaos is
-   aimed at: `ServiceNow.CreateIncident` (the default) or any other tool
+   grades the recovery. Open **Run › Tools** to
+   choose the connector to aim chaos at: `ServiceNow.CreateIncident` (the default) or any other tool
    boundary.
 3. Back on **Run**, keep the scenario *"Create a support ticket for my
    broken laptop"*, leave **Expired auth (HTTP 401)** selected and choose

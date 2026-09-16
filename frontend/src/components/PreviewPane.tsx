@@ -24,10 +24,10 @@ interface PreviewPaneProps {
 
 export function PreviewPane(props: PreviewPaneProps) {
   return (
-    <section className="session" aria-label="Preview">
+    <section className="session" aria-label="Run">
       <div className="session__header">
         <div>
-          <h2 className="session__title">Preview</h2>
+          <h2 className="session__title">Run</h2>
           <p className="session__target">Target · {props.targetLabel}</p>
         </div>
         <button type="button" className="button button--ghost" onClick={props.onClear} disabled={props.running}>
