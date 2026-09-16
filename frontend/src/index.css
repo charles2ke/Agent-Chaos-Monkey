@@ -472,11 +472,6 @@ body {
 }
 
 @media (max-width: 1000px) {
-  .shell {
-    /* Rendered height of the wrapped responsive top bar. */
-    --topbar-height: 84px;
-  }
-
   .rail__item,
   .rail__subitem {
     min-height: 44px;
@@ -500,6 +495,13 @@ body {
     grid-template-columns: minmax(0, 1fr);
     padding: 16px;
   }
+}
+
+@media (max-width: 700px) {
+  .shell {
+    /* The phone layout adds a full-width metadata row to the top bar. */
+    --topbar-height: 136px;
+  }
 
   /* Stacked layout: show the run pane first so "Run chaos" is not buried
      below the whole configuration panel. */
@@ -518,13 +520,6 @@ body {
     top: var(--topbar-height);
     z-index: 1;
     background: var(--surface);
-  }
-}
-
-@media (max-width: 700px) {
-  .shell {
-    /* The phone layout adds a full-width metadata row to the top bar. */
-    --topbar-height: 136px;
   }
 
   .rail__brand {
