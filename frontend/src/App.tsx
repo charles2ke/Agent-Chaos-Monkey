@@ -222,9 +222,8 @@ export default function App() {
           }}
           menuButtonRef={menuButtonRef}
         />
-        <div className="shell__content" inert={navOpen ? true : undefined}>
         {activeTab === 'Preview' ? (
-          <main className="workspace">
+          <main className="workspace" inert={navOpen ? true : undefined}>
             <ChaosPanel
               modes={modes}
               selectedModes={selectedModes}
@@ -275,7 +274,7 @@ export default function App() {
             />
           </main>
         ) : activeTab !== 'Laboratory' ? (
-          <main className="workspace workspace--single">
+          <main className="workspace workspace--single" inert={navOpen ? true : undefined}>
             {activeTab === 'Overview' && (
               <OverviewPage
                 modes={modes}
@@ -303,10 +302,13 @@ export default function App() {
             )}
           </main>
         ) : null}
-        <main className="workspace workspace--single" hidden={activeTab !== 'Laboratory'}>
+        <main
+          className="workspace workspace--single"
+          hidden={activeTab !== 'Laboratory'}
+          inert={navOpen ? true : undefined}
+        >
           <LaboratoryPage />
         </main>
-        </div>
       </div>
     </div>
   )

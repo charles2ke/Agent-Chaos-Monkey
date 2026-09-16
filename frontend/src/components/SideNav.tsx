@@ -56,8 +56,8 @@ export function SideNav({
         navRef.current?.querySelectorAll<HTMLElement>(
           'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
         ) ?? [],
-      ).filter((element) => element.offsetParent !== null)
-      if (!focusable?.length) return
+      ).filter((element) => element.checkVisibility({ visibilityProperty: true }))
+      if (!focusable.length) return
 
       const first = focusable[0]
       const last = focusable[focusable.length - 1]
