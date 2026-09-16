@@ -35,12 +35,13 @@ npm run dev                           # → http://localhost:5173
 
 ## 4. Run your first experiment
 
-1. Open <http://localhost:5173>. The app starts on **Preview**.
+1. Open <http://localhost:5173>. The app starts on **Run**.
 2. Open **Overview** to see the resilience contract the agent is scored
-   against, the catalogue of faults that can be injected, the judge that grades
-   the recovery, and the connector chaos is aimed at. Pick
-   `ServiceNow.CreateIncident` (the default) or any other tool boundary.
-3. Back on **Preview**, keep the scenario *"Create a support ticket for my
+   against, the catalogue of faults that can be injected and the judge that
+   grades the recovery. Open **Run › Tools** to choose the connector chaos is
+   aimed at: `ServiceNow.CreateIncident` (the default) or any other tool
+   boundary.
+3. Back on **Run**, keep the scenario *"Create a support ticket for my
    broken laptop"*, leave **Expired auth (HTTP 401)** selected and choose
    **Run chaos**.
 4. Read the resilience report: the score, the connector trace, and every
@@ -67,7 +68,7 @@ actions or costs. For Direct Line agents, see
 
 ## 6. Go beyond a single run
 
-- **Run assistant** (Preview) turns the selected faults into an approval-based
+- **Run assistant** (Run) turns the selected faults into an approval-based
   plan: one healthy baseline, then one isolated check per fault.
 - **Laboratory** adds versioned definitions, evidence-backed assertions, saved
   regression tests, history and comparisons, plus opt-in live gateway testing

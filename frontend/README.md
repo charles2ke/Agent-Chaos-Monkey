@@ -20,7 +20,7 @@ no backend is required.
 ## Laboratory
 
 The **Laboratory** tab adds single-fault, isolated matrix, and ordered sequence
-experiments alongside the original Preview. Schedule faults by connector,
+experiments alongside the original Run screen. Schedule faults by connector,
 operation, and 1-based invocation; configure virtual latency, timeout, retry
 limits/backoff, and follow-up turns with explicit reauthentication.
 
@@ -51,7 +51,7 @@ Known credentials and common token forms are redacted from user text. Raw agent
 output, session identifiers, and trace text are **not persisted or exported**.
 Do not put confidential data into scenarios; redaction cannot classify arbitrary
 unlabeled prose as a secret. Replay may require replacing redacted values.
-Legacy Preview activity remains session-only.
+Legacy Run activity remains session-only.
 
 Search, export/import, and compare history summaries across versions. Imported
 outcomes are unverified; replay to gather current evidence. Comparisons are

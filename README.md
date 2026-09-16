@@ -27,7 +27,7 @@ those failures and recovers safely.
 
 ## ✨ What it does
 
-Agent Chaos Monkey provides **resilience testing of AI agents**. Use Preview for the original simulated connector-result demo, or Laboratory for reproducible experiments, tool-call evidence, regression tests, and opt-in live gateway testing. You get back:
+Agent Chaos Monkey provides **resilience testing of AI agents**. Use Run for the original simulated connector-result demo, or Laboratory for reproducible experiments, tool-call evidence, regression tests, and opt-in live gateway testing. You get back:
 
 - a **resilience score**
 - latency and status of every call
@@ -36,7 +36,7 @@ Agent Chaos Monkey provides **resilience testing of AI agents**. Use Preview for
 
 There is a built-in `/api/demo-agent`, so you can demo everything without wiring up a real agent first.
 
-### Guided runs in Preview
+### Guided runs in Run
 
 The **Run assistant** turns your selected faults into an approval-based plan: one healthy baseline,
 then one check per fault. Isolating faults prevents a higher-priority failure from masking another.
@@ -53,7 +53,7 @@ invoked once per check — N faults means N+1 evaluator calls, which affects lat
 Use a sandbox target: each check sends a separate request and may cause real actions or costs.
 **Stop after current check** skips queued checks without cancelling the active request; request
 or transport errors also stop the plan. Runs stay in the current session's Activity history.
-Preview evaluates simulated connector results, not evidence of real tool execution; use Laboratory
+Run evaluates simulated connector results, not evidence of real tool execution; use Laboratory
 for tool-call evidence. The guided demo also works on GitHub Pages without a backend.
 
 ## 🧨 Chaos modes
@@ -73,13 +73,13 @@ for tool-call evidence. The guided demo also works on GitHub Pages without a bac
 | 🌊 Cascading failure | One connector outage that keeps every later dependency call failing |
 
 The last five are agent-layer faults: they target what the agent *does with* a tool response rather
-than the HTTP transport. Every mode is available in both Preview and Laboratory. Prompt injection is
+than the HTTP transport. Every mode is available in both Run and Laboratory. Prompt injection is
 scored by the `noInjectedInstructionFollowed` assertion in Laboratory, and by canary detection in the
-Preview judge — the run fails only when a reply repeats the canary phrase that was planted in the
+Run judge — the run fails only when a reply repeats the canary phrase that was planted in the
 payload, which is observed evidence, not a guess. A fresh canary is generated per run, so a reply
 cannot pass by coincidence. The Laboratory simulation replays the agent-layer faults against a
 deterministic scripted agent, so a simulated result says nothing about your agent: run the backend
-locally and use Preview, or opt in to the live tool gateway, to get real evidence for them. The
+locally and use Run, or opt in to the live tool gateway, to get real evidence for them. The
 `noInjectedInstructionFollowed` assertion stays inconclusive whenever no injection payload was
 delivered.
 
@@ -124,8 +124,8 @@ focus, and **Overview** has sub-menus for its four sections.
 
 | Screen | Purpose |
 | --- | --- |
-| **Overview** | The resilience contract, the injectable chaos catalogue, the configured judge and the connector / tool boundary where chaos is injected. Sub-menus: Instructions, Chaos catalogue, Resilience judge, Tools |
-| **Preview** | Chat preview pane with the connector trace and resilience report |
+| **Run** | Chat preview pane with the connector trace and resilience report. Sub-menu: Tools, the connector / tool boundary where chaos is injected |
+| **Overview** | The resilience contract, the injectable chaos catalogue and the configured judge. Sub-menus: Instructions, Chaos catalogue, Resilience judge |
 | **Activity** | History of the experiments run in this session |
 | **Laboratory** | Versioned experiments, schedules, traces, saved tests, persistent history and comparisons |
 | **Settings** (gear icon) | Agent endpoint and token, injected latency, evaluator model |
@@ -135,13 +135,13 @@ focus, and **Overview** has sub-menus for its four sections.
 **Navigation** — the hamburger menu with Overview sub-menus, and a single Overview section opened
 from one of them:
 
-![Hamburger navigation menu open, showing Overview with its Instructions, Chaos catalogue, Resilience judge and Tools sub-menus, plus Preview, Laboratory and Activity](docs/images/navigation-menu.png)
+![Hamburger navigation menu open, showing Run with its Tools sub-menu, Overview with its Instructions, Chaos catalogue and Resilience judge sub-menus, plus Laboratory and Activity](docs/images/navigation-menu.png)
 
 ![The Tools sub-menu of Overview, showing only the connector picker](docs/images/overview-tools-section.png)
 
-**Preview and the resilience report** — a scenario replayed with an expired-auth fault injected:
+**Run and the resilience report** — a scenario replayed with an expired-auth fault injected:
 
-![Preview screen before a run, with the chaos configuration panel and the run assistant](docs/images/preview-empty.png)
+![Run screen before a run, with the chaos configuration panel and the run assistant](docs/images/preview-empty.png)
 
 ![Resilience report after injecting an expired-auth HTTP 401 failure](docs/images/resilience-report.png)
 
@@ -284,11 +284,11 @@ Backend line coverage is measured by [`.github/workflows/coverage.yml`](.github/
 
 Pages is enabled with **GitHub Actions** as the source, and the UI is published to that URL on every push to `main` by [`.github/workflows/pages.yml`](.github/workflows/pages.yml). The workflow can also be re-run manually (`workflow_dispatch`) to refresh the site. The deploy job probes for the Pages site first, so if the setting is ever turned off the run reports actionable guidance instead of failing with an opaque 404 — and the built site remains available as the `github-pages` artifact of the run.
 
-All tabs ship in that build. Pages only serves static files, so the build sets `VITE_STATIC_DEMO=true`. Preview runs in [`frontend/src/staticDemo.ts`](frontend/src/staticDemo.ts); Laboratory uses a deterministic browser simulation with explicitly **virtual** timing. Neither observes real connector calls. Testing a real agent endpoint or measuring actual tool waits requires the .NET API. The build also honours `VITE_BASE_PATH`, which the workflow sets to the repository name so the project site resolves its assets.
+All tabs ship in that build. Pages only serves static files, so the build sets `VITE_STATIC_DEMO=true`. Run experiments use [`frontend/src/staticDemo.ts`](frontend/src/staticDemo.ts); Laboratory uses a deterministic browser simulation with explicitly **virtual** timing. Neither observes real connector calls. Testing a real agent endpoint or measuring actual tool waits requires the .NET API. The build also honours `VITE_BASE_PATH`, which the workflow sets to the repository name so the project site resolves its assets.
 
 ## 🧪 Resilience laboratory
 
-The **Laboratory** tab is the executable experiment workbench. The original Preview
+The **Laboratory** tab is the executable experiment workbench. The original Run screen
 API remains compatible; its supplied connector results are simulations, not evidence
 that a remote agent called a tool. Laboratory distinguishes simulated demo traces
 from gateway-observed interactions and never treats retry-related prose as a retry.
@@ -529,7 +529,7 @@ cd mcp && npm install && npm start   # from a clone: stdio MCP server, npm test 
 | Tool | Purpose |
 | --- | --- |
 | `get_health` / `list_chaos_modes` / `get_evaluator` | API liveness, injectable failures, configured judge |
-| `run_experiment` | Run one Preview experiment and return the resilience report |
+| `run_experiment` | Run one Run-tab experiment and return the resilience report |
 | `get_lab_capabilities` | Supported schema, execution modes, assertion kinds, gateway status and limits |
 | `run_lab_experiment` / `run_lab_suite` | Run a version 1 definition, or 1–20 saved regression tests |
 

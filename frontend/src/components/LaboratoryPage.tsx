@@ -230,7 +230,7 @@ export function LaboratoryPage() {
       </section>
       <section className="lab-card" aria-label="Durable history">
         <h3>05 / History & version comparison</h3>
-        <p className="lab-hint">Redacted, versioned local summaries, including after reload. Imported summaries are unverified; current-session reports contain evidence. Legacy Preview activity remains session-only.</p>
+        <p className="lab-hint">Redacted, versioned local summaries, including after reload. Imported summaries are unverified; current-session reports contain evidence. Legacy Run activity remains session-only.</p>
         <label>Search laboratory history<input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Name, scenario, version, outcome…" /></label>
         <div className="lab-actions"><button onClick={() => download('chaos-history.v1.json', { schemaVersion: 1, history: history.map(h => ({ ...h, definition: safeDefinition(h.definition, secrets) })) })}>Export history</button><label className="lab-upload">Import history<input aria-label="Import history" type="file" accept=".json,application/json" onChange={e => void importFile(e, 'history')} /></label><button onClick={() => setHistory([])}>Clear laboratory history</button></div>
         {history.filter(h => `${h.definition.name} ${h.definition.scenario} ${h.definition.agentVersion} ${h.outcome}`.toLowerCase().includes(search.toLowerCase())).map(h => <div className="lab-saved" key={h.id}>

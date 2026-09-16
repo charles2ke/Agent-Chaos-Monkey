@@ -51,7 +51,7 @@ Register it with an MCP client, for example in `.vscode/mcp.json` or a client's
 | `get_health` | Check that the Chaos API is reachable |
 | `list_chaos_modes` | Catalogue of injectable failures |
 | `get_evaluator` | Configured judge provider/model and whether credentials are present |
-| `run_experiment` | Run one Preview experiment and return the resilience report |
+| `run_experiment` | Run one Run-tab experiment and return the resilience report |
 | `get_lab_capabilities` | Supported schema, execution modes, assertion kinds, gateway status and limits |
 | `run_lab_experiment` | Run a version 1 laboratory definition with evidence-backed assertions |
 | `run_lab_suite` | Run 1–20 saved regression tests and return the aggregate outcome |
@@ -70,6 +70,6 @@ version 1 schema as [`examples/demo-suite.json`](../examples/demo-suite.json).
   query or fragment — the same rule the headless runner applies.
 - Responses are redacted before they reach the model: credential-shaped keys,
   bearer/basic headers and URL credentials or query strings are removed.
-- Preview connector results are simulations. Only Laboratory runs distinguish
+- Run connector results are simulations. Only Laboratory runs distinguish
   gateway-observed evidence, and missing observations yield `inconclusive`
   rather than a fabricated pass.
