@@ -1,5 +1,3 @@
-<div align="center">
-
 # 🐒 Agent Chaos Monkey
 
 **Deliberately inject connector failures, latency, bad responses, expired auth and malformed data — then measure whether your agent recovers safely.**
@@ -15,8 +13,6 @@
 
 [Live demo](https://charles2ke.github.io/Agent-Chaos-Monkey/) · [Getting started](GETTING_STARTED.md) · [Evaluate in 3 minutes](docs/JUDGES.md) · [Quick start](#-quick-start) · [Leaderboard](docs/LEADERBOARD.md) · [Direct Line](docs/DIRECT_LINE.md) · [GitHub Action](docs/ACTION.md) · [Deploy to Azure](docs/DEPLOY.md) · [Resilience laboratory](#-resilience-laboratory)
 
-</div>
-
 ---
 
 ## Why this exists
@@ -25,12 +21,9 @@ AI agents can fabricate success after tool failures, allowing silently broken
 workflows to ship. There is no standard way to test whether an agent recognizes
 those failures and recovers safely.
 
-<p align="center">
-  <a href="https://charles2ke.github.io/Agent-Chaos-Monkey/">
-    <img src="docs/images/preview-empty.png" alt="Agent Chaos Monkey preview pane before a run" width="49%">
-    <img src="docs/images/resilience-report.png" alt="Agent Chaos Monkey resilience report after injecting an expired-auth failure" width="49%">
-  </a>
-</p>
+[![Agent Chaos Monkey preview pane before a run](docs/images/preview-empty.png)](https://charles2ke.github.io/Agent-Chaos-Monkey/)
+
+[![Agent Chaos Monkey resilience report after injecting an expired-auth failure](docs/images/resilience-report.png)](https://charles2ke.github.io/Agent-Chaos-Monkey/)
 
 ## ✨ What it does
 
@@ -142,36 +135,32 @@ focus, and **Overview** has sub-menus for its four sections.
 **Navigation** — the hamburger menu with Overview sub-menus, and a single Overview section opened
 from one of them:
 
-<p align="center">
-  <img src="docs/images/navigation-menu.png" alt="Hamburger navigation menu open, showing Overview with its Instructions, Chaos catalogue, Resilience judge and Tools sub-menus, plus Preview, Laboratory and Activity" width="49%">
-  <img src="docs/images/overview-tools-section.png" alt="The Tools sub-menu of Overview, showing only the connector picker" width="49%">
-</p>
+![Hamburger navigation menu open, showing Overview with its Instructions, Chaos catalogue, Resilience judge and Tools sub-menus, plus Preview, Laboratory and Activity](docs/images/navigation-menu.png)
+
+![The Tools sub-menu of Overview, showing only the connector picker](docs/images/overview-tools-section.png)
 
 **Preview and the resilience report** — a scenario replayed with an expired-auth fault injected:
 
-<p align="center">
-  <img src="docs/images/preview-empty.png" alt="Preview screen before a run, with the chaos configuration panel and the run assistant" width="49%">
-  <img src="docs/images/resilience-report.png" alt="Resilience report after injecting an expired-auth HTTP 401 failure" width="49%">
-</p>
+![Preview screen before a run, with the chaos configuration panel and the run assistant](docs/images/preview-empty.png)
+
+![Resilience report after injecting an expired-auth HTTP 401 failure](docs/images/resilience-report.png)
 
 **Overview, Activity and Laboratory**:
 
-<p align="center">
-  <img src="docs/images/tab-overview.png" alt="Overview screen with the resilience contract, the chaos catalogue, the judge and the connector picker" width="49%">
-  <img src="docs/images/tab-activity.png" alt="Activity screen listing the experiments run in this session with their scores" width="49%">
-</p>
-<p align="center">
-  <img src="docs/images/tab-laboratory.png" alt="Laboratory screen with a versioned experiment definition and its evidence report" width="49%">
-  <img src="docs/images/tab-settings.png" alt="Settings screen, opened from the gear icon, with the agent endpoint, injected latency and evaluator model" width="49%">
-</p>
+![Overview screen with the resilience contract, the chaos catalogue, the judge and the connector picker](docs/images/tab-overview.png)
+
+![Activity screen listing the experiments run in this session with their scores](docs/images/tab-activity.png)
+
+![Laboratory screen with a versioned experiment definition and its evidence report](docs/images/tab-laboratory.png)
+
+![Settings screen, opened from the gear icon, with the agent endpoint, injected latency and evaluator model](docs/images/tab-settings.png)
 
 **Tooltips and small screens** — every panel, field and table column explains itself, and the same
 menu drives navigation on a phone:
 
-<p align="center">
-  <img src="docs/images/tooltips.png" alt="A descriptive tooltip explaining the injected failures panel" width="49%">
-  <img src="docs/images/mobile-navigation.png" alt="The navigation drawer open on a 390 pixel wide phone viewport" width="32%">
-</p>
+![A descriptive tooltip explaining the injected failures panel](docs/images/tooltips.png)
+
+![The navigation drawer open on a 390 pixel wide phone viewport](docs/images/mobile-navigation.png)
 
 Every image is a Playwright screenshot, refreshed by `cd frontend && npm run test:e2e` and
 `npm run test:e2e:static`.
