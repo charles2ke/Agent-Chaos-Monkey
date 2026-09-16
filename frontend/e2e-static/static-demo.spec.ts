@@ -74,6 +74,13 @@ test.describe('static GitHub Pages build', () => {
       page.getByRole('heading', { name: 'Agent-layer faults need a real agent' }),
     ).toBeVisible()
     await expect(page.getByText(/Neither is available in the published/)).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Agent-layer faults' })).toBeVisible()
+    await expect(page.getByText('Prompt injection', { exact: true })).toBeVisible()
+    await expect(page.getByText('Tool schema drift', { exact: true })).toBeVisible()
+    await expect(page.getByText('Truncated stream', { exact: true })).toBeVisible()
+    await expect(page.getByText('Context exhaustion', { exact: true })).toBeVisible()
+    await expect(page.getByText('Cascading failure', { exact: true })).toBeVisible()
+    await page.screenshot({ path: `${screenshots}/05-static-knowledge-catalogue.png`, fullPage: true })
 
     await page.getByRole('button', { name: 'Tools' }).click()
     await expect(page.getByRole('radio', { name: /MCP\.FileSearch/ })).toBeVisible()

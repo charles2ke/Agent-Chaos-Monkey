@@ -2,7 +2,7 @@
 
 This repo ships an [Azure Developer CLI (`azd`)](https://learn.microsoft.com/azure/developer/azure-developer-cli/) template that stands up:
 
-- The .NET 8 API (`backend/ChaosMonkey.Api`) on **Azure Container Apps** (external HTTPS ingress, port 8080)
+- The .NET 10 API (`backend/ChaosMonkey.Api`) on **Azure Container Apps** (external HTTPS ingress, port 8080)
 - The Vite/React UI (`frontend/`) on **Azure Static Web Apps** (Free tier)
 - **Azure Container Registry** (Basic; admin user disabled, image pull via user-assigned managed identity + AcrPull role)
 - A **user-assigned managed identity** for the container app

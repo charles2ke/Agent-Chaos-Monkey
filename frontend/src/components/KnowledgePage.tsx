@@ -1,24 +1,30 @@
-import type { ChaosModeId, ChaosModeInfo, EvaluatorInfo } from '../api'
+import { isAgentLayerMode } from '../api'
+import type { ChaosModeInfo, EvaluatorInfo } from '../api'
 
 interface KnowledgePageProps {
   modes: ChaosModeInfo[]
   evaluator: EvaluatorInfo | null
 }
 
-/**
- * Faults that target what the agent does with a tool response rather than the HTTP transport.
- * The Laboratory browser simulation replays them against a scripted reference agent, so it can
- * never show how a real agent behaves under them.
- */
-const agentLayerModes: ChaosModeId[] = [
-  'PromptInjection',
-  'ToolSchemaDrift',
-  'TruncatedStream',
-  'ContextExhaustion',
-  'CascadingFailure',
-]
+function ModeCards({ modes }: { modes: ChaosModeInfo[] }) {
+  return (
+    <ul className="cards">
+      {modes.map((mode) => (
+        <li key={mode.id} className="card">
+          <span className="card__badge">{mode.id}</span>
+          {isAgentLayerMode(mode.id) && <span className="card__badge">Agent-layer</span>}
+          <strong className="card__title">{mode.name}</strong>
+          <p className="card__detail">{mode.description}</p>
+        </li>
+      ))}
+    </ul>
+  )
+}
 
 export function KnowledgePage({ modes, evaluator }: KnowledgePageProps) {
+  const transportModes = modes.filter((mode) => !isAgentLayerMode(mode.id))
+  const agentModes = modes.filter((mode) => isAgentLayerMode(mode.id))
+
   return (
     <section className="page" aria-label="Knowledge">
       <header className="page__header">
@@ -33,34 +39,38 @@ export function KnowledgePage({ modes, evaluator }: KnowledgePageProps) {
       {modes.length === 0 ? (
         <p className="page__empty">No chaos modes loaded. Start the backend to fetch the catalogue.</p>
       ) : (
-        <ul className="cards">
-          {modes.map((mode) => (
-            <li key={mode.id} className="card">
-              <span className="card__badge">{mode.id}</span>
-              {agentLayerModes.includes(mode.id) && (
-                <span className="card__badge">Agent-layer</span>
-              )}
-              <strong className="card__title">{mode.name}</strong>
-              <p className="card__detail">{mode.description}</p>
-            </li>
-          ))}
-        </ul>
-      )}
+        <>
+          {transportModes.length > 0 && (
+            <>
+              <h4 className="page__subtitle">Transport faults</h4>
+              <ModeCards modes={transportModes} />
+            </>
+          )}
 
-      <div className="note">
-        <h4 className="note__title">Agent-layer faults need a real agent</h4>
-        <p>
-          Prompt injection, tool schema drift, truncated stream, context exhaustion and cascading
-          failure are judged on what the agent does with the payload, not on the status code. The
-          Laboratory simulation only replays them against a deterministic scripted agent, so a
-          simulated pass is evidence about the harness, never about your agent.
-        </p>
-        <p>
-          For real evidence on these five modes, run the backend locally and use Preview, or opt in
-          to the live tool gateway in the Laboratory tab. Neither is available in the published
-          GitHub Pages demo, where every Laboratory run is simulated in the browser.
-        </p>
-      </div>
+          {agentModes.length > 0 && (
+            <>
+              <h4 className="page__subtitle">Agent-layer faults</h4>
+              <div className="note">
+                <h5 className="note__title">Agent-layer faults need a real agent</h5>
+                <p>
+                  Prompt injection, tool schema drift, truncated stream, context exhaustion and
+                  cascading failure are judged on what the agent does with the payload, not on the
+                  status code. The Laboratory simulation only replays them against a deterministic
+                  scripted agent, so a simulated pass is evidence about the harness, never about
+                  your agent.
+                </p>
+                <p>
+                  For real evidence on these five modes, run the backend locally and use Preview,
+                  or opt in to the live tool gateway in the Laboratory tab. Neither is available in
+                  the published GitHub Pages demo, where every Laboratory run is simulated in the
+                  browser.
+                </p>
+              </div>
+              <ModeCards modes={agentModes} />
+            </>
+          )}
+        </>
+      )}
 
       <h3 className="page__subtitle">Resilience judge</h3>
       <div className="note">

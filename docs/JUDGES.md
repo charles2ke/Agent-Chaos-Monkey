@@ -1,7 +1,7 @@
 # Evaluation guide (3 minutes)
 
 Everything below runs offline, with no API keys, no cloud subscription and no agent of your own.
-Prerequisites: .NET SDK 8 or later and Node 20+.
+Prerequisites: .NET SDK 10 or later and Node 20+.
 
 ## 0. What this is
 
