@@ -1,6 +1,13 @@
 import { expect, test } from '@playwright/test'
 
 const screenshots = 'e2e/screenshots'
+const agentLayerModes = [
+  'PromptInjection',
+  'ToolSchemaDrift',
+  'TruncatedStream',
+  'ContextExhaustion',
+  'CascadingFailure',
+]
 
 test.describe('agent tabs', () => {
   test('every tab is published and navigable', async ({ page }) => {
@@ -12,6 +19,15 @@ test.describe('agent tabs', () => {
     await expect(page.getByRole('heading', { name: 'Chaos catalogue' })).toBeVisible()
     await expect(page.getByText('Expired auth (HTTP 401)')).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Resilience judge' })).toBeVisible()
+    for (const mode of agentLayerModes) {
+      await expect(
+        page.locator('li.card', { hasText: mode }).getByText('Agent-layer', { exact: true }),
+      ).toBeVisible()
+    }
+    await expect(
+      page.getByRole('heading', { name: 'Agent-layer faults need a real agent' }),
+    ).toBeVisible()
+    await expect(page.getByText(/opt in to the live tool gateway in the Laboratory tab/)).toBeVisible()
     await expect(page.getByRole('radio', { name: /MCP\.FileSearch/ })).toBeVisible()
     await page.screenshot({ path: `${screenshots}/05-overview.png`, fullPage: true })
 

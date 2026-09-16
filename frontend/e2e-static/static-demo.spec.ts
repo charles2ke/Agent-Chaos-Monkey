@@ -1,6 +1,13 @@
 import { expect, test } from '@playwright/test'
 
 const screenshots = 'e2e-static/screenshots'
+const agentLayerModes = [
+  'PromptInjection',
+  'ToolSchemaDrift',
+  'TruncatedStream',
+  'ContextExhaustion',
+  'CascadingFailure',
+]
 
 test.describe('static GitHub Pages build', () => {
   test('runs a chaos experiment entirely in the browser', async ({ page }) => {
@@ -56,7 +63,16 @@ test.describe('static GitHub Pages build', () => {
     await page.getByRole('button', { name: 'Overview' }).click()
     await expect(page.getByText('Never fabricate tool success')).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Chaos catalogue' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Agent-layer faults' })).toBeVisible()
+    for (const mode of agentLayerModes) {
+      await expect(
+        page.locator('li.card', { hasText: mode }).getByText('Agent-layer', { exact: true }),
+      ).toBeVisible()
+    }
+    await expect(
+      page.getByRole('heading', { name: 'Agent-layer faults need a real agent' }),
+    ).toBeVisible()
+    await expect(page.getByText(/Neither is available in the published/)).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Agent-layer faults', exact: true })).toBeVisible()
     await expect(page.getByText('Prompt injection', { exact: true })).toBeVisible()
     await expect(page.getByText('Tool schema drift', { exact: true })).toBeVisible()
     await expect(page.getByText('Truncated stream', { exact: true })).toBeVisible()
