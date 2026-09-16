@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace ChaosMonkey.Api.Lab;
 
 /// <summary>
-/// Drives a real Copilot Studio / Microsoft 365 Agents SDK agent over Direct Line: token exchange,
+/// Drives a real Bot Framework / Microsoft 365 Agents SDK agent over Direct Line: token exchange,
 /// conversation start, activity send and activity receive. The chaos gateway callback protocol is
 /// carried on the activity so the agent invokes its tools through the laboratory boundary, which is
 /// what turns a run into observed evidence instead of an inconclusive result.
@@ -57,8 +57,8 @@ public sealed class DirectLineAdapter(IHttpClientFactory clients, DirectLineOpti
                 type = "message",
                 from = new { id = userId },
                 text = message,
-                // Copilot Studio surfaces activity.value to the agent, and the Agents SDK sample in
-                // examples/copilot-studio reads the chaos callback from exactly this property.
+                // Direct Line delivers activity.value to the agent, and the Agents SDK sample in
+                // examples/direct-line-agent reads the chaos callback from exactly this property.
                 value = payload,
                 channelData = new { chaosMonkey = payload }
             }, token);

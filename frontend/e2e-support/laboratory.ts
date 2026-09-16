@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { goToTab } from './nav'
 import { defaultDefinition, validateDefinition, validateHistory, validateTests } from '../src/lab'
 import { noInjectedInstructionFollowed, simulateLab } from '../src/labSimulation'
 
@@ -6,7 +7,7 @@ export function laboratoryTests(staticBuild: boolean) {
   const screenshots = staticBuild ? 'e2e-static/screenshots' : 'e2e/screenshots'
   test.beforeEach(async ({ page }) => {
     await page.goto(staticBuild ? './' : '/')
-    await page.getByRole('button', { name: 'Laboratory', exact: true }).click()
+    await goToTab(page, 'Laboratory')
   })
 
   test('prompt injection assertion requires and evaluates a delivered canary', () => {
@@ -66,7 +67,7 @@ export function laboratoryTests(staticBuild: boolean) {
     await saved.getByRole('button', { name: 'Rerun test', exact: true }).click()
     await expect(saved.getByText(/Baseline: fail · Resolved/)).toBeVisible()
     await page.reload()
-    await page.getByRole('button', { name: 'Laboratory', exact: true }).click()
+    await goToTab(page, 'Laboratory')
     await expect(saved.getByText(/Baseline: fail · Resolved/)).toBeVisible()
     await expect(page.getByLabel('Agent version', { exact: true })).toHaveValue('demo-v2')
     await page.getByLabel('Search laboratory history').fill('Auth recovery')
@@ -129,7 +130,7 @@ export function laboratoryTests(staticBuild: boolean) {
     validateTests({ schemaVersion: 1, tests: state.tests })
     validateHistory({ schemaVersion: 1, history: state.history })
     await page.reload()
-    await page.getByRole('button', { name: 'Laboratory', exact: true }).click()
+    await goToTab(page, 'Laboratory')
     await page.getByText('Agent connection & live boundary', { exact: true }).click()
     await expect(page.getByLabel('Agent API key (memory only)')).toHaveValue('')
     await expect(page.getByLabel('Agent endpoint', { exact: true })).toHaveValue('https://example.com/agent')
@@ -138,7 +139,7 @@ export function laboratoryTests(staticBuild: boolean) {
   test('handles corrupt storage and quota without disabling simulations', async ({ page }) => {
     await page.evaluate(() => localStorage.setItem('chaos-monkey.laboratory.v1', '{broken'))
     await page.reload()
-    await page.getByRole('button', { name: 'Laboratory', exact: true }).click()
+    await goToTab(page, 'Laboratory')
     await expect(page.getByText(/Saved storage is unavailable or corrupt/)).toBeVisible()
     await page.getByRole('button', { name: 'Run laboratory experiment' }).click()
     await expect(page.getByRole('region', { name: 'Evidence report' })).toBeVisible()
@@ -176,7 +177,7 @@ export function laboratoryTests(staticBuild: boolean) {
       await page.getByRole('button', { name: 'Run laboratory experiment' }).click()
       await expect(page.getByRole('alert')).toContainText('HTTP 503')
       await page.reload()
-      await page.getByRole('button', { name: 'Laboratory', exact: true }).click()
+      await goToTab(page, 'Laboratory')
       await page.getByText('Agent connection & live boundary', { exact: true }).click()
       await expect(gateway).not.toBeChecked()
     }

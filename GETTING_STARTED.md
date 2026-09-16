@@ -62,8 +62,8 @@ Open **Settings** and set:
 - **Injected latency** and **evaluator model** — optional overrides.
 
 Use a sandbox target: every check sends a real request and may cause real
-actions or costs. For Copilot Studio agents, see
-[docs/COPILOT_STUDIO.md](docs/COPILOT_STUDIO.md).
+actions or costs. For Direct Line agents, see
+[docs/DIRECT_LINE.md](docs/DIRECT_LINE.md).
 
 ## 6. Go beyond a single run
 

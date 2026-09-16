@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, extractReply } from './api'
 import type { ChaosModeId, ChaosModeInfo, EvaluatorInfo, ExperimentRequest, ExperimentResult } from './api'
 import { ActivityPage } from './components/ActivityPage'
@@ -13,12 +13,15 @@ import { LaboratoryPage } from './components/LaboratoryPage'
 import { RunAssistant } from './components/RunAssistant'
 import { buildAssistantPlan } from './runAssistant'
 import type { AssistantRun } from './runAssistant'
-import type { TabId } from './tabs'
+import type { OverviewSectionId, TabId } from './tabs'
 
 const defaultScenario = 'Create a support ticket for my broken laptop'
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('Preview')
+  const [overviewSection, setOverviewSection] = useState<OverviewSectionId | null>(null)
+  const [navOpen, setNavOpen] = useState(false)
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null)
   const [modes, setModes] = useState<ChaosModeInfo[]>([])
   const [evaluator, setEvaluator] = useState<EvaluatorInfo | null>(null)
   const [selectedModes, setSelectedModes] = useState<ChaosModeId[]>(['ExpiredAuth'])
@@ -36,6 +39,7 @@ export default function App() {
   const [stopRequested, setStopRequested] = useState(false)
   const executionLocked = useRef(false)
   const stopAfterCurrent = useRef(false)
+  const workspaceInert = navOpen || undefined
 
   useEffect(() => {
     api.chaosModes().then(setModes).catch(() => setModes([]))
@@ -47,6 +51,23 @@ export default function App() {
       })
       .catch(() => setEvaluator(null))
   }, [])
+
+  const closeNav = useCallback(() => {
+    setNavOpen(false)
+    menuButtonRef.current?.focus()
+  }, [])
+
+  function selectTab(tab: TabId) {
+    setActiveTab(tab)
+    if (tab === 'Overview') setOverviewSection(null)
+    closeNav()
+  }
+
+  function selectOverviewSection(section: OverviewSectionId | null) {
+    setActiveTab('Overview')
+    setOverviewSection(section)
+    closeNav()
+  }
 
   const targetLabel = useMemo(
     () => (agentEndpoint.trim() ? agentEndpoint.trim() : 'Built-in demo agent'),
@@ -170,11 +191,40 @@ export default function App() {
 
   return (
     <div className="app">
-      <SideNav evaluator={evaluator} activeTab={activeTab} onSelectTab={setActiveTab} />
+      {navOpen && (
+        <button
+          type="button"
+          className="app__scrim"
+          aria-label="Close navigation menu"
+          tabIndex={-1}
+          onClick={closeNav}
+        />
+      )}
+      <SideNav
+        evaluator={evaluator}
+        activeTab={activeTab}
+        overviewSection={overviewSection}
+        open={navOpen}
+        onSelectTab={selectTab}
+        onSelectOverviewSection={selectOverviewSection}
+        onClose={closeNav}
+      />
       <div className="shell">
-        <TopBar evaluator={evaluator} activeTab={activeTab} targetLabel={targetLabel} />
+        <TopBar
+          evaluator={evaluator}
+          activeTab={activeTab}
+          overviewSection={overviewSection}
+          targetLabel={targetLabel}
+          navOpen={navOpen}
+          onToggleNav={() => setNavOpen((open) => !open)}
+          onOpenSettings={() => {
+            setActiveTab('Settings')
+            setNavOpen(false)
+          }}
+          menuButtonRef={menuButtonRef}
+        />
         {activeTab === 'Preview' ? (
-          <main className="workspace">
+          <main className="workspace" inert={workspaceInert}>
             <ChaosPanel
               modes={modes}
               selectedModes={selectedModes}
@@ -225,13 +275,14 @@ export default function App() {
             />
           </main>
         ) : activeTab !== 'Laboratory' ? (
-          <main className="workspace workspace--single">
+          <main className="workspace workspace--single" inert={workspaceInert}>
             {activeTab === 'Overview' && (
               <OverviewPage
                 modes={modes}
                 evaluator={evaluator}
                 connectorName={connectorName}
                 onConnectorNameChange={setConnectorName}
+                section={overviewSection}
               />
             )}
             {activeTab === 'Activity' && (
@@ -252,7 +303,11 @@ export default function App() {
             )}
           </main>
         ) : null}
-        <main className="workspace workspace--single" hidden={activeTab !== 'Laboratory'}>
+        <main
+          className="workspace workspace--single"
+          hidden={activeTab !== 'Laboratory'}
+          inert={workspaceInert}
+        >
           <LaboratoryPage />
         </main>
       </div>

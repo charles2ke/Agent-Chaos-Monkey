@@ -94,7 +94,7 @@ assertion that produced it. `.github/workflows/remediate.yml` opens these as a p
 | --- | --- |
 | How is chaos injected at the boundary? | `backend/ChaosMonkey.Api/Lab/LabGateway.cs` |
 | How is a verdict reached without trusting the agent? | `backend/ChaosMonkey.Api/Lab/EvidenceEvaluator.cs` |
-| How does a real agent participate? | `examples/sample-agent/agent.mjs`, `examples/copilot-studio/agent-handler.ts` |
+| How does a real agent participate? | `examples/sample-agent/agent.mjs`, `examples/direct-line-agent/agent-handler.ts` |
 | What was actually measured? | [`docs/LEADERBOARD.md`](LEADERBOARD.md) |
 | How does this gate a PR? | `action.yml`, [`docs/ACTION.md`](ACTION.md) |
 
@@ -113,7 +113,7 @@ assertion that produced it. `.github/workflows/remediate.yml` opens these as a p
 
 - The leaderboard measures the agents this repo can run unattended; no commercial platform is
   measured yet, and unmeasured platforms are listed as such rather than estimated.
-- The Direct Line transport is covered by unit tests against a stubbed channel; a live Copilot Studio
-  run needs a channel secret you supply.
+- The Direct Line transport is covered by unit tests against a stubbed channel; a live agent run
+  needs a channel secret you supply.
 - The evidence evaluator reads English success/negation phrasing; unrecognised wording is reported as
   `inconclusive` rather than guessed.

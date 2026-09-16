@@ -80,7 +80,7 @@ public sealed class LabGatewayOptions
 }
 
 /// <summary>
-/// Direct Line channel settings for driving a Copilot Studio / Microsoft 365 Agents SDK agent.
+/// Direct Line channel settings for driving a Bot Framework / Microsoft 365 Agents SDK agent.
 /// The secret is supplied by the host environment only; it is never accepted in a definition.
 /// </summary>
 public sealed class DirectLineOptions

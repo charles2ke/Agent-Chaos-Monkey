@@ -1,5 +1,3 @@
-<div align="center">
-
 # 🐒 Agent Chaos Monkey
 
 **Deliberately inject connector failures, latency, bad responses, expired auth and malformed data — then measure whether your agent recovers safely.**
@@ -13,9 +11,7 @@
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](backend)
 [![React 19 + Vite](https://img.shields.io/badge/React-19%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](frontend)
 
-[Live demo](https://charles2ke.github.io/Agent-Chaos-Monkey/) · [Getting started](GETTING_STARTED.md) · [Evaluate in 3 minutes](docs/JUDGES.md) · [Quick start](#-quick-start) · [Leaderboard](docs/LEADERBOARD.md) · [Copilot Studio](docs/COPILOT_STUDIO.md) · [GitHub Action](docs/ACTION.md) · [Deploy to Azure](docs/DEPLOY.md) · [Resilience laboratory](#-resilience-laboratory)
-
-</div>
+[Live demo](https://charles2ke.github.io/Agent-Chaos-Monkey/) · [Getting started](GETTING_STARTED.md) · [Evaluate in 3 minutes](docs/JUDGES.md) · [Quick start](#-quick-start) · [Leaderboard](docs/LEADERBOARD.md) · [Direct Line](docs/DIRECT_LINE.md) · [GitHub Action](docs/ACTION.md) · [Deploy to Azure](docs/DEPLOY.md) · [Resilience laboratory](#-resilience-laboratory)
 
 ---
 
@@ -25,12 +21,9 @@ AI agents can fabricate success after tool failures, allowing silently broken
 workflows to ship. There is no standard way to test whether an agent recognizes
 those failures and recovers safely.
 
-<p align="center">
-  <a href="https://charles2ke.github.io/Agent-Chaos-Monkey/">
-    <img src="docs/images/preview-empty.png" alt="Agent Chaos Monkey preview pane before a run" width="49%">
-    <img src="docs/images/resilience-report.png" alt="Agent Chaos Monkey resilience report after injecting an expired-auth failure" width="49%">
-  </a>
-</p>
+[![Agent Chaos Monkey preview pane before a run](docs/images/preview-empty.png)](https://charles2ke.github.io/Agent-Chaos-Monkey/)
+
+[![Agent Chaos Monkey resilience report after injecting an expired-auth failure](docs/images/resilience-report.png)](https://charles2ke.github.io/Agent-Chaos-Monkey/)
 
 ## ✨ What it does
 
@@ -125,30 +118,52 @@ and fails if the result would run longer than two minutes.
 
 ## 🧭 The UI
 
-The UI is styled after an agent in the new GitHub harness experience of Copilot Studio, and every tab is a real page:
+Navigation lives behind the **hamburger menu** in the top left; **Settings** sits behind the
+**gear icon** in the top right. Every control carries a descriptive tooltip on hover or keyboard
+focus, and **Overview** has sub-menus for its four sections.
 
-| Tab | Purpose |
+| Screen | Purpose |
 | --- | --- |
-| **Overview** | The resilience contract, the injectable chaos catalogue, the configured judge and the connector / tool boundary where chaos is injected |
+| **Overview** | The resilience contract, the injectable chaos catalogue, the configured judge and the connector / tool boundary where chaos is injected. Sub-menus: Instructions, Chaos catalogue, Resilience judge, Tools |
 | **Preview** | Chat preview pane with the connector trace and resilience report |
 | **Activity** | History of the experiments run in this session |
-| **Settings** | Agent endpoint and token, injected latency, evaluator model |
 | **Laboratory** | Versioned experiments, schedules, traces, saved tests, persistent history and comparisons |
+| **Settings** (gear icon) | Agent endpoint and token, injected latency, evaluator model |
 
-<details>
-<summary><strong>Screenshots of every tab</strong></summary>
+### Screenshots
 
-<p align="center">
-  <img src="docs/images/tab-overview.png" alt="Overview tab with the resilience contract, the chaos catalogue, the judge and the connector picker" width="49%">
-  <img src="docs/images/tab-activity.png" alt="Activity tab listing the experiments run in this session with their scores" width="49%">
-</p>
-<p align="center">
-  <img src="docs/images/tab-settings.png" alt="Settings tab with the agent endpoint, injected latency and evaluator model" width="49%">
-</p>
+**Navigation** — the hamburger menu with Overview sub-menus, and a single Overview section opened
+from one of them:
 
-Every image is a Playwright screenshot, refreshed by `npm run test:e2e`.
+![Hamburger navigation menu open, showing Overview with its Instructions, Chaos catalogue, Resilience judge and Tools sub-menus, plus Preview, Laboratory and Activity](docs/images/navigation-menu.png)
 
-</details>
+![The Tools sub-menu of Overview, showing only the connector picker](docs/images/overview-tools-section.png)
+
+**Preview and the resilience report** — a scenario replayed with an expired-auth fault injected:
+
+![Preview screen before a run, with the chaos configuration panel and the run assistant](docs/images/preview-empty.png)
+
+![Resilience report after injecting an expired-auth HTTP 401 failure](docs/images/resilience-report.png)
+
+**Overview, Activity and Laboratory**:
+
+![Overview screen with the resilience contract, the chaos catalogue, the judge and the connector picker](docs/images/tab-overview.png)
+
+![Activity screen listing the experiments run in this session with their scores](docs/images/tab-activity.png)
+
+![Laboratory screen with a versioned experiment definition and its evidence report](docs/images/tab-laboratory.png)
+
+![Settings screen, opened from the gear icon, with the agent endpoint, injected latency and evaluator model](docs/images/tab-settings.png)
+
+**Tooltips and small screens** — every panel, field and table column explains itself, and the same
+menu drives navigation on a phone:
+
+![A descriptive tooltip explaining the injected failures panel](docs/images/tooltips.png)
+
+![The navigation drawer open on a 390 pixel wide phone viewport](docs/images/mobile-navigation.png)
+
+Every image is a Playwright screenshot, refreshed by `cd frontend && npm run test:e2e` and
+`npm run test:e2e:static`.
 
 ## 🏗️ Architecture
 
@@ -168,7 +183,7 @@ ASP.NET Core Chaos API
    │      └── agent-layer faults (prompt injection, schema drift,
    │             truncated stream, context exhaustion, cascade)
    │
-   ├──────────────► Target agent (HTTPS POST, or Copilot Studio over Direct Line)
+   ├──────────────► Target agent (HTTPS POST, or Bot Framework Direct Line)
    │
    ▼
 Configurable LLM Evaluator
@@ -348,9 +363,9 @@ target that an operator maps to one exact HTTP endpoint:
    using the ephemeral `gateway.capability` bearer token, as shown below. The
    gateway injects the fault, forwards allowed calls upstream and records the trace.
 
-Any safe HTTP(S) endpoint can be a gateway target; Copilot Studio connectors are not
-connected by catalogue or OAuth here. Test one through an allowlisted Copilot Studio
-agent endpoint that uses the connector, or put a small allowlisted HTTPS proxy in
+Any safe HTTP(S) endpoint can be a gateway target; hosted agent connectors are not
+connected by catalogue or OAuth here. Test one through an allowlisted agent
+endpoint that uses the connector, or put a small allowlisted HTTPS proxy in
 front of protocols or custom auth flows the gateway cannot express.
 
 ### Opt-in gateway integration
@@ -417,9 +432,9 @@ reference and relays raw connector text, which is exactly the failure this proje
 [`examples/gateway-suite.json`](examples/gateway-suite.json) is the matching suite, and the
 `gateway` job in [the CI workflow](.github/workflows/resilience.yml) runs it on every pull request.
 
-### Copilot Studio and the Microsoft 365 Agents SDK
+### Direct Line and the Microsoft 365 Agents SDK
 
-`transport: "directline"` drives a real Copilot Studio agent instead of posting to a generic HTTPS
+`transport: "directline"` drives a real agent over Direct Line instead of posting to a generic HTTPS
 endpoint: token exchange, conversation start, activity send and watermark-polled receive, with the
 chaos turn payload delivered on `activity.value` (and `channelData.chaosMonkey`). The agent's tool
 call is mapped onto the same scoped gateway, so a run yields observed evidence rather than
@@ -434,8 +449,8 @@ call is mapped onto the same scoped gateway, so a run yields observed evidence r
 | `LabGateway__DirectLine__PollIntervalMs` / `__ReceiveTimeoutSeconds` | Receive tuning (default 500 ms / 45 s) |
 
 Full walkthrough and a ready-to-paste activity handler:
-[`docs/COPILOT_STUDIO.md`](docs/COPILOT_STUDIO.md) and
-[`examples/copilot-studio/agent-handler.ts`](examples/copilot-studio/agent-handler.ts).
+[`docs/DIRECT_LINE.md`](docs/DIRECT_LINE.md) and
+[`examples/direct-line-agent/agent-handler.ts`](examples/direct-line-agent/agent-handler.ts).
 
 ### Headless suites and CI
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // A runnable sample agent that participates in the Agent Chaos Monkey gateway protocol.
 //
-// The same handler shape is used by the Copilot Studio / Microsoft 365 Agents SDK sample in
-// examples/copilot-studio/, where the payload arrives as `activity.value` over Direct Line instead
+// The same handler shape is used by the Bot Framework / Microsoft 365 Agents SDK sample in
+// examples/direct-line-agent/, where the payload arrives as `activity.value` over Direct Line instead
 // of as an HTTP body. Because this agent calls its tool through the laboratory gateway, a run
 // produces observed evidence (real tool attempts, statuses and side-effect ids), not `inconclusive`.
 //

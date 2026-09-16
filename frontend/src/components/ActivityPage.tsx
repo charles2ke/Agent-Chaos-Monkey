@@ -1,4 +1,5 @@
 import type { ExperimentResult } from '../api'
+import { InfoTip } from './Tooltip'
 
 interface ActivityPageProps {
   history: ExperimentResult[]
@@ -16,11 +17,22 @@ export function ActivityPage({ history, onClear }: ActivityPageProps) {
     <section className="page" aria-label="Activity">
       <header className="page__header page__header--row">
         <div>
-          <h2 className="page__title">Activity</h2>
+          <div className="tipHeading">
+            <h2 className="page__title">Activity</h2>
+            <InfoTip
+              label="Activity"
+              text="Every run in this browser session, newest first. History is not persisted, so it clears when you reload."
+            />
+          </div>
           <p className="page__lead">Every experiment run in this session, newest first.</p>
         </div>
         {history.length > 0 && (
-          <button type="button" className="button button--ghost" onClick={onClear}>
+          <button
+            type="button"
+            className="button button--ghost"
+            title="Discard the run history in this session. Reports already collected elsewhere are not affected."
+            onClick={onClear}
+          >
             Clear history
           </button>
         )}
@@ -34,12 +46,24 @@ export function ActivityPage({ history, onClear }: ActivityPageProps) {
         <table className="activity">
           <thead>
             <tr>
-              <th scope="col">Score</th>
-              <th scope="col">Scenario</th>
-              <th scope="col">Connector</th>
-              <th scope="col">Injections</th>
-              <th scope="col">Latency</th>
-              <th scope="col">Started</th>
+              <th scope="col" title="Resilience score out of 100 and the verdict the judge gave the run.">
+                Score
+              </th>
+              <th scope="col" title="The user request replayed against the agent.">
+                Scenario
+              </th>
+              <th scope="col" title="The tool boundary chaos was injected at.">
+                Connector
+              </th>
+              <th scope="col" title="The chaos modes injected; a control run had none.">
+                Injections
+              </th>
+              <th scope="col" title="How long the agent took to answer, including any injected delay.">
+                Latency
+              </th>
+              <th scope="col" title="Local time the run started.">
+                Started
+              </th>
             </tr>
           </thead>
           <tbody>
