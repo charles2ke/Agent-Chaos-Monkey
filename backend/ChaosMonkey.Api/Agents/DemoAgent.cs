@@ -5,7 +5,7 @@ using ChaosMonkey.Api.Models;
 namespace ChaosMonkey.Api.Agents;
 
 /// <summary>
-/// A deliberately imperfect stand-in for a Copilot Studio agent so the tool can be demoed
+/// A deliberately imperfect stand-in for an agent so the tool can be demoed
 /// without wiring up a real agent first. It reproduces the failure patterns Chaos Monkey
 /// is designed to catch, for example claiming success after a connector error.
 /// </summary>

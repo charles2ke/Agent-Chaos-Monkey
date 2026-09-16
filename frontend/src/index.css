@@ -46,9 +46,19 @@ body {
 }
 
 .app {
-  display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
+  display: block;
   min-height: 100vh;
+}
+
+.app__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  border: 0;
+  padding: 0;
+  background: rgb(1 4 9 / 62%);
+  backdrop-filter: blur(2px);
+  cursor: pointer;
 }
 
 .shell {
@@ -57,7 +67,7 @@ body {
   min-width: 0;
 }
 
-/* Sidebar rail --------------------------------------------------------- */
+/* Navigation drawer ---------------------------------------------------- */
 .rail {
   display: flex;
   flex-direction: column;
@@ -65,11 +75,169 @@ body {
   gap: 20px;
   padding: 18px 14px;
   background: linear-gradient(180deg, var(--surface) 0%, var(--canvas) 100%);
-  border-right: 1px solid var(--border-muted);
-  position: sticky;
+  border-right: 1px solid var(--border);
+  box-shadow: 0 24px 60px rgb(1 4 9 / 60%);
+  position: fixed;
   top: 0;
-  min-height: 100vh;
-  max-height: 100vh;
+  left: 0;
+  z-index: 30;
+  width: min(280px, 86vw);
+  height: 100vh;
+  overflow-y: auto;
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition: transform 160ms ease, visibility 160ms ease;
+}
+
+.rail--open {
+  transform: none;
+  visibility: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail {
+    transition: none;
+  }
+}
+
+.rail__close {
+  margin-left: auto;
+}
+
+.rail__sublist {
+  list-style: none;
+  margin: 2px 0 6px;
+  padding: 0 0 0 22px;
+  display: grid;
+  gap: 2px;
+  border-left: 1px solid var(--border-muted);
+  margin-left: 18px;
+}
+
+.rail__subitem {
+  display: block;
+  width: 100%;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rail__subitem:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.rail__subitem--active {
+  background: var(--accent-soft);
+  border-color: rgb(110 140 255 / 35%);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.rail__subitem:focus-visible,
+.iconButton:focus-visible,
+.tip__trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Icon buttons --------------------------------------------------------- */
+.iconButton {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-muted);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.iconButton--on {
+  background: var(--accent-soft);
+  border-color: rgb(110 140 255 / 35%);
+  color: var(--text);
+}
+
+/* Tooltips ------------------------------------------------------------- */
+.tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tip__trigger {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--mono);
+  line-height: 1;
+  cursor: help;
+  padding: 0;
+}
+
+.tip__trigger:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.tip__bubble {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  z-index: 40;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: normal;
+  /* Hidden tooltips must not take part in layout, or they widen narrow screens. */
+  display: none;
+}
+
+.tip:hover .tip__bubble,
+.tip__trigger:focus-visible + .tip__bubble {
+  display: block;
+}
+
+.tipHeading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tipHeading .page__subtitle,
+.tipHeading .page__title {
+  margin-bottom: 0;
 }
 
 .rail__brand {
@@ -118,13 +286,6 @@ body {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
-}
-
-.badge--draft {
-  margin-left: auto;
-  color: #e3b341;
-  border-color: rgb(210 153 34 / 45%);
-  background: rgb(210 153 34 / 10%);
 }
 
 .rail__list {
@@ -226,6 +387,10 @@ body {
   z-index: 5;
 }
 
+.topbar__menu {
+  margin-right: 4px;
+}
+
 .topbar__crumbs {
   display: flex;
   align-items: center;
@@ -305,49 +470,13 @@ body {
 }
 
 @media (max-width: 1000px) {
-  .app {
-    grid-template-columns: 1fr;
-  }
-
-  .rail {
-    position: sticky;
-    top: 0;
-    z-index: 6;
-    align-self: start;
-    gap: 12px;
-    padding: 10px 12px;
-    min-height: 0;
-    max-height: none;
-    border-right: none;
-    border-bottom: 1px solid var(--border-muted);
-    background: rgb(17 22 32 / 92%);
-    backdrop-filter: blur(8px);
-  }
-
-  .rail__list {
-    grid-auto-flow: column;
-    grid-auto-columns: max-content;
-    overflow-x: auto;
-    scroll-snap-type: x proximity;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 2px;
-  }
-
-  .rail__list li {
-    scroll-snap-align: center;
-  }
-
-  .rail__item {
+  .rail__item,
+  .rail__subitem {
     min-height: 44px;
-    white-space: nowrap;
   }
 
-  .rail__status {
-    margin-top: 0;
-  }
-
+  /* The hamburger lives in the top bar, so it stays sticky on small screens. */
   .topbar {
-    position: static;
     flex-wrap: wrap;
     padding: 10px 16px;
   }
@@ -369,15 +498,6 @@ body {
 @media (max-width: 700px) {
   .rail__brand {
     padding: 0;
-  }
-
-  .rail__version {
-    display: none;
-  }
-
-  /* The evaluator status is already shown as a top bar chip on small screens. */
-  .rail__status {
-    display: none;
   }
 
   .topbar__scope,

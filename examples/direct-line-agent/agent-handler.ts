@@ -1,6 +1,7 @@
 // Microsoft 365 Agents SDK activity handler for an agent under chaos test.
 //
-// Agent Chaos Monkey drives a Copilot Studio agent over Direct Line (transport: "directline"). The
+// Agent Chaos Monkey drives a Bot Framework / Microsoft 365 Agents SDK agent over Direct Line
+// (transport: "directline"). The
 // turn payload described in examples/sample-agent/README.md arrives as `activity.value` (and, for
 // channels that strip `value`, as `activity.channelData.chaosMonkey`), so the handler below is the
 // same logic as examples/sample-agent/agent.mjs with a different transport.

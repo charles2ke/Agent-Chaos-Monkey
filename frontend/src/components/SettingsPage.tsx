@@ -1,4 +1,5 @@
 import type { EvaluatorInfo } from '../api'
+import { InfoTip, TipHeading } from './Tooltip'
 
 interface SettingsPageProps {
   agentEndpoint: string
@@ -16,14 +17,23 @@ export function SettingsPage(props: SettingsPageProps) {
   return (
     <section className="page" aria-label="Settings">
       <header className="page__header">
-        <h2 className="page__title">Settings</h2>
+        <div className="tipHeading">
+          <h2 className="page__title">Settings</h2>
+          <InfoTip
+            label="Settings"
+            text="Harness configuration that applies to the next experiment: which agent is tested, how much latency is injected and which model judges the recovery."
+          />
+        </div>
         <p className="page__lead">
           Target agent, injected latency and the model that judges the recovery. These settings apply
           to the next experiment.
         </p>
       </header>
 
-      <h3 className="page__subtitle">Agent under test</h3>
+      <TipHeading
+        title="Agent under test"
+        text="Leave the endpoint empty to test the built-in demo agent. Point it at your own HTTPS endpoint to test a real agent."
+      />
       <label className="field field--wide">
         <span className="field__label">Endpoint</span>
         <input
@@ -44,7 +54,10 @@ export function SettingsPage(props: SettingsPageProps) {
         />
       </label>
 
-      <h3 className="page__subtitle">Chaos</h3>
+      <TipHeading
+        title="Chaos"
+        text="Shared fault tuning. Injected latency is how long the connector stalls before it answers when the latency mode is selected."
+      />
       <label className="field field--wide">
         <span className="field__label">Injected latency ({props.latencyMs} ms)</span>
         <input
@@ -58,7 +71,10 @@ export function SettingsPage(props: SettingsPageProps) {
         />
       </label>
 
-      <h3 className="page__subtitle">Resilience judge</h3>
+      <TipHeading
+        title="Resilience judge"
+        text="The model that scores each recovery out of 100. Without credentials the deterministic heuristic judge is used."
+      />
       <label className="field field--wide">
         <span className="field__label">Model</span>
         <input

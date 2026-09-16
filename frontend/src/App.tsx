@@ -13,12 +13,15 @@ import { LaboratoryPage } from './components/LaboratoryPage'
 import { RunAssistant } from './components/RunAssistant'
 import { buildAssistantPlan } from './runAssistant'
 import type { AssistantRun } from './runAssistant'
-import type { TabId } from './tabs'
+import type { OverviewSectionId, TabId } from './tabs'
 
 const defaultScenario = 'Create a support ticket for my broken laptop'
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('Preview')
+  const [overviewSection, setOverviewSection] = useState<OverviewSectionId | null>(null)
+  const [navOpen, setNavOpen] = useState(false)
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null)
   const [modes, setModes] = useState<ChaosModeInfo[]>([])
   const [evaluator, setEvaluator] = useState<EvaluatorInfo | null>(null)
   const [selectedModes, setSelectedModes] = useState<ChaosModeId[]>(['ExpiredAuth'])
@@ -47,6 +50,23 @@ export default function App() {
       })
       .catch(() => setEvaluator(null))
   }, [])
+
+  function closeNav() {
+    setNavOpen(false)
+    menuButtonRef.current?.focus()
+  }
+
+  function selectTab(tab: TabId) {
+    setActiveTab(tab)
+    if (tab === 'Overview') setOverviewSection(null)
+    closeNav()
+  }
+
+  function selectOverviewSection(section: OverviewSectionId | null) {
+    setActiveTab('Overview')
+    setOverviewSection(section)
+    closeNav()
+  }
 
   const targetLabel = useMemo(
     () => (agentEndpoint.trim() ? agentEndpoint.trim() : 'Built-in demo agent'),
@@ -170,9 +190,37 @@ export default function App() {
 
   return (
     <div className="app">
-      <SideNav evaluator={evaluator} activeTab={activeTab} onSelectTab={setActiveTab} />
+      {navOpen && (
+        <button
+          type="button"
+          className="app__scrim"
+          aria-label="Close navigation menu"
+          onClick={closeNav}
+        />
+      )}
+      <SideNav
+        evaluator={evaluator}
+        activeTab={activeTab}
+        overviewSection={overviewSection}
+        open={navOpen}
+        onSelectTab={selectTab}
+        onSelectOverviewSection={selectOverviewSection}
+        onClose={closeNav}
+      />
       <div className="shell">
-        <TopBar evaluator={evaluator} activeTab={activeTab} targetLabel={targetLabel} />
+        <TopBar
+          evaluator={evaluator}
+          activeTab={activeTab}
+          overviewSection={overviewSection}
+          targetLabel={targetLabel}
+          navOpen={navOpen}
+          onToggleNav={() => setNavOpen((open) => !open)}
+          onOpenSettings={() => {
+            setActiveTab('Settings')
+            setNavOpen(false)
+          }}
+          menuButtonRef={menuButtonRef}
+        />
         {activeTab === 'Preview' ? (
           <main className="workspace">
             <ChaosPanel
@@ -232,6 +280,7 @@ export default function App() {
                 evaluator={evaluator}
                 connectorName={connectorName}
                 onConnectorNameChange={setConnectorName}
+                section={overviewSection}
               />
             )}
             {activeTab === 'Activity' && (

@@ -26,12 +26,18 @@ const leadSeconds = 1
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
 /** Each step narrates one screen; `run` performs the UI actions while the line is spoken. */
+/** Navigation is behind the hamburger menu, so each tab change opens the drawer first. */
+async function goToTab(page, tab) {
+  await page.getByRole('button', { name: 'Open navigation menu' }).click()
+  await page.locator('.rail').getByRole('button', { name: tab, exact: true }).click()
+}
+
 const steps = [
   {
     text: 'Agent Chaos Monkey injects connector failures into AI agents, then measures whether they recover safely.',
     run: async (page) => {
       await page.goto(baseUrl)
-      await page.getByRole('button', { name: 'Preview' }).click()
+      await goToTab(page, 'Preview')
     },
   },
   {
@@ -61,13 +67,13 @@ const steps = [
   {
     text: 'The Activity screen keeps the history of every run, so you can compare scores as you harden the agent.',
     run: async (page) => {
-      await page.getByRole('button', { name: 'Activity' }).click()
+      await goToTab(page, 'Activity')
     },
   },
   {
     text: 'Overview holds the resilience contract under test. Rules like never fabricate tool success are exactly what chaos runs verify.',
     run: async (page) => {
-      await page.getByRole('button', { name: 'Overview' }).click()
+      await goToTab(page, 'Overview')
     },
   },
   {

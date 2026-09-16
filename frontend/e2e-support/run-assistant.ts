@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { goToTab } from './nav'
 
 export function runAssistantTests(staticBuild: boolean) {
   const screenshots = staticBuild ? 'e2e-static/screenshots' : 'e2e/screenshots'
@@ -33,9 +34,9 @@ export function runAssistantTests(staticBuild: boolean) {
     const path = `${screenshots}/20-run-assistant-results.png`
     await assistant.screenshot({ path })
     await testInfo.attach('Run assistant: results and follow-up', { path, contentType: 'image/png' })
-    await page.getByRole('button', { name: 'Activity', exact: true }).click()
+    await goToTab(page, 'Activity')
     await expect(page.getByRole('table').getByRole('row')).toHaveCount(3)
-    await page.getByRole('button', { name: 'Preview', exact: true }).click()
+    await goToTab(page, 'Preview')
     await expect(assistant.getByRole('status')).toHaveText('Plan completed · 2/2 checks completed')
     await page.getByRole('button', { name: 'Clear session' }).click()
     await expect(assistant.getByRole('status')).toHaveCount(0)
@@ -108,10 +109,9 @@ export function runAssistantTests(staticBuild: boolean) {
       await expect(assistant.getByRole('button', { name: 'Approve & run 2 checks' })).toBeVisible()
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
       expect(await assistant.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
-      const settings = page.getByRole('button', { name: 'Settings', exact: true })
-      await settings.scrollIntoViewIfNeeded()
-      await expect(settings).toBeInViewport()
-      await page.getByRole('button', { name: 'Preview', exact: true }).scrollIntoViewIfNeeded()
+      // The gear and the hamburger stay reachable in the sticky top bar.
+      await expect(page.getByRole('button', { name: 'Settings', exact: true })).toBeInViewport()
+      await expect(page.getByRole('button', { name: 'Open navigation menu' })).toBeInViewport()
     }
     const path = `${screenshots}/22-run-assistant-mobile.png`
     await assistant.screenshot({ path })

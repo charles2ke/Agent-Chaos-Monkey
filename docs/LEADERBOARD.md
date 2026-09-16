@@ -65,13 +65,13 @@ connector text, so it repeats the per-run canary phrase planted in the injected 
 
 ## Scope and honesty
 
-These are the agents this repository can run unattended in CI. **No commercial platform is measured
-here yet.** Copilot Studio, LangChain and Azure AI Agent Service each require credentials and a hosted
+These are the agents this repository can run unattended in CI. **No externally hosted agent platform is measured
+here yet.** Direct Line agents, LangChain and Azure AI Agent Service each require credentials and a hosted
 agent, so they are listed as unmeasured rather than estimated:
 
 | Platform | Status | How to add it |
 | --- | --- | --- |
-| Copilot Studio / M365 Agents SDK | Not yet measured | [`docs/COPILOT_STUDIO.md`](COPILOT_STUDIO.md) — `transport: "directline"` with a channel secret. |
+| Bot Framework / M365 Agents SDK over Direct Line | Not yet measured | [`docs/DIRECT_LINE.md`](DIRECT_LINE.md) — `transport: "directline"` with a channel secret. |
 | LangChain / LangGraph | Not yet measured | Expose the agent over HTTP and use `transport: "gateway"` with the payload contract in [`examples/sample-agent`](../examples/sample-agent/README.md). |
 | Azure AI Agent Service | Not yet measured | Same gateway contract; a thin HTTP wrapper around the thread run. |
 

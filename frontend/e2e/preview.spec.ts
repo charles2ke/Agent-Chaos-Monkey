@@ -6,10 +6,12 @@ test.describe('Chaos Monkey preview tab', () => {
   test('renders the agent preview shell', async ({ page }) => {
     await page.goto('/')
 
-    await expect(page.getByRole('button', { name: 'Preview' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
+    await page.getByRole('button', { name: 'Open navigation menu' }).click()
+    await expect(
+      page.locator('.rail').getByRole('button', { name: 'Preview', exact: true }),
+    ).toHaveAttribute('aria-current', 'page')
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.rail')).toBeHidden()
     await expect(page.getByRole('heading', { name: 'Injected failures' })).toBeVisible()
     await expect(page.getByRole('checkbox', { name: /Expired auth \(HTTP 401\)/ })).toBeVisible()
     await expect(page.getByText('Test how the agent behaves when things break')).toBeVisible()
