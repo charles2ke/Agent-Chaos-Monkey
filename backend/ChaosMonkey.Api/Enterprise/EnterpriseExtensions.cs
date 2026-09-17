@@ -39,10 +39,13 @@ public static class EnterpriseExtensions
                 // An ambient key keeps the shared secret out of configuration files and container images.
                 options.ApiKey = EnterpriseOptions.ResolveApiKey(options.ApiKey,
                     Environment.GetEnvironmentVariable(ApiKeyVariable));
-                options.CorrelationHeader = options.CorrelationHeader?.Trim() ?? "";
+                var correlationHeader = options.CorrelationHeader?.Trim();
+                options.CorrelationHeader = string.IsNullOrEmpty(correlationHeader)
+                    ? EnterpriseOptions.DefaultCorrelationHeader
+                    : correlationHeader;
             })
             .Validate(EnterpriseOptions.IsValid,
-                "Enterprise options require non-negative rate limit permits, a 1..86400 second window, and a safe non-reserved correlation header name.")
+                $"Enterprise options require non-negative rate limit permits, a 1..{EnterpriseOptions.MaxRateLimitWindowSeconds} second window, and a safe non-reserved correlation header name.")
             .ValidateOnStart();
 
         services.AddRateLimiter(limiter =>

@@ -62,6 +62,19 @@ public class EnterpriseTests
         Assert.Equal("http://localhost:5173", response.Headers.GetValues("Access-Control-Allow-Origin").Single());
     }
 
+    [Fact]
+    public async Task A_blank_correlation_header_configuration_keeps_the_default_header()
+    {
+        using var host = new ApiHost(("Enterprise:CorrelationHeader", "  "));
+        using var client = host.CreateClient();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/health");
+        request.Headers.Add(EnterpriseOptions.DefaultCorrelationHeader, "trace-42");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal("trace-42", response.Headers.GetValues(EnterpriseOptions.DefaultCorrelationHeader).Single());
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

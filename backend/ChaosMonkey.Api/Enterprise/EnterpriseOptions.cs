@@ -8,7 +8,9 @@ namespace ChaosMonkey.Api.Enterprise;
 public sealed class EnterpriseOptions
 {
     public const string SectionName = "Enterprise";
-    private const int MaxRateLimitWindowSeconds = 86400;
+    public const string DefaultCorrelationHeader = "X-Correlation-Id";
+    public const int MaxRateLimitWindowSeconds = 86400;
+    public const int MaxCorrelationHeaderLength = 128;
     private static readonly string[] ReservedCorrelationHeaders =
     [
         EnterpriseExtensions.ApiKeyHeader,
@@ -36,7 +38,7 @@ public sealed class EnterpriseOptions
     public int RateLimitWindowSeconds { get; set; } = 60;
 
     /// <summary>Header carrying a caller supplied correlation identifier, echoed on every response.</summary>
-    public string CorrelationHeader { get; set; } = "X-Correlation-Id";
+    public string CorrelationHeader { get; set; } = DefaultCorrelationHeader;
 
     /// <summary>Configuration wins over the ambient variable; a blank value in either place means no gate.</summary>
     public static string? ResolveApiKey(string? configured, string? ambient) =>
@@ -58,7 +60,7 @@ public sealed class EnterpriseOptions
     {
         var header = value?.Trim();
         return !string.IsNullOrEmpty(header) &&
-            header.Length <= 128 &&
+            header.Length <= MaxCorrelationHeaderLength &&
             header.All(IsHeaderTokenCharacter) &&
             !ReservedCorrelationHeaders.Contains(header, StringComparer.OrdinalIgnoreCase);
     }
