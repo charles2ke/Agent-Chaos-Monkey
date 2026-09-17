@@ -28,7 +28,7 @@ public static class EnterpriseExtensions
     /// authentication at the tool boundary.
     /// </summary>
     public static bool IsGatewayCallback(PathString path) =>
-        path.StartsWithSegments(GatewayCallbackPrefix, StringComparison.OrdinalIgnoreCase);
+        TryMatchGatewayCallback(path, out _);
 
     public static void AddEnterprise(this IServiceCollection services, IConfiguration configuration)
     {
@@ -115,8 +115,7 @@ public static class EnterpriseExtensions
     /// </summary>
     private static bool IsAuthenticatedGatewayCallback(HttpContext context)
     {
-        if (!context.Request.Path.StartsWithSegments(GatewayCallbackPrefix, StringComparison.OrdinalIgnoreCase,
-            out var remaining))
+        if (!TryMatchGatewayCallback(context.Request.Path, out var remaining))
         {
             return false;
         }
@@ -136,6 +135,9 @@ public static class EnterpriseExtensions
         var token = auth[BearerPrefix.Length..];
         return context.RequestServices.GetRequiredService<LabGateway>().Authenticate(runId, token) is not null;
     }
+
+    private static bool TryMatchGatewayCallback(PathString path, out PathString remaining) =>
+        path.StartsWithSegments(GatewayCallbackPrefix, StringComparison.OrdinalIgnoreCase, out remaining);
 
     private static EnterpriseOptions Options(HttpContext context) =>
         context.RequestServices.GetRequiredService<IOptions<EnterpriseOptions>>().Value;
