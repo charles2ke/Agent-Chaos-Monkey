@@ -6,7 +6,7 @@ Each post is a self-contained Markdown file with a small front-matter block (tit
 
 ## Posts
 
-- [**The Failure Mode Nobody Tests For: Agents That Lie About Success**](./agent-chaos-testing.md) — why agents that fabricate success after a tool call fails are the most dangerous and least-tested failure mode in agentic systems, and how chaos-engineering ideas apply to the agent/tool boundary.
+- [**The Failure Mode Nobody Tests For: Agents That Lie About Success**](./agent-chaos-testing.md) — why agents that fabricate success after a tool call fails are the most dangerous and least-tested failure mode in agentic systems, how chaos-engineering ideas apply to the agent/tool boundary, and how a discovered failure becomes a committed regression test and a pull-request gate.
 
 ## Publishing notes
 

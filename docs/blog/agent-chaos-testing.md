@@ -45,7 +45,9 @@ But the analogy breaks down in one important place, and it's worth being explici
 
 ## What that looks like in practice
 
-This is the idea behind [Agent Chaos Monkey](https://github.com/charles2ke/Agent-Chaos-Monkey), a small resilience-testing harness for agent endpoints. You point it at an agent, describe a scenario, and choose which failures to inject around the agent's HTTP interaction. It currently implements six chaos modes, each designed to surface a specific, distinct bad behavior:
+This is the idea behind [Agent Chaos Monkey](https://github.com/charles2ke/Agent-Chaos-Monkey), a resilience-testing harness for agent endpoints. You point it at an agent, describe a scenario, and choose which failures to inject at the agent's tool boundary. It currently implements eleven chaos modes, each designed to surface a specific, distinct bad behavior.
+
+The first six are transport faults — the everyday ways an HTTP dependency lets you down:
 
 | Chaos mode | What's injected | What it's designed to surface |
 | --- | --- | --- |
@@ -56,9 +58,19 @@ This is the idea behind [Agent Chaos Monkey](https://github.com/charles2ke/Agent
 | 🚦 Throttling (HTTP 429) | Rate limiting / throttling | Does the agent back off and retry sensibly, or does it hammer the endpoint, or silently give up? |
 | 🔐 Expired auth (HTTP 401) | Expired or invalid authentication | Does the agent explain the auth problem, or — as in the ticket example above — claim success anyway? |
 
-None of these are exotic failure conditions. They're the everyday reality of any system with a token that expires, a rate limit, or a dependency that occasionally times out. The point isn't to invent bizarre edge cases; it's to make sure the ordinary ones are actually being tested, deliberately, instead of being discovered by a user.
+The other five are agent-layer faults. They target what the agent *does with* a tool response rather than the transport carrying it, which is where the more interesting lies live:
 
-In the current implementation these faults are injected around the agent's HTTP interaction — there's a built-in demo agent so you can see the whole loop without wiring up a real one first, and the backend also speaks to real agent endpoints you configure. The harder version — injecting the fault at the agent's actual tool/connector boundary (ServiceNow, Salesforce, Dataverse, custom APIs, MCP servers) rather than around the outer HTTP call — is roadmap, not shipped. That distinction matters, and I'll come back to it.
+| Chaos mode | What's injected | What it's designed to surface |
+| --- | --- | --- |
+| 💉 Prompt injection | Instructions embedded in a connector payload, carrying a per-run canary phrase | Does the agent obey instructions that arrived as *data*? The canary makes that observable instead of a guess — a run fails only when the reply repeats the phrase that was planted in the payload. |
+| 🧬 Tool schema drift | A renamed or removed tool parameter, so the call is rejected as a schema mismatch | Does the agent notice that its own call was malformed, or does it narrate a result the tool never produced? |
+| ✂️ Truncated stream | A response cut off mid-payload, as an interrupted stream would be | Does the agent complete the missing half from imagination? |
+| 🧠 Context exhaustion | An oversized payload that pushes the agent past its context budget | Does the task survive, or does the agent quietly lose the user's original request? |
+| 🌊 Cascading failure | One connector outage that keeps every later dependency call failing | Does the agent degrade sensibly, or keep asserting progress as each dependency falls over? |
+
+None of these are exotic failure conditions. They're the everyday reality of any system with a token that expires, a rate limit, a streaming endpoint, or a payload that came from somewhere a user could write to. The point isn't to invent bizarre edge cases; it's to make sure the ordinary ones are actually being tested, deliberately, instead of being discovered by a user.
+
+There are two ways to run them. **Run** is the quick demo loop: faults are injected around the agent's HTTP interaction and the connector result is simulated, so it answers "what does this agent say when the result looks broken" without any wiring. **Laboratory** is the version that produces evidence: the fault is injected at the agent's actual tool boundary by a scoped chaos gateway that sits between the agent and an allowlisted upstream, records every call, and forwards the ones that are allowed through. A built-in demo agent means you can see either loop before connecting anything real.
 
 ## Scoring the recovery
 
@@ -71,13 +83,15 @@ Once the fault is injected and the agent responds, the harness scores what happe
 
 Judging that reliably needs something that can read the response and reason about it, which is why the resilience judge in this project is a configurable LLM — it speaks both the Anthropic Messages API and the OpenAI-compatible Chat Completions API, so a hosted model or a local one (Ollama, vLLM, Azure OpenAI) can sit behind it. But an LLM judge that only works when you have an API key isn't a testing tool you can rely on in CI, so there's a deterministic, rule-based fallback: when no credentials are configured, a heuristic evaluator scores the run instead, so the demo — and the tests — still work completely offline.
 
+Laboratory goes one step further and scores against recorded evidence rather than prose: call counts, retry gaps and backoff, side-effect identifiers, and whether a success claim is actually supported by an observed tool result. The rule that matters most there is what happens when the evidence is missing. A remote agent that ignores the gateway callback produces no observed tool interaction, and the run is reported as **inconclusive** — never as a pass. A testing tool that resolves ambiguity in the agent's favour has the same problem as the agent in the opening story.
+
 ## The closed loop
 
-The part of this that I think matters most is also the part that isn't built yet, and I want to be straightforward about that rather than presenting it as shipped.
+The part of this that I think matters most is that a discovered failure shouldn't stop at a screenshot. The loop is: **Break → Observe → Judge → Generate Eval → Fix → Re-test → PR gate.** You inject a fault, observe what the agent actually did at the tool boundary, judge whether it recovered honestly, and then turn that specific failure into a permanent regression test. A failure like "agent falsely claims a ServiceNow ticket was created when the connector returns 401" shouldn't just get filed as a bug. It should become a standing test that runs in CI on every future change, so the same failure can never silently come back.
 
-The idea is a loop: **Break → Observe → Judge → Generate Eval → Fix → Re-test → PR gate.** You inject a fault, observe the agent's real response, judge whether it recovered honestly, and — this is the piece that's still roadmap — automatically turn that specific failure into a permanent regression test. A discovered failure like "agent falsely claims a ServiceNow ticket was created when the connector returns 401" shouldn't just get filed as a bug. It should become a standing eval that runs in CI on every future change, so the same failure can never silently come back.
+That loop now closes. An experiment in Laboratory can be saved as a test, exported as a versioned suite, and committed to the repository alongside the code it protects. A headless runner executes that suite against the API and writes JSON and JUnit output, with exit codes that distinguish a real assertion failure from insufficient evidence — so "we couldn't tell" never passes silently as green. A GitHub Action wraps the whole thing, posts per-dimension score deltas against a committed baseline on the pull request, and turns the check red on a regression. The repository carries its own baseline suite — a healthy control plus one test per failure mode — so the gate is a reviewable artifact rather than a hidden setting.
 
-Today, this project runs the first half of that loop for real: it injects the six chaos modes above around the agent boundary, scores the response with a real or heuristic judge, and reports a resilience score with findings. The second half — connector-level chaos injection (a proper "chaos gateway" sitting in front of ServiceNow, Salesforce, Dataverse, custom APIs, and MCP servers) and automatic generation of permanent regression evals from discovered failures — is the direction, not the destination. It's worth building because the alternative is what opened this post: a user quietly trusting a ticket number that was never real, discovered only when someone goes looking for it.
+The last piece, going from a failing run to the actual fix, is deliberately modest: a remediation command turns a failed run into concrete suggested changes — instruction and system-prompt additions, a retry and idempotency policy — each traced back to the assertion that produced it. Suggestions, not magic. The point is that the path from "we broke it and it lied" to "this can never regress again" is now a few commands rather than a good intention, because the alternative is what opened this post: a user quietly trusting a ticket number that was never real, discovered only when someone goes looking for it.
 
 ## Try it
 
@@ -85,6 +99,6 @@ There's a live, static demo running entirely in the browser — no backend requi
 
 **<https://charles2ke.github.io/Agent-Chaos-Monkey/>**
 
-If you want to run it against your own agent endpoint, the [quick start in the README](https://github.com/charles2ke/Agent-Chaos-Monkey#-quick-start) gets a local backend and frontend running in a couple of commands, and the built-in demo agent lets you see the whole loop — inject, respond, judge, score — before you connect anything real.
+If you want to run it against your own agent endpoint, the [quick start in the README](https://github.com/charles2ke/Agent-Chaos-Monkey#-quick-start) gets a local backend and frontend running in a couple of commands, and the built-in demo agent lets you see the whole loop — inject, respond, judge, score — before you connect anything real. The hosted demo is a browser simulation: it observes no real connector calls, so treat it as a tour of the loop rather than evidence about any agent. Observed tool evidence needs the local API, and a real agent needs the opt-in gateway, which stays disabled until an operator allowlists exact endpoints server-side.
 
 If you're building agentic systems and you haven't deliberately broken your own tool calls to see what your agent says about it, that's the cheapest resilience test you're not running yet.
