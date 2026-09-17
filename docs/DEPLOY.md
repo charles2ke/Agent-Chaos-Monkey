@@ -41,6 +41,21 @@ On the API side, the Bicep template already injects `AllowedOrigins__0=https://<
 
 > If you use a custom domain for the SWA, add it to the API's allowed origins by setting an extra env var on the container app (e.g. `AllowedOrigins__1`) or by extending `infra/core/resources.bicep`.
 
+## Hardening a shared deployment
+
+The Container App is provisioned with liveness (`/api/health`) and readiness
+(`/api/health/ready`) probes, and with `AllowedOrigins__0` set to the Static Web App
+origin. Before you share the URL with a team, add a shared key and review the request
+budget as described in [`ENTERPRISE.md`](ENTERPRISE.md):
+
+```bash
+# The template does not provision a key for you; set one on the container app directly.
+az containerapp secret set --name <api-app> --resource-group <rg> \
+  --secrets chaos-api-key='<generated-secret>'
+az containerapp update --name <api-app> --resource-group <rg> \
+  --set-env-vars CHAOS_MONKEY_API_KEY=secretref:chaos-api-key
+```
+
 ## Expected cost
 
 The default SKUs are the cheapest usable tiers and should land in the **low single-digit USD/month** range for light demo traffic:

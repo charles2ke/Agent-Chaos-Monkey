@@ -1,0 +1,13 @@
+# Code owners for Agent Chaos Monkey.
+# Every pull request requires a review from the repository maintainers.
+
+*                       @charles2ke
+
+# Security-sensitive boundaries: allowlists, gateway authentication and credentials.
+/backend/ChaosMonkey.Api/Lab/          @charles2ke
+/backend/ChaosMonkey.Api/Agents/       @charles2ke
+/backend/ChaosMonkey.Api/Enterprise/   @charles2ke
+/backend/ChaosMonkey.Api/Evaluation/   @charles2ke
+/SECURITY.md                           @charles2ke
+/.github/workflows/                    @charles2ke
+/infra/                                @charles2ke

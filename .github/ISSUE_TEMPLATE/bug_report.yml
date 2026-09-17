@@ -1,0 +1,56 @@
+name: Bug report
+description: Something behaves incorrectly or produces misleading evidence.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not report security vulnerabilities here — follow [SECURITY.md](../../SECURITY.md).
+        Never paste tokens, credentials, customer data, or internal endpoints.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Commit SHA, release tag, container tag, or npm package version you tested.
+      placeholder: main @ abc1234
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Backend API
+        - Laboratory / gateway
+        - Frontend UI
+        - CLI
+        - MCP server
+        - GitHub Action
+        - Deployment (azd / container)
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected versus observed behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: Include the exact command or run definition. Sanitize all output.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: correlation
+    attributes:
+      label: Correlation id or run id
+      description: The `X-Correlation-Id` response header, if you have it.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, .NET / Node versions, deployment target.

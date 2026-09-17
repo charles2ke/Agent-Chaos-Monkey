@@ -185,6 +185,29 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: webHostname
             }
           ]
+          // Revisions only take traffic once the API reports the configuration it will serve with.
+          probes: [
+            {
+              type: 'Liveness'
+              httpGet: {
+                path: '/api/health'
+                port: 8080
+              }
+              initialDelaySeconds: 10
+              periodSeconds: 30
+              failureThreshold: 3
+            }
+            {
+              type: 'Readiness'
+              httpGet: {
+                path: '/api/health/ready'
+                port: 8080
+              }
+              initialDelaySeconds: 5
+              periodSeconds: 10
+              failureThreshold: 3
+            }
+          ]
         }
       ]
       scale: {
