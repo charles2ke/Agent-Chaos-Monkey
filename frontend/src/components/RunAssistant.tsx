@@ -9,6 +9,7 @@ interface RunAssistantProps {
   running: boolean
   canRun: boolean
   liveTarget: boolean
+  liveEvaluator: boolean
   run: AssistantRun | null
   stopRequested: boolean
   onRun: () => void
@@ -51,8 +52,12 @@ export function RunAssistant(props: RunAssistantProps) {
         </ol>
         <p>
           {props.liveTarget
-            ? 'Each check sends your current scenario to the configured endpoint and may trigger real actions or incur costs. Use a sandbox.'
-            : 'Each check runs against the built-in demo agent, so nothing leaves this session and no real connector is called.'}
+            ? 'Each check sends your current scenario to the configured agent endpoint and may trigger real actions or incur costs. Use a sandbox.'
+            : 'Each check runs against the built-in demo agent, so no real connector is called.'}
+          {' '}
+          {props.liveEvaluator
+            ? 'Scoring sends the scenario, the injected connector data and the agent response to the configured judge model, which may incur costs.'
+            : 'Scoring uses the deterministic judge, so nothing is sent to a model.'}
           {' '}Settings are captured at approval; later edits apply only to the next run.
         </p>
       </details>

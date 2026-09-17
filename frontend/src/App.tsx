@@ -275,6 +275,7 @@ export default function App() {
                   running={running}
                   canRun={Boolean(scenario.trim())}
                   liveTarget={Boolean(agentEndpoint.trim())}
+                  liveEvaluator={Boolean(evaluator?.configured)}
                   run={assistantRun}
                   stopRequested={stopRequested}
                   onRun={runAssistant}
