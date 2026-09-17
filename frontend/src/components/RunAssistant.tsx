@@ -8,6 +8,7 @@ interface RunAssistantProps {
   selectedModes: ChaosModeId[]
   running: boolean
   canRun: boolean
+  liveTarget: boolean
   run: AssistantRun | null
   stopRequested: boolean
   onRun: () => void
@@ -17,6 +18,7 @@ interface RunAssistantProps {
 
 export function RunAssistant(props: RunAssistantProps) {
   const plan = buildAssistantPlan(props.selectedModes, props.modes)
+  const checks = `${plan.length} check${plan.length === 1 ? '' : 's'}`
   const run = props.run
   const baseline = run?.steps[0].result
   const completed = run?.steps.filter((step) => step.status === 'completed') ?? []
@@ -43,14 +45,15 @@ export function RunAssistant(props: RunAssistantProps) {
       </p>
       <p>Run uses simulated connector results. Use Laboratory for tool-call evidence.</p>
       <details open={!run}>
-        <summary>Review next plan · {plan.length} checks</summary>
+        <summary>Review next plan · {checks}</summary>
         <ol className="run-assistant__plan">
           {plan.map((step) => <li key={step.label}>{step.label}</li>)}
         </ol>
         <p>
-          Each check sends your current scenario to the configured target and may trigger real
-          actions or incur costs. Use a sandbox. Settings are captured at approval; later edits
-          apply only to the next run.
+          {props.liveTarget
+            ? 'Each check sends your current scenario to the configured endpoint and may trigger real actions or incur costs. Use a sandbox.'
+            : 'Each check runs against the built-in demo agent, so nothing leaves this session and no real connector is called.'}
+          {' '}Settings are captured at approval; later edits apply only to the next run.
         </p>
       </details>
       <div className="run-assistant__actions">
@@ -60,7 +63,7 @@ export function RunAssistant(props: RunAssistantProps) {
           disabled={props.running || !props.canRun || props.selectedModes.length === 0}
           onClick={props.onRun}
         >
-          Approve & run {plan.length} checks
+          Approve & run {checks}
         </button>
         {run?.status === 'running' && (
           <button

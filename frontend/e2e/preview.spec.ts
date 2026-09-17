@@ -62,4 +62,22 @@ test.describe('Chaos Monkey run tab', () => {
 
     await page.screenshot({ path: `${screenshots}/04-malformed-data.png`, fullPage: true })
   })
+
+  test('keeps the composer and the newest result in view after repeated runs', async ({ page }) => {
+    await page.goto('/')
+
+    for (let run = 0; run < 2; run++) {
+      await page.getByRole('button', { name: 'Run chaos' }).click()
+      await expect(page.getByRole('button', { name: 'Run chaos' })).toBeEnabled({ timeout: 30_000 })
+    }
+
+    await expect(page.getByRole('log').getByRole('article')).toHaveCount(4)
+    await expect(page.getByRole('button', { name: 'Run chaos' })).toBeInViewport()
+    await expect(page.getByRole('log').getByRole('article').last()).toBeInViewport()
+    expect(
+      await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight),
+    ).toBe(true)
+
+    await page.screenshot({ path: `${screenshots}/05-transcript-scroll.png` })
+  })
 })

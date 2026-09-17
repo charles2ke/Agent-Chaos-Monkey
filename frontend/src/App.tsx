@@ -274,6 +274,7 @@ export default function App() {
                   selectedModes={selectedModes}
                   running={running}
                   canRun={Boolean(scenario.trim())}
+                  liveTarget={Boolean(agentEndpoint.trim())}
                   run={assistantRun}
                   stopRequested={stopRequested}
                   onRun={runAssistant}

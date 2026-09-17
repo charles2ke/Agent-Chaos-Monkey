@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import type { ChaosModeId, ExperimentResult } from '../api'
 import { AlertIcon, SendIcon, SparkleIcon } from './icons'
@@ -23,6 +24,20 @@ interface PreviewPaneProps {
 }
 
 export function PreviewPane(props: PreviewPaneProps) {
+  const threadRef = useRef<HTMLDivElement | null>(null)
+  const latestTurnRef = useRef<HTMLElement | null>(null)
+  const turnCount = props.turns.length
+
+  // Each run appends to the bottom of the transcript, so follow it automatically
+  // and start the newest turn at the top of the visible thread.
+  useEffect(() => {
+    if (turnCount === 0) {
+      threadRef.current?.scrollTo({ top: 0 })
+      return
+    }
+    latestTurnRef.current?.scrollIntoView({ block: 'start' })
+  }, [turnCount, props.running])
+
   return (
     <section className="session" aria-label="Run">
       <div className="session__header">
@@ -35,7 +50,7 @@ export function PreviewPane(props: PreviewPaneProps) {
         </button>
       </div>
 
-      <div className="session__thread">
+      <div className="session__thread" ref={threadRef}>
         {props.assistant}
         <div role="log" aria-live="polite">
         {props.turns.length === 0 && (
@@ -46,7 +61,8 @@ export function PreviewPane(props: PreviewPaneProps) {
             <h3>Test how the agent behaves when things break</h3>
             <p>
               Pick the failures to inject, then send a scenario. Chaos Monkey replays it
-              against the agent with a real connector fault and scores how safely it recovers.
+              against the target agent with the selected connector faults and scores how safely
+              it recovers.
             </p>
             <ul className="banner__hints">
               <li>
@@ -63,9 +79,10 @@ export function PreviewPane(props: PreviewPaneProps) {
         )}
 
         {props.turns.map((turn, index) => {
+          const latest = index === props.turns.length - 1 ? latestTurnRef : undefined
           if (turn.kind === 'user') {
             return (
-              <article key={index} className="turn turn--user">
+              <article key={index} className="turn turn--user" ref={latest}>
                 <span className="turn__avatar" aria-hidden="true">
                   You
                 </span>
@@ -76,7 +93,7 @@ export function PreviewPane(props: PreviewPaneProps) {
 
           if (turn.kind === 'error') {
             return (
-              <article key={index} className="turn turn--error">
+              <article key={index} className="turn turn--error" ref={latest}>
                 <span className="turn__avatar" aria-hidden="true">
                   <AlertIcon />
                 </span>
@@ -88,7 +105,7 @@ export function PreviewPane(props: PreviewPaneProps) {
           }
 
           return (
-            <article key={index} className="turn turn--agent">
+            <article key={index} className="turn turn--agent" ref={latest}>
               <span className="turn__avatar" aria-hidden="true">
                 <SparkleIcon />
               </span>

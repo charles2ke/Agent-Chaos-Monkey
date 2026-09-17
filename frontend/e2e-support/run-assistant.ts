@@ -19,7 +19,7 @@ export function runAssistantTests(staticBuild: boolean) {
     await expect(approve).toBeDisabled()
     await scenario.fill('Create a support ticket')
     await page.getByLabel('Expired auth (HTTP 401)').uncheck()
-    await expect(assistant.getByRole('button', { name: 'Approve & run 1 checks' })).toBeDisabled()
+    await expect(assistant.getByRole('button', { name: 'Approve & run 1 check' })).toBeDisabled()
     await page.getByLabel('Expired auth (HTTP 401)').check()
     await approve.click()
     await expect(assistant.getByRole('status')).toHaveText('Plan completed · 2/2 checks completed', { timeout: 30_000 })
