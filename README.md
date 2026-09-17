@@ -429,7 +429,8 @@ network/access controls before exposing it.
 disposable connector, so you can watch the whole loop produce observed evidence without owning an
 agent. `--profile resilient` passes every experiment; `--profile naive` fabricates a ticket
 reference and relays raw connector text, which is exactly the failure this project exists to catch.
-[`examples/gateway-suite.json`](examples/gateway-suite.json) is the matching suite, and the
+[`examples/gateway-suite.json`](examples/gateway-suite.json) is the matching suite — it exercises
+all five agent-layer modes against the live agent — and the
 `gateway` job in [the CI workflow](.github/workflows/resilience.yml) runs it on every pull request.
 
 ### Direct Line and the Microsoft 365 Agents SDK
@@ -498,8 +499,12 @@ in branch protection if you want a resilience regression to block the pull reque
 [`examples/agent-regression-suite.json`](examples/agent-regression-suite.json) is the
 committed baseline: a healthy control, throttling recovery, exhausted HTTP 500 retries,
 expired auth with a reauthentication turn, a tool timeout that is retried, a latency
-spike inside the timeout, empty and malformed payloads, and a matrix run covering every
-chaos mode against its own control. Assertions that must block a merge are `critical`;
+spike inside the timeout, empty and malformed payloads, one test for each of the five
+agent-layer modes (prompt injection, tool schema drift, truncated stream, context
+exhaustion and cascading failure), and a matrix run covering every chaos mode against
+its own control. Every test uses `transport: "simulation"` with no `agentEndpoint`, so
+the same file runs in pull-request CI and in the nightly drift job without an agent
+being reachable. Assertions that must block a merge are `critical`;
 observational ones such as measured backoff are `warning`, so they stay visible in the
 JSON report without failing the gate. `agentVersion` and `evaluator` are pinned so
 results stay comparable, timings are small and explicit so wall-clock variance cannot
