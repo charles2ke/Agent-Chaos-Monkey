@@ -16,17 +16,19 @@ public static class EnterpriseExtensions
 {
     public const string ApiKeyHeader = "X-Api-Key";
     public const string ApiKeyVariable = "CHAOS_MONKEY_API_KEY";
+    private const string GatewayCallbackPrefix = "/api/lab/gateway";
+    private const string BearerPrefix = "Bearer ";
 
     /// <summary>Probes stay reachable so a load balancer never needs the shared key or a request budget.</summary>
     public static bool IsProbe(PathString path) =>
         path.StartsWithSegments("/api/health", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Gateway callbacks are exempt from the shared key because the agent under test authenticates
-    /// with a per-run bearer token at the tool boundary.
+    /// Identifies gateway callback paths so the shared key gate can defer to run-scoped bearer
+    /// authentication at the tool boundary.
     /// </summary>
     public static bool IsGatewayCallback(PathString path) =>
-        path.StartsWithSegments("/api/lab/gateway", StringComparison.OrdinalIgnoreCase);
+        path.StartsWithSegments(GatewayCallbackPrefix, StringComparison.OrdinalIgnoreCase);
 
     public static void AddEnterprise(this IServiceCollection services, IConfiguration configuration)
     {
@@ -107,9 +109,13 @@ public static class EnterpriseExtensions
             SHA256.HashData(Encoding.UTF8.GetBytes(expected)));
     }
 
+    /// <summary>
+    /// Authenticated gateway callbacks already have per-run call caps, so only they bypass the shared
+    /// request budget; rejected callbacks stay rate limited by caller.
+    /// </summary>
     private static bool IsAuthenticatedGatewayCallback(HttpContext context)
     {
-        if (!context.Request.Path.StartsWithSegments("/api/lab/gateway", StringComparison.OrdinalIgnoreCase,
+        if (!context.Request.Path.StartsWithSegments(GatewayCallbackPrefix, StringComparison.OrdinalIgnoreCase,
             out var remaining))
         {
             return false;
@@ -122,8 +128,13 @@ public static class EnterpriseExtensions
         }
 
         var auth = context.Request.Headers.Authorization.ToString();
-        return auth.StartsWith("Bearer ", StringComparison.Ordinal) &&
-            context.RequestServices.GetRequiredService<LabGateway>().Authenticate(runId, auth[7..]) is not null;
+        if (!auth.StartsWith(BearerPrefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var token = auth[BearerPrefix.Length..];
+        return context.RequestServices.GetRequiredService<LabGateway>().Authenticate(runId, token) is not null;
     }
 
     private static EnterpriseOptions Options(HttpContext context) =>
