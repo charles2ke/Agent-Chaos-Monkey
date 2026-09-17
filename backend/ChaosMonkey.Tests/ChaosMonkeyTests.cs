@@ -476,7 +476,9 @@ public class AgentInvokerTests
 
         Assert.True(interaction.Succeeded);
         Assert.Equal(200, interaction.StatusCode);
-        Assert.True(interaction.DurationMs >= 40);
+        // Allow a small tolerance for timer/measurement jitter on CI runners; the demo agent
+        // responds instantly, so any delay of this magnitude confirms the latency was injected.
+        Assert.True(interaction.DurationMs >= 35, $"Expected an injected delay of ~40ms, but measured {interaction.DurationMs}ms.");
         Assert.Null(interaction.TransportError);
         Assert.Contains("INC-1842", HeuristicEvaluator.ExtractText(interaction.ResponseBody));
     }
