@@ -73,7 +73,7 @@ test.describe('agent tabs', () => {
     )
 
     await page.keyboard.press('Shift+Tab')
-    await expect(page.locator('.rail').getByRole('button', { name: 'Activity', exact: true })).toBeFocused()
+    await expect(page.locator('.rail__profile')).toBeFocused()
     await page.keyboard.press('Tab')
     await expect(page.locator('.rail__close')).toBeFocused()
   })
