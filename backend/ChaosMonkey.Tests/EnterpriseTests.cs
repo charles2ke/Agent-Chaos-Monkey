@@ -5,7 +5,9 @@ using ChaosMonkey.Api.Enterprise;
 using ChaosMonkey.Api.Lab;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace ChaosMonkey.Tests;
 
@@ -186,11 +188,17 @@ public class EnterpriseTests
     [InlineData("Enterprise:RateLimitWindowSeconds", "86401")]
     [InlineData("Enterprise:CorrelationHeader", "X-Api-Key")]
     [InlineData("Enterprise:CorrelationHeader", "Bad Header")]
-    public void Invalid_enterprise_options_fail_startup(string key, string value)
+    public void Invalid_enterprise_options_are_rejected_by_options_validation(string key, string value)
     {
-        using var host = new ApiHost((key, value));
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection([new KeyValuePair<string, string?>(key, value)])
+            .Build();
+        var services = new ServiceCollection();
+        services.AddEnterprise(configuration);
+        using var provider = services.BuildServiceProvider();
 
-        Assert.ThrowsAny<Exception>(() => host.CreateClient());
+        Assert.Throws<OptionsValidationException>(() =>
+            provider.GetRequiredService<IOptions<EnterpriseOptions>>().Value);
     }
 
     [Fact]

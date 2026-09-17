@@ -75,13 +75,6 @@ public static class EnterpriseExtensions
         });
     }
 
-    public static void UseEnterprise(this WebApplication app)
-    {
-        app.UseEnterpriseHeaders();
-        app.UseRateLimiter();
-        app.UseEnterpriseKeyGate();
-    }
-
     public static void UseEnterpriseHeaders(this WebApplication app)
     {
         app.Use(async (context, next) =>

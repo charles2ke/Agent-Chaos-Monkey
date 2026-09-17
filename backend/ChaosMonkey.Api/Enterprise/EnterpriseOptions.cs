@@ -46,6 +46,7 @@ public sealed class EnterpriseOptions
 
     public bool RequiresApiKey => !string.IsNullOrWhiteSpace(ApiKey);
 
+    // IsValid guarantees the configured window is positive before this is observed at runtime.
     public bool RateLimitEnabled => RateLimitPermitsPerWindow > 0;
 
     public static bool IsValid(EnterpriseOptions options) =>
