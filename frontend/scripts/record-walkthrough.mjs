@@ -21,12 +21,12 @@ const baseUrl = 'http://localhost:4173/Agent-Chaos-Monkey/'
 const viewport = { width: 1280, height: 800 }
 const voice = process.env.WALKTHROUGH_VOICE ?? 'en-gb+f3'
 const pitch = process.env.WALKTHROUGH_PITCH ?? '60'
-const wordsPerMinute = process.env.WALKTHROUGH_WPM ?? '165'
-const gapSeconds = 0.6
-const leadSeconds = 1
+const wordsPerMinute = process.env.WALKTHROUGH_WPM ?? '130'
+const gapSeconds = 1.2
+const leadSeconds = 1.5
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
-/** Each step narrates one screen; `run` performs the UI actions while the line is spoken. */
+/** Each step narrates one screen; `run` prepares the screen before the line is spoken. */
 /** Navigation is behind the hamburger menu, so each tab change opens the drawer first. */
 async function goToTab(page, tab) {
   await page.getByRole('button', { name: 'Open navigation menu' }).click()
@@ -42,7 +42,7 @@ const steps = [
     },
   },
   {
-    text: 'This is the Run screen. On the left you pick the faults to inject: latency spikes, server errors, empty or malformed payloads, throttling and expired auth. Choose the connector under Tools in the menu.',
+    text: 'This is the Run screen. Pick faults on the left, like delays, server errors, or expired authentication. Choose your connector under Tools in the menu.',
     run: async (page) => {
       await page
         .getByRole('complementary', { name: 'Chaos configuration' })
@@ -51,7 +51,7 @@ const steps = [
     },
   },
   {
-    text: 'Expired auth is selected, so the demo simulates a ServiceNow authentication failure: H T T P four oh one. Run the chaos experiment.',
+    text: 'Let us run the experiment. Expired authentication is selected. The demo simulates a ServiceNow failure, with status code four oh one.',
     run: async (page) => {
       await page.getByRole('button', { name: 'Run chaos' }).click()
       await page
@@ -60,31 +60,31 @@ const steps = [
     },
   },
   {
-    text: 'The resilience report scores the run, flags that the agent fabricated tool success, and lists the connector trace with recommended fixes.',
+    text: 'Here is the resilience report. The agent claimed success, even though its tool failed. The report shows the connector trace and recommends fixes.',
     run: async (page) => {
       await page.getByRole('region', { name: 'Resilience report' }).scrollIntoViewIfNeeded()
     },
   },
   {
-    text: 'The Activity screen keeps the history of every run, so you can compare scores as you harden the agent.',
+    text: 'Activity keeps a history of your runs. Compare the scores here as you improve your agent.',
     run: async (page) => {
       await goToTab(page, 'Activity')
     },
   },
   {
-    text: 'Overview holds the resilience contract under test. Rules like never fabricate tool success are exactly what chaos runs verify.',
+    text: 'Overview explains the rules under test. One key rule is simple. Never claim a tool succeeded when it did not.',
     run: async (page) => {
       await goToTab(page, 'Overview')
     },
   },
   {
-    text: 'The same page documents the chaos catalogue and how the resilience judge scores each response. The menu lets you jump directly to each section.',
+    text: 'The chaos catalogue explains each fault. Use the menu to explore the catalogue, or see how the resilience judge scores responses.',
     run: async (page) => {
       await goToTab(page, 'Chaos catalogue')
     },
   },
   {
-    text: 'Settings holds your agent endpoint and judge model. To test your own agent, run the backend locally, replace the demo endpoint, and start testing.',
+    text: 'Settings holds your agent endpoint and judge model. To test a real agent, run the backend locally, and replace the demo endpoint.',
     run: async (page) => {
       await page.getByRole('button', { name: 'Settings' }).click()
       await page.mouse.wheel(0, 200)
@@ -214,16 +214,19 @@ async function main() {
     recordVideo: { dir: path.join(workDir, 'video'), size: viewport },
   })
   const page = await context.newPage()
+  const recordingStart = performance.now()
 
   try {
     for (const [index, step] of steps.entries()) {
       await step.run(page)
-      // The narration track opens with `leadSeconds` of silence; hold the first
-      // screen for the same time so speech and actions stay in sync.
-      const hold = clips[index].duration + gapSeconds + (index === 0 ? leadSeconds : 0)
-      await page.waitForTimeout(hold * 1000)
+      if (index === 0) await page.waitForTimeout(leadSeconds * 1000)
+      // Include navigation and rendering time in the audio gaps to prevent drift.
+      clips[index].start = (performance.now() - recordingStart) / 1000
+      await page.waitForTimeout((clips[index].duration + gapSeconds) * 1000)
     }
-    await page.waitForTimeout(800)
+    if ((performance.now() - recordingStart) / 1000 > 120) {
+      throw new Error('Walkthrough exceeds the two minute budget including screen transitions.')
+    }
   } finally {
     await context.close()
     await browser.close()
@@ -234,14 +237,19 @@ async function main() {
   const [recorded] = (await readdir(videoDir)).filter((name) => name.endsWith('.webm'))
   if (!recorded) throw new Error('Playwright produced no video.')
 
-  // Rebuild the narration track with the same lead-in and gaps used while recording.
+  // Match the voiceover to the measured screen timings, including quiet transitions.
   const silence = path.join(workDir, 'gap.wav')
-  const lead = path.join(workDir, 'lead.wav')
   await makeSilence(silence, gapSeconds)
-  await makeSilence(lead, leadSeconds)
 
-  const entries = [lead]
-  for (const clip of clips) entries.push(clip.file, silence)
+  const entries = []
+  let previousEnd = 0
+  for (const [index, clip] of clips.entries()) {
+    const pause = path.join(workDir, `pause-${index}.wav`)
+    await makeSilence(pause, clip.start - previousEnd)
+    entries.push(pause, clip.file)
+    previousEnd = clip.start + clip.duration
+  }
+  entries.push(silence)
   const concatList = path.join(workDir, 'narration.txt')
   await writeFile(concatList, entries.map((file) => `file '${file}'`).join('\n'))
 
