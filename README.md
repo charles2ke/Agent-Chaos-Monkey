@@ -107,7 +107,7 @@ Then open <http://localhost:5173>.
 
 ## 🎬 Video walkthrough
 
-A narrated 75-second tour of every screen:
+A short tour of the main screens with British female synthetic narration:
 **[docs/videos/walkthrough.mp4](docs/videos/walkthrough.mp4)**
 
 Regenerate it after UI changes with `cd frontend && npm run record:walkthrough`

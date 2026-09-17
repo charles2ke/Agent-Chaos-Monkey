@@ -19,7 +19,8 @@ const workDir = path.join(frontendDir, '.walkthrough')
 const outputFile = path.join(repoRoot, 'docs', 'videos', 'walkthrough.mp4')
 const baseUrl = 'http://localhost:4173/Agent-Chaos-Monkey/'
 const viewport = { width: 1280, height: 800 }
-const voice = process.env.WALKTHROUGH_VOICE ?? 'en-us+f3'
+const voice = process.env.WALKTHROUGH_VOICE ?? 'en-gb+f3'
+const pitch = process.env.WALKTHROUGH_PITCH ?? '60'
 const wordsPerMinute = process.env.WALKTHROUGH_WPM ?? '165'
 const gapSeconds = 0.6
 const leadSeconds = 1
@@ -34,14 +35,14 @@ async function goToTab(page, tab) {
 
 const steps = [
   {
-    text: 'Agent Chaos Monkey injects connector failures into AI agents, then measures whether they recover safely.',
+    text: 'Agent Chaos Monkey tests whether AI agents recover safely from connector failures. This walkthrough uses the simulated browser demo.',
     run: async (page) => {
       await page.goto(baseUrl)
-      await goToTab(page, 'Preview')
+      await goToTab(page, 'Run')
     },
   },
   {
-    text: 'This is the Preview screen. On the left you pick the connector to sabotage and the chaos modes: latency spikes, server errors, empty or malformed payloads, throttling and expired auth.',
+    text: 'This is the Run screen. On the left you pick the faults to inject: latency spikes, server errors, empty or malformed payloads, throttling and expired auth. Choose the connector under Tools in the menu.',
     run: async (page) => {
       await page
         .getByRole('complementary', { name: 'Chaos configuration' })
@@ -50,7 +51,7 @@ const steps = [
     },
   },
   {
-    text: 'Expired auth is selected, so the ServiceNow connector answers with HTTP 401. Run the chaos experiment.',
+    text: 'Expired auth is selected, so the demo simulates a ServiceNow authentication failure: H T T P four oh one. Run the chaos experiment.',
     run: async (page) => {
       await page.getByRole('button', { name: 'Run chaos' }).click()
       await page
@@ -61,7 +62,7 @@ const steps = [
   {
     text: 'The resilience report scores the run, flags that the agent fabricated tool success, and lists the connector trace with recommended fixes.',
     run: async (page) => {
-      await page.mouse.wheel(0, 400)
+      await page.getByRole('region', { name: 'Resilience report' }).scrollIntoViewIfNeeded()
     },
   },
   {
@@ -77,13 +78,13 @@ const steps = [
     },
   },
   {
-    text: 'The same page documents the chaos catalogue, how the resilience judge scores each response, and which connector chaos targets.',
+    text: 'The same page documents the chaos catalogue and how the resilience judge scores each response. The menu lets you jump directly to each section.',
     run: async (page) => {
-      await page.mouse.wheel(0, 900)
+      await goToTab(page, 'Chaos catalogue')
     },
   },
   {
-    text: 'Settings points the harness at your own agent endpoint and judge model. Swap the built in demo agent for yours, and start testing.',
+    text: 'Settings holds your agent endpoint and judge model. To test your own agent, run the backend locally, replace the demo endpoint, and start testing.',
     run: async (page) => {
       await page.getByRole('button', { name: 'Settings' }).click()
       await page.mouse.wheel(0, 200)
@@ -172,7 +173,7 @@ function probeDuration(file) {
 }
 
 async function speak(text, file) {
-  await run('espeak-ng', ['-v', voice, '-s', wordsPerMinute, '-w', file, text])
+  await run('espeak-ng', ['-v', voice, '-p', pitch, '-s', wordsPerMinute, '-w', file, text])
   return probeDuration(file)
 }
 
