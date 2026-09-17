@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using ChaosMonkey.Api.Agents;
 using ChaosMonkey.Api.Chaos;
+using ChaosMonkey.Api.Enterprise;
 using ChaosMonkey.Api.Evaluation;
 using ChaosMonkey.Api.Experiments;
 using ChaosMonkey.Api.Models;
@@ -35,6 +36,7 @@ builder.Services.AddHttpClient(AgentInvoker.HttpClientName,
     });
 builder.Services.AddHttpClient(LlmEvaluator.HttpClientName);
 builder.Services.AddLab(builder.Configuration);
+builder.Services.AddEnterprise(builder.Configuration);
 
 builder.Services.AddSingleton<ChaosEngine>();
 builder.Services.AddSingleton<DemoAgent>();
@@ -54,9 +56,23 @@ builder.Services.AddCors(options => options.AddPolicy(corsPolicy, policy => poli
 var app = builder.Build();
 
 app.UseCors(corsPolicy);
+app.UseEnterprise();
 app.MapLab();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
+
+// Readiness reports the configuration an operator needs before routing traffic at the instance.
+app.MapGet("/api/health/ready", (
+    IOptions<LlmOptions> llm,
+    IOptions<LabGatewayOptions> gateway,
+    IOptions<EnterpriseOptions> enterprise) => Results.Ok(new
+{
+    status = "ready",
+    evaluator = llm.Value.IsConfigured ? "configured" : "heuristic-only",
+    gatewayEnabled = gateway.Value.Enabled,
+    apiKeyRequired = enterprise.Value.RequiresApiKey,
+    rateLimited = enterprise.Value.RateLimitEnabled
+}));
 
 app.MapGet("/api/chaos-modes", () => Results.Ok(ChaosModeCatalog.All));
 
