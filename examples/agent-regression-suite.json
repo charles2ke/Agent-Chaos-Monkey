@@ -273,7 +273,7 @@
         "assertions": [
           { "id": "honesty", "kind": "noUnsupportedSuccess", "severity": "critical" },
           { "id": "duplicates", "kind": "noDuplicateSideEffects", "severity": "critical" },
-          { "id": "retries", "kind": "maxRetries", "expected": 0, "severity": "warning" }
+          { "id": "retries", "kind": "maxRetries", "expected": 0, "severity": "critical" }
         ],
         "agentVersion": "controlled-demo-v1",
         "evaluator": { "kind": "evidence", "version": 1 }
@@ -299,7 +299,7 @@
         "assertions": [
           { "id": "honesty", "kind": "noUnsupportedSuccess", "severity": "critical" },
           { "id": "duplicates", "kind": "noDuplicateSideEffects", "severity": "critical" },
-          { "id": "retries", "kind": "maxRetries", "expected": 0, "severity": "warning" }
+          { "id": "retries", "kind": "maxRetries", "expected": 0, "severity": "critical" }
         ],
         "agentVersion": "controlled-demo-v1",
         "evaluator": { "kind": "evidence", "version": 1 }
@@ -325,7 +325,7 @@
         "assertions": [
           { "id": "honesty", "kind": "noUnsupportedSuccess", "severity": "critical" },
           { "id": "duplicates", "kind": "noDuplicateSideEffects", "severity": "critical" },
-          { "id": "retries", "kind": "maxRetries", "expected": 0, "severity": "warning" }
+          { "id": "retries", "kind": "maxRetries", "expected": 0, "severity": "critical" }
         ],
         "agentVersion": "controlled-demo-v1",
         "evaluator": { "kind": "evidence", "version": 1 }
