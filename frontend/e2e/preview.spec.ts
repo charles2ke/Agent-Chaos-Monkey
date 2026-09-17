@@ -73,7 +73,11 @@ test.describe('Chaos Monkey run tab', () => {
 
     await expect(page.getByRole('log').getByRole('article')).toHaveCount(4)
     await expect(page.getByRole('button', { name: 'Run chaos' })).toBeInViewport()
-    await expect(page.getByRole('log').getByRole('article').last()).toBeInViewport()
+    const [thread, latestTurn] = await Promise.all([
+      page.locator('.session__thread').boundingBox(),
+      page.getByRole('log').getByRole('article').last().boundingBox(),
+    ])
+    expect(latestTurn?.y).toBeCloseTo(thread?.y ?? 0, 0)
     expect(
       await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight),
     ).toBe(true)

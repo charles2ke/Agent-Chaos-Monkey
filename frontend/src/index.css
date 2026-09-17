@@ -1007,6 +1007,11 @@ body {
   font-size: 14px;
 }
 
+.session__thread::after {
+  content: '';
+  flex: 0 0 100%;
+}
+
 .session__error {
   margin: 0 18px;
   color: var(--danger);
