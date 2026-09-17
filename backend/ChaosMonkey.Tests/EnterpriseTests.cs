@@ -2,8 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using ChaosMonkey.Api.Enterprise;
+using ChaosMonkey.Api.Lab;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ChaosMonkey.Tests;
 
@@ -101,23 +103,43 @@ public class EnterpriseTests
     }
 
     [Fact]
-    public async Task Callers_that_exceed_the_request_budget_are_throttled_while_probes_stay_reachable()
+    public async Task Callers_that_exceed_the_request_budget_are_throttled_while_probes_and_authenticated_callbacks_stay_reachable()
     {
         using var host = new ApiHost(
             ("Enterprise:RateLimitPermitsPerWindow", "1"), ("Enterprise:RateLimitWindowSeconds", "60"));
         using var client = host.CreateClient();
+        var gateway = host.Services.GetRequiredService<LabGateway>();
+        var session = gateway.Open(new ExperimentDefinition
+        {
+            SchemaVersion = 1, Name = "Ticket resilience", Scenario = "Create a ticket",
+            Connector = "ServiceNow", Operation = "CreateIncident"
+        }, [], [], null, CancellationToken.None);
 
-        var first = await client.GetAsync("/api/chaos-modes");
-        var second = await client.GetAsync("/api/chaos-modes");
-        var probe = await client.GetAsync("/api/health");
-        var gateway = await client.PostAsJsonAsync("/api/lab/gateway/unknown-run", new { });
+        try
+        {
+            var first = await client.GetAsync("/api/chaos-modes");
+            var second = await client.GetAsync("/api/chaos-modes");
+            using var callback = new HttpRequestMessage(HttpMethod.Post, $"/api/lab/gateway/{session.Id}")
+            {
+                Content = JsonContent.Create(new GatewayCall(session.SessionId, "ServiceNow", "CreateIncident",
+                    JsonSerializer.SerializeToElement(new { scenario = "Create a ticket" })))
+            };
+            callback.Headers.Authorization = new("Bearer", session.Capability);
+            var authenticatedGateway = await client.SendAsync(callback);
+            var rejectedGateway = await client.PostAsJsonAsync("/api/lab/gateway/unknown-run", new { });
+            var probe = await client.GetAsync("/api/health");
 
-        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
-        Assert.Equal(HttpStatusCode.TooManyRequests, second.StatusCode);
-        Assert.Equal("60", second.Headers.GetValues("Retry-After").Single());
-        Assert.Equal(HttpStatusCode.OK, probe.StatusCode);
-        // The gateway callback is exempt: it is the surface under test and carries its own per-run limits.
-        Assert.Equal(HttpStatusCode.Unauthorized, gateway.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+            Assert.Equal(HttpStatusCode.TooManyRequests, second.StatusCode);
+            Assert.Equal("60", second.Headers.GetValues("Retry-After").Single());
+            Assert.Equal(HttpStatusCode.OK, authenticatedGateway.StatusCode);
+            Assert.Equal(HttpStatusCode.TooManyRequests, rejectedGateway.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, probe.StatusCode);
+        }
+        finally
+        {
+            await gateway.CloseAsync(session);
+        }
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.RateLimiting;
+using ChaosMonkey.Api.Lab;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 
@@ -21,8 +22,8 @@ public static class EnterpriseExtensions
         path.StartsWithSegments("/api/health", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Gateway callbacks come from the agent under test and already carry a per-run bearer token and
-    /// call cap, so a shared request budget here would distort the experiment rather than protect it.
+    /// Gateway callbacks are exempt from the shared key because the agent under test authenticates
+    /// with a per-run bearer token at the tool boundary.
     /// </summary>
     public static bool IsGatewayCallback(PathString path) =>
         path.StartsWithSegments("/api/lab/gateway", StringComparison.OrdinalIgnoreCase);
@@ -46,7 +47,8 @@ public static class EnterpriseExtensions
             limiter.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
             {
                 var options = Options(context);
-                if (!options.RateLimitEnabled || IsProbe(context.Request.Path) || IsGatewayCallback(context.Request.Path))
+                if (!options.RateLimitEnabled || IsProbe(context.Request.Path) ||
+                    IsAuthenticatedGatewayCallback(context))
                 {
                     return RateLimitPartition.GetNoLimiter("unlimited");
                 }
@@ -103,6 +105,25 @@ public static class EnterpriseExtensions
         return CryptographicOperations.FixedTimeEquals(
             SHA256.HashData(Encoding.UTF8.GetBytes(presented)),
             SHA256.HashData(Encoding.UTF8.GetBytes(expected)));
+    }
+
+    private static bool IsAuthenticatedGatewayCallback(HttpContext context)
+    {
+        if (!context.Request.Path.StartsWithSegments("/api/lab/gateway", StringComparison.OrdinalIgnoreCase,
+            out var remaining))
+        {
+            return false;
+        }
+
+        var runId = remaining.Value?.Trim('/');
+        if (string.IsNullOrEmpty(runId) || runId.Contains('/'))
+        {
+            return false;
+        }
+
+        var auth = context.Request.Headers.Authorization.ToString();
+        return auth.StartsWith("Bearer ", StringComparison.Ordinal) &&
+            context.RequestServices.GetRequiredService<LabGateway>().Authenticate(runId, auth[7..]) is not null;
     }
 
     private static EnterpriseOptions Options(HttpContext context) =>
