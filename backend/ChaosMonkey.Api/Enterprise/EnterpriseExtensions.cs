@@ -32,10 +32,18 @@ public static class EnterpriseExtensions
 
     public static void AddEnterprise(this IServiceCollection services, IConfiguration configuration)
     {
-        services.Configure<EnterpriseOptions>(configuration.GetSection(EnterpriseOptions.SectionName));
-        // An ambient key keeps the shared secret out of configuration files and container images.
-        services.PostConfigure<EnterpriseOptions>(options => options.ApiKey =
-            EnterpriseOptions.ResolveApiKey(options.ApiKey, Environment.GetEnvironmentVariable(ApiKeyVariable)));
+        services.AddOptions<EnterpriseOptions>()
+            .Bind(configuration.GetSection(EnterpriseOptions.SectionName))
+            .PostConfigure(options =>
+            {
+                // An ambient key keeps the shared secret out of configuration files and container images.
+                options.ApiKey = EnterpriseOptions.ResolveApiKey(options.ApiKey,
+                    Environment.GetEnvironmentVariable(ApiKeyVariable));
+                options.CorrelationHeader = options.CorrelationHeader?.Trim() ?? "";
+            })
+            .Validate(EnterpriseOptions.IsValid,
+                "Enterprise options require non-negative rate limit permits, a 1..86400 second window, and a safe non-reserved correlation header name.")
+            .ValidateOnStart();
 
         services.AddRateLimiter(limiter =>
         {
@@ -69,6 +77,13 @@ public static class EnterpriseExtensions
 
     public static void UseEnterprise(this WebApplication app)
     {
+        app.UseEnterpriseHeaders();
+        app.UseRateLimiter();
+        app.UseEnterpriseKeyGate();
+    }
+
+    public static void UseEnterpriseHeaders(this WebApplication app)
+    {
         app.Use(async (context, next) =>
         {
             var options = Options(context);
@@ -82,9 +97,18 @@ public static class EnterpriseExtensions
             context.Response.Headers["X-Content-Type-Options"] = "nosniff";
             context.Response.Headers["X-Frame-Options"] = "DENY";
             context.Response.Headers["Referrer-Policy"] = "no-referrer";
-            context.Response.Headers["Cross-Origin-Resource-Policy"] = "same-origin";
+            context.Response.Headers["Cross-Origin-Resource-Policy"] = "cross-origin";
             context.Response.Headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'";
 
+            await next(context).ConfigureAwait(false);
+        });
+    }
+
+    public static void UseEnterpriseKeyGate(this WebApplication app)
+    {
+        app.Use(async (context, next) =>
+        {
+            var options = Options(context);
             if (options.RequiresApiKey && !IsProbe(context.Request.Path) &&
                 !IsGatewayCallback(context.Request.Path) && !HasValidKey(context, options.ApiKey!))
             {
@@ -96,8 +120,6 @@ public static class EnterpriseExtensions
 
             await next(context).ConfigureAwait(false);
         });
-
-        app.UseRateLimiter();
     }
 
     private static bool HasValidKey(HttpContext context, string expected)

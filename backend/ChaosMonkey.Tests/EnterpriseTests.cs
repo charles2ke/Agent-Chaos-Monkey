@@ -37,9 +37,27 @@ public class EnterpriseTests
         Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
         Assert.Equal("DENY", response.Headers.GetValues("X-Frame-Options").Single());
         Assert.Equal("no-referrer", response.Headers.GetValues("Referrer-Policy").Single());
-        Assert.Equal("same-origin", response.Headers.GetValues("Cross-Origin-Resource-Policy").Single());
+        Assert.Equal("cross-origin", response.Headers.GetValues("Cross-Origin-Resource-Policy").Single());
         Assert.Equal("default-src 'none'; frame-ancestors 'none'",
             response.Headers.GetValues("Content-Security-Policy").Single());
+    }
+
+    [Fact]
+    public async Task Cors_preflights_receive_enterprise_headers_before_short_circuiting()
+    {
+        using var host = new ApiHost(("Enterprise:ApiKey", "operator-key"));
+        using var client = host.CreateClient();
+
+        using var request = new HttpRequestMessage(HttpMethod.Options, "/api/chaos-modes");
+        request.Headers.Add("Origin", "http://localhost:5173");
+        request.Headers.Add("Access-Control-Request-Method", "GET");
+        request.Headers.Add("X-Correlation-Id", "preflight-42");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal("preflight-42", response.Headers.GetValues("X-Correlation-Id").Single());
+        Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
+        Assert.Equal("http://localhost:5173", response.Headers.GetValues("Access-Control-Allow-Origin").Single());
     }
 
     [Theory]
@@ -103,6 +121,25 @@ public class EnterpriseTests
     }
 
     [Fact]
+    public async Task Rejected_api_key_attempts_consume_the_request_budget()
+    {
+        using var host = new ApiHost(
+            ("Enterprise:ApiKey", "operator-key"),
+            ("Enterprise:RateLimitPermitsPerWindow", "1"),
+            ("Enterprise:RateLimitWindowSeconds", "60"));
+        using var client = host.CreateClient();
+
+        var anonymous = await client.GetAsync("/api/chaos-modes");
+        using var wrong = new HttpRequestMessage(HttpMethod.Get, "/api/chaos-modes");
+        wrong.Headers.Add(EnterpriseExtensions.ApiKeyHeader, "guessed-key");
+        var throttled = await client.SendAsync(wrong);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, throttled.StatusCode);
+        Assert.Equal("60", throttled.Headers.GetValues("Retry-After").Single());
+    }
+
+    [Fact]
     public async Task Callers_that_exceed_the_request_budget_are_throttled_while_probes_and_authenticated_callbacks_stay_reachable()
     {
         using var host = new ApiHost(
@@ -140,6 +177,20 @@ public class EnterpriseTests
         {
             await gateway.CloseAsync(session);
         }
+    }
+
+    [Theory]
+    [InlineData("Enterprise:RateLimitPermitsPerWindow", "-1")]
+    [InlineData("Enterprise:RateLimitWindowSeconds", "0")]
+    [InlineData("Enterprise:RateLimitWindowSeconds", "-1")]
+    [InlineData("Enterprise:RateLimitWindowSeconds", "86401")]
+    [InlineData("Enterprise:CorrelationHeader", "X-Api-Key")]
+    [InlineData("Enterprise:CorrelationHeader", "Bad Header")]
+    public void Invalid_enterprise_options_fail_startup(string key, string value)
+    {
+        using var host = new ApiHost((key, value));
+
+        Assert.ThrowsAny<Exception>(() => host.CreateClient());
     }
 
     [Fact]

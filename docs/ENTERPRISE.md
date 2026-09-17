@@ -46,7 +46,7 @@ per-team keys, audit trails, or OAuth/Entra ID sign-in.
 
 ## Request budgets
 
-A fixed-window budget is applied per calling IP address:
+A fixed-window budget is applied per calling IP address in each API process:
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
@@ -54,12 +54,16 @@ A fixed-window budget is applied per calling IP address:
 | `Enterprise__RateLimitWindowSeconds` | `60` | Window length in seconds. |
 
 Rejected callers receive `429 Too Many Requests` with a `Retry-After` header. Probes
-and gateway callbacks are exempt — gateway callbacks come from the agent under test
-and already carry their own per-run caps (90 seconds, 32 tool calls), so throttling
-them would distort the experiment rather than protect the host.
+and authenticated gateway callbacks are exempt — gateway callbacks come from the
+agent under test and already carry their own per-run caps (90 seconds, 32 tool
+calls), so throttling them would distort the experiment rather than protect the
+host. Unauthenticated or invalid callback attempts remain in the per-caller
+budget.
 
-If your ingress already enforces quotas, set the permit count to `0` and let the edge
-own it.
+The built-in limiter is a per-instance backstop. On multi-replica deployments, or
+when `RemoteIpAddress` is an ingress peer rather than the original client, enforce
+organization-wide quotas at a trusted edge or proxy. If your ingress already
+enforces quotas, set the permit count to `0` and let the edge own it.
 
 ## Probes
 
@@ -86,15 +90,17 @@ returns its trace identifier. Include that value in bug reports and incident not
 it links a user complaint to the request in your logs.
 
 Set `Enterprise__CorrelationHeader` if your platform standardises on a different
-header name.
+safe header name. The API rejects invalid names and reserved headers such as
+`X-Api-Key`, `Authorization`, cookies, rate-limit response headers, and the fixed
+security headers.
 
 ## Response hardening
 
 Every response also carries `X-Content-Type-Options: nosniff`,
 `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`,
-`Cross-Origin-Resource-Policy: same-origin`, and a `default-src 'none'` content
-security policy. The API serves JSON only, so these are safe defaults; the UI is a
-separate static site.
+`Cross-Origin-Resource-Policy: cross-origin`, and a `default-src 'none'` content
+security policy. The API serves JSON only, and the cross-origin resource policy
+allows the separate Static Web App origin to read API responses that pass CORS.
 
 Browser access is restricted by CORS. Set `AllowedOrigins__0..n` to the exact origins
 of your UI deployments — the wildcard is never used.
@@ -132,7 +138,7 @@ customer content or secrets into run definitions.
 
 - [ ] `CHAOS_MONKEY_API_KEY` (or `Enterprise__ApiKey`) set from a secret store
 - [ ] `AllowedOrigins__*` limited to your UI origins
-- [ ] Request budget tuned, or delegated to your ingress
+- [ ] Request budget tuned, or organization-wide quotas delegated to your ingress
 - [ ] Liveness and readiness probes wired into the platform
 - [ ] `LabGateway__Enabled` left `false` unless you are driving a real agent, and every
       `AgentEndpoints`/`Operations` entry reviewed as an exact allowlist entry

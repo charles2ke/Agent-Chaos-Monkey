@@ -7,7 +7,7 @@ service-level agreement, no paid support tier, and no warranty — see [`LICENSE
 
 | Need | Channel |
 | --- | --- |
-| Question about usage or interpretation of a run | [GitHub Discussions](https://github.com/charles2ke/Agent-Chaos-Monkey/discussions) or a `question` issue |
+| Question about usage or interpretation of a run | [GitHub Discussions](https://github.com/charles2ke/Agent-Chaos-Monkey/discussions) |
 | Suspected bug or wrong evidence | [Open a bug report](https://github.com/charles2ke/Agent-Chaos-Monkey/issues/new/choose) |
 | Feature or new fault mode | [Open a feature request](https://github.com/charles2ke/Agent-Chaos-Monkey/issues/new/choose) |
 | Security vulnerability | **Do not open an issue.** Follow [`SECURITY.md`](SECURITY.md) |

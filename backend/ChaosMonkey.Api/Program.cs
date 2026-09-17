@@ -6,6 +6,7 @@ using ChaosMonkey.Api.Evaluation;
 using ChaosMonkey.Api.Experiments;
 using ChaosMonkey.Api.Models;
 using ChaosMonkey.Api.Lab;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -55,8 +56,10 @@ builder.Services.AddCors(options => options.AddPolicy(corsPolicy, policy => poli
 
 var app = builder.Build();
 
+app.UseEnterpriseHeaders();
 app.UseCors(corsPolicy);
-app.UseEnterprise();
+app.UseRateLimiter();
+app.UseEnterpriseKeyGate();
 app.MapLab();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));

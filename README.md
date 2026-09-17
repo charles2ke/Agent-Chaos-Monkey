@@ -594,7 +594,7 @@ are configuration-only:
 | Control | Setting | Default |
 | --- | --- | --- |
 | Shared key on every route except probes and gateway callbacks | `CHAOS_MONKEY_API_KEY` or `Enterprise__ApiKey` | off |
-| Per-caller request budget (`429` + `Retry-After`) | `Enterprise__RateLimitPermitsPerWindow` / `Enterprise__RateLimitWindowSeconds` | 600 per 60s |
+| Per-instance caller request budget (`429` + `Retry-After`) | `Enterprise__RateLimitPermitsPerWindow` / `Enterprise__RateLimitWindowSeconds` | 600 per 60s |
 | Correlation id echoed on every response | `Enterprise__CorrelationHeader` | `X-Correlation-Id` |
 | Security response headers and exact-origin CORS | `AllowedOrigins__*` | localhost dev origins |
 

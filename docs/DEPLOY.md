@@ -45,8 +45,13 @@ On the API side, the Bicep template already injects `AllowedOrigins__0=https://<
 
 The Container App is provisioned with liveness (`/api/health`) and readiness
 (`/api/health/ready`) probes, and with `AllowedOrigins__0` set to the Static Web App
-origin. Before you share the URL with a team, add a shared key and review the request
-budget as described in [`ENTERPRISE.md`](ENTERPRISE.md):
+origin. Before you share the API URL with a team, review the request budget as
+described in [`ENTERPRISE.md`](ENTERPRISE.md).
+
+Only add the shared API key when browsers reach the API through an authenticated
+same-origin proxy or gateway that injects `X-Api-Key` server-side. The shipped
+Static Web App calls the API directly and must not embed the operator secret in
+browser JavaScript:
 
 ```bash
 # The template does not provision a key for you; set one on the container app directly.
