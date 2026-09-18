@@ -196,7 +196,7 @@ public class EnterpriseTests
 
     [Theory]
     [InlineData("/api/lab/gateway")]
-    [InlineData("/api/lab/gateway/run/extra")]
+    [InlineData("/api/lab/gateway/run-42/extra")]
     public async Task Gateway_callbacks_without_a_single_run_segment_stay_rate_limited(string path)
     {
         using var host = new ApiHost(
@@ -204,15 +204,15 @@ public class EnterpriseTests
         using var client = host.CreateClient();
 
         var first = await client.GetAsync("/api/chaos-modes");
-        using var callback = new HttpRequestMessage(HttpMethod.Post, path)
+        using var malformed = new HttpRequestMessage(HttpMethod.Post, path)
         {
             Content = JsonContent.Create(new { })
         };
-        callback.Headers.Authorization = new("Bearer", "not-a-capability");
-        var malformedGateway = await client.SendAsync(callback);
+        malformed.Headers.Authorization = new("Bearer", "any-capability");
+        var throttled = await client.SendAsync(malformed);
 
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
-        Assert.Equal(HttpStatusCode.TooManyRequests, malformedGateway.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, throttled.StatusCode);
     }
 
     [Theory]
