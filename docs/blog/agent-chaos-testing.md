@@ -1,8 +1,7 @@
 ---
 title: "The Failure Mode Nobody Tests For: Agents That Lie About Success"
 description: "Deterministic systems fail loudly. LLM agents fail plausibly. Here's why that gap is the most dangerous thing in agentic systems, and how chaos engineering ideas can close it."
-tags: ai, llm, agents, testing
-canonical_url: https://REPLACE-ME-WITH-PUBLISHED-URL
+tags: ai, llm, agents, testing, chaos-engineering, prompt-injection
 ---
 
 # The Failure Mode Nobody Tests For: Agents That Lie About Success
@@ -99,6 +98,13 @@ There's a live, static demo running entirely in the browser — no backend requi
 
 **<https://charles2ke.github.io/Agent-Chaos-Monkey/>**
 
-If you want to run it against your own agent endpoint, the [quick start in the README](https://github.com/charles2ke/Agent-Chaos-Monkey#-quick-start) gets a local backend and frontend running in a couple of commands, and the built-in demo agent lets you see the whole loop — inject, respond, judge, score — before you connect anything real. The hosted demo is a browser simulation: it observes no real connector calls, so treat it as a tour of the loop rather than evidence about any agent. Observed tool evidence needs the local API, and a real agent needs the opt-in gateway, which stays disabled until an operator allowlists exact endpoints server-side.
+| Path | What it gives you |
+| --- | --- |
+| [`docs/JUDGES.md`](../JUDGES.md) | A three-minute evaluation path with exact commands and expected output, requiring no API keys or cloud subscription. |
+| [`examples/sample-agent/`](../../examples/sample-agent/) | Run with `--profile naive` to see a fabricated ticket reference, then `--profile resilient` to pass every experiment. |
+| [`azd up`](../DEPLOY.md#one-command-deploy) | Provision the API on Azure Container Apps and the UI on Azure Static Web Apps. |
+| [README quick start](../../README.md#-quick-start) | Run the local backend and frontend, then connect an agent endpoint when you are ready. |
+
+The hosted demo is a browser simulation: it observes no real connector calls, so treat it as a tour of the loop rather than evidence about any agent. Observed tool evidence needs the local API, and a real agent needs the opt-in gateway, which stays disabled until an operator allowlists exact endpoints server-side.
 
 If you're building agentic systems and you haven't deliberately broken your own tool calls to see what your agent says about it, that's the cheapest resilience test you're not running yet.

@@ -13,6 +13,7 @@ import type { OverviewSectionId, RunSectionId, TabId } from '../tabs'
 import {
   ActivityIcon,
   CloseIcon,
+  GitHubIcon,
   OverviewIcon,
   PreviewIcon,
   SettingsIcon,
@@ -190,6 +191,17 @@ export function SideNav({
             : 'evaluator offline'}
         </span>
       </div>
+
+      <a
+        className="rail__profile"
+        href="https://github.com/charles2ke"
+        target="_blank"
+        rel="noreferrer noopener"
+        title="Open the project author's GitHub profile in a new tab"
+      >
+        <GitHubIcon className="rail__glyph" />
+        github.com/charles2ke
+      </a>
     </nav>
   )
 }

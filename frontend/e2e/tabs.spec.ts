@@ -72,8 +72,13 @@ test.describe('agent tabs', () => {
       'Close the navigation menu and return to the current screen',
     )
 
+    const profileLink = page.locator('.rail').getByRole('link', { name: 'github.com/charles2ke' })
+    await expect(profileLink).toHaveAttribute('href', 'https://github.com/charles2ke')
+    await expect(profileLink).toHaveAttribute('target', '_blank')
+    await expect(profileLink).toHaveAttribute('rel', 'noreferrer noopener')
+
     await page.keyboard.press('Shift+Tab')
-    await expect(page.locator('.rail').getByRole('button', { name: 'Activity', exact: true })).toBeFocused()
+    await expect(profileLink).toBeFocused()
     await page.keyboard.press('Tab')
     await expect(page.locator('.rail__close')).toBeFocused()
   })
