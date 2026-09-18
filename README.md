@@ -25,6 +25,12 @@ those failures and recovers safely.
 
 [![Agent Chaos Monkey resilience report after injecting an expired-auth failure](docs/images/resilience-report.png)](https://charles2ke.github.io/Agent-Chaos-Monkey/)
 
+## 🎬 Walkthrough
+
+<video src="docs/videos/walkthrough.mp4" controls width="100%" title="Agent Chaos Monkey walkthrough"></video>
+
+If the video does not play inline, [open the walkthrough video](docs/videos/walkthrough.mp4).
+
 ## ✨ What it does
 
 Agent Chaos Monkey provides **resilience testing of AI agents**. Use Run for the original simulated connector-result demo, or Laboratory for reproducible experiments, tool-call evidence, regression tests, and opt-in live gateway testing. You get back:
