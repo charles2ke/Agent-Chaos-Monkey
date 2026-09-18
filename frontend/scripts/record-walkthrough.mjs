@@ -21,9 +21,9 @@ const baseUrl = 'http://localhost:4173/Agent-Chaos-Monkey/'
 const viewport = { width: 1280, height: 800 }
 const voice = process.env.WALKTHROUGH_VOICE ?? 'en-gb+f3'
 const pitch = process.env.WALKTHROUGH_PITCH ?? '60'
-const wordsPerMinute = process.env.WALKTHROUGH_WPM ?? '165'
-const gapSeconds = 0.6
-const leadSeconds = 1
+const wordsPerMinute = process.env.WALKTHROUGH_WPM ?? '125'
+const gapSeconds = 1.2
+const leadSeconds = 1.5
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
 /** Each step narrates one screen; `run` performs the UI actions while the line is spoken. */
