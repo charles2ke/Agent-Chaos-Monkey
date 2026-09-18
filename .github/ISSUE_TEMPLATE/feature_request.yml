@@ -1,0 +1,38 @@
+name: Feature request
+description: Propose a new fault mode, assertion, integration, or capability.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What resilience question can you not answer with the harness today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should the harness do, and what evidence should it produce?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: How would a run prove it?
+      description: |
+        The project only reports what it observes. Describe the observable signal
+        (status codes, side-effect ids, transcript) that would back the result.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Security boundaries
+      options:
+        - label: This proposal does not weaken the endpoint allowlist, gateway authentication, or credential handling described in CONTRIBUTING.md.
+          required: true

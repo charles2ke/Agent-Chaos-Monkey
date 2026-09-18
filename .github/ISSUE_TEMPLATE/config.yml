@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/charles2ke/Agent-Chaos-Monkey/security/advisories/new
+    about: Report vulnerabilities privately. Never open a public issue for them.
+  - name: Question or discussion
+    url: https://github.com/charles2ke/Agent-Chaos-Monkey/discussions
+    about: Ask how to use the harness or how to interpret a run.
+  - name: Support and operations guidance
+    url: https://github.com/charles2ke/Agent-Chaos-Monkey/blob/main/SUPPORT.md
+    about: Support channels, expectations, and enterprise deployment guidance.

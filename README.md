@@ -214,6 +214,7 @@ All packages are kept on their latest stable releases.
 | Method | Route | Description |
 | --- | --- | --- |
 | `GET` | `/api/health` | Liveness |
+| `GET` | `/api/health/ready` | Readiness: judge configuration, gateway state and the active deployment guardrails |
 | `GET` | `/api/chaos-modes` | Catalogue of injectable failures |
 | `GET` | `/api/evaluator` | Configured provider/model and whether credentials are present |
 | `POST` | `/api/experiments` | Run an experiment and return the resilience report |
@@ -584,6 +585,23 @@ azd up
 [`azure.yaml`](azure.yaml) and [`infra/`](infra) provision the API on Azure Container Apps and the UI
 on Azure Static Web Apps, so a reviewer gets a live backend without installing .NET.
 See [`docs/DEPLOY.md`](docs/DEPLOY.md).
+
+## 🏢 Enterprise deployment
+
+Hosting the harness for a team rather than a laptop? The API ships deployment guardrails that
+are configuration-only:
+
+| Control | Setting | Default |
+| --- | --- | --- |
+| Shared key on every route except probes and gateway callbacks | `CHAOS_MONKEY_API_KEY` or `Enterprise__ApiKey` | off |
+| Per-instance caller request budget (`429` + `Retry-After`) | `Enterprise__RateLimitPermitsPerWindow` / `Enterprise__RateLimitWindowSeconds` | 600 per 60s |
+| Correlation id echoed on every response | `Enterprise__CorrelationHeader` | `X-Correlation-Id` |
+| Security response headers and exact-origin CORS | `AllowedOrigins__*` | localhost dev origins |
+
+Access control, probes, traceability, supply-chain and data-handling guidance, plus a deployment
+checklist: [`docs/ENTERPRISE.md`](docs/ENTERPRISE.md). Support channels are in
+[`SUPPORT.md`](SUPPORT.md) and the community expectations in
+[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 
 ## 🏁 Resilience leaderboard
 

@@ -6,6 +6,10 @@ gateway boundary and the redaction rules being trustworthy. Please read the
 [security boundary rules](#security-boundary-rules-do-not-weaken) before
 proposing changes to the backend.
 
+By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md). Support
+channels and expectations are described in [SUPPORT.md](SUPPORT.md), and guidance for
+hosting the harness internally is in [docs/ENTERPRISE.md](docs/ENTERPRISE.md).
+
 ## Development setup
 
 You need the following installed locally:
