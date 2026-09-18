@@ -13,8 +13,9 @@
 - `mobile-navigation.png` — the navigation drawer on a phone viewport.
 
 All are copied from the Playwright screenshots in `frontend/e2e/screenshots` and
-`frontend/e2e-static/screenshots`. Refresh them here after any UI change that
-alters these views (see the root README for how they're embedded).
+`frontend/e2e-static/screenshots`, which render at a 2x device pixel ratio so the
+docs stay sharp on high definition displays. Refresh them here after any UI change
+that alters these views (see the root README for how they're embedded).
 
 Optionally add a recorded Agent Chaos Monkey UI walkthrough as `demo.gif` in
 this directory for an animated overview.

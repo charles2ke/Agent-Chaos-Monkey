@@ -9,7 +9,13 @@ export default defineConfig({
     viewport: { width: 1440, height: 900 },
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      // deviceScaleFactor 2 renders high definition (retina) screenshots for the docs.
+      use: { ...devices['Desktop Chrome'], deviceScaleFactor: 2 },
+    },
+  ],
   webServer: [
     {
       command: 'dotnet run --project ../backend/ChaosMonkey.Api --urls http://localhost:5249',

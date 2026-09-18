@@ -168,8 +168,9 @@ menu drives navigation on a phone:
 
 ![The navigation drawer open on a 390 pixel wide phone viewport](docs/images/mobile-navigation.png)
 
-Every image is a Playwright screenshot, refreshed by `cd frontend && npm run test:e2e` and
-`npm run test:e2e:static`.
+Every image is a high definition (2x device pixel ratio) Playwright screenshot — 2560×1440 on the
+desktop viewport and 780×1688 on the phone viewport — refreshed by `cd frontend && npm run test:e2e`
+and `npm run test:e2e:static`.
 
 ## 🏗️ Architecture
 
