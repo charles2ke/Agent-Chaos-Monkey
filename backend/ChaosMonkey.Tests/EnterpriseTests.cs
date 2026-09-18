@@ -195,6 +195,27 @@ public class EnterpriseTests
     }
 
     [Theory]
+    [InlineData("/api/lab/gateway")]
+    [InlineData("/api/lab/gateway/run-42/extra")]
+    public async Task Gateway_callbacks_without_a_single_run_segment_stay_rate_limited(string path)
+    {
+        using var host = new ApiHost(
+            ("Enterprise:RateLimitPermitsPerWindow", "1"), ("Enterprise:RateLimitWindowSeconds", "60"));
+        using var client = host.CreateClient();
+
+        var first = await client.GetAsync("/api/chaos-modes");
+        using var malformed = new HttpRequestMessage(HttpMethod.Post, path)
+        {
+            Content = JsonContent.Create(new { })
+        };
+        malformed.Headers.Authorization = new("Bearer", "any-capability");
+        var throttled = await client.SendAsync(malformed);
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, throttled.StatusCode);
+    }
+
+    [Theory]
     [InlineData("Enterprise:RateLimitPermitsPerWindow", "-1")]
     [InlineData("Enterprise:RateLimitWindowSeconds", "0")]
     [InlineData("Enterprise:RateLimitWindowSeconds", "-1")]
