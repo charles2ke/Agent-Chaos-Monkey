@@ -3,8 +3,9 @@
 The video opens on the failure, not the tool. No logo, no architecture diagram, no "hi, I'm…".
 
 Recording setup: 1920×1080, terminal at 16pt or larger, two panes (chat left, gateway trace right).
-The exact commands are in [`JUDGES.md`](JUDGES.md) §3; the naive profile reproduces the failure every
-time.
+The whole failure is reproduced by `node cli/demo-401.mjs` ([`JUDGES.md`](JUDGES.md) §3), which
+prints the reply beside the recorded trace for the naive profile and then the resilient one, so the
+0:00–0:20 and the 0:30–0:55 beats can be captured from a single take.
 
 | Time | On screen | Voiceover |
 | --- | --- | --- |
@@ -28,6 +29,6 @@ time.
 
 ## Assets
 
-- Failure reproduction: `examples/sample-agent/agent.mjs --profile naive`
+- Failure reproduction: `node cli/demo-401.mjs` (or `examples/sample-agent/agent.mjs --profile naive` by hand)
 - Passing contrast: the same command with `--profile resilient`
 - Leaderboard numbers: `docs/LEADERBOARD.md`
