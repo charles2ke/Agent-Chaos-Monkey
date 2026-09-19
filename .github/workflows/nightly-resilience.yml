@@ -94,7 +94,7 @@ jobs:
           exit "$status"
       - name: Publish suite results as JUnit
         if: always()
-        uses: mikepenz/action-junit-report@v5
+        uses: mikepenz/action-junit-report@v6
         with:
           report_paths: results/chaos-results.xml
           check_name: Nightly resilience suite
