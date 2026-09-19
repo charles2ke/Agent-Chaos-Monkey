@@ -156,3 +156,24 @@ jobs:
             /tmp/chaos-agent.log
           if-no-files-found: ignore
           retention-days: 14
+
+  money-demo:
+    # The single command judges are pointed at. Running it in CI keeps the README output honest:
+    # the naive profile must still be caught fabricating success after the connector returns 401,
+    # and the resilient profile must still pass the same assertion.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Reproduce the fabricated success after HTTP 401
+        env:
+          Llm__ApiKey: ''
+          ANTHROPIC_API_KEY: ''
+          OPENAI_API_KEY: ''
+        run: node cli/demo-401.mjs
