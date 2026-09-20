@@ -181,7 +181,9 @@ async function main() {
 
     const moments = {}
     for (const profile of ['naive', 'resilient']) {
-      agent = start('node', ['examples/sample-agent/agent.mjs', '--port', agentPort, '--profile', profile])
+      // The agent only trusts gateway callbacks from this origin, so it must match the API in use.
+      agent = start('node', ['examples/sample-agent/agent.mjs', '--port', agentPort,
+        '--profile', profile, '--gateway-base', url])
       if (!(await waitForHttp(`http://127.0.0.1:${agentPort}/agent`, 15_000))) {
         throw new Error(`the ${profile} agent did not start.`)
       }
