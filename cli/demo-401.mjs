@@ -87,7 +87,9 @@ async function waitForHttp(url, timeoutMs) {
   const deadline = Date.now() + timeoutMs
   for (;;) {
     try {
-      await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
+      // GET, so the probe never mutates: the connector and the agent answer 405 without
+      // creating a record, which is enough to prove the port is listening.
+      await fetch(url, { method: 'GET' })
       return true
     } catch {
       if (Date.now() >= deadline) return false
