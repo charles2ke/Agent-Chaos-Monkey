@@ -158,8 +158,9 @@ A short tour of the main screens with natural British female narration:
 **[docs/videos/walkthrough.mp4](docs/videos/walkthrough.mp4)**
 
 Regenerate it after UI changes with `cd frontend && npm run record:walkthrough`
-(needs `ffmpeg` on PATH and `pip install kokoro-onnx` for the neural voice; set
-`WALKTHROUGH_TTS=espeak` to fall back to the robotic `espeak-ng` voice). The
+(needs `ffmpeg` and `ffprobe` on PATH and `pip install kokoro-onnx` for the
+neural voice; set `WALKTHROUGH_TTS=espeak` to fall back to the robotic
+`espeak-ng` voice). The
 script drives the static demo build with Playwright, generates the voiceover
 from the narration script in
 [`frontend/scripts/record-walkthrough.mjs`](frontend/scripts/record-walkthrough.mjs)
