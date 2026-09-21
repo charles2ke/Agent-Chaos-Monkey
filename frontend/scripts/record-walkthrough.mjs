@@ -219,7 +219,12 @@ async function synthesizeNeural(texts) {
       speed,
     ],
     JSON.stringify(texts),
-  )
+  ).catch((error) => {
+    throw new Error(
+      `Neural narration failed (${error.message}). Install it with \`pip install kokoro-onnx\`, ` +
+        'or set WALKTHROUGH_TTS=espeak for the robotic fallback voice.',
+    )
+  })
   return JSON.parse(output)
 }
 
