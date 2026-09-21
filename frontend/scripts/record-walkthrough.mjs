@@ -281,8 +281,10 @@ async function main() {
 
   try {
     for (const [index, step] of steps.entries()) {
-      offsets.push((Date.now() - startedAt) / 1000)
       await step.run(page)
+      // The line describes the screen this step just produced, so the offset is
+      // taken after the action settles rather than before it starts.
+      offsets.push((Date.now() - startedAt) / 1000)
       // The narration track opens with `leadSeconds` of silence; hold the first
       // screen for the same time so speech and actions stay in sync.
       const hold = clips[index].duration + gapSeconds + (index === 0 ? leadSeconds : 0)
