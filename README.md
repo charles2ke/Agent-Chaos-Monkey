@@ -154,12 +154,14 @@ Then open <http://localhost:5173>.
 
 ## 🎬 Video walkthrough
 
-A short tour of the main screens with British female synthetic narration:
+A short tour of the main screens with natural British female narration:
 **[docs/videos/walkthrough.mp4](docs/videos/walkthrough.mp4)**
 
 Regenerate it after UI changes with `cd frontend && npm run record:walkthrough`
-(needs `ffmpeg` and `espeak-ng`). The script drives the static demo build with
-Playwright, generates the voiceover from the narration script in
+(needs `ffmpeg` on PATH and `pip install kokoro-onnx` for the neural voice; set
+`WALKTHROUGH_TTS=espeak` to fall back to the robotic `espeak-ng` voice). The
+script drives the static demo build with Playwright, generates the voiceover
+from the narration script in
 [`frontend/scripts/record-walkthrough.mjs`](frontend/scripts/record-walkthrough.mjs)
 and fails if the result would run longer than two minutes.
 

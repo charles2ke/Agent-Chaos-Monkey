@@ -1,11 +1,13 @@
 /**
  * Records the narrated product walkthrough (docs/videos/walkthrough.mp4).
  *
- * Drives the static demo build with Playwright, speaks each step with espeak-ng
+ * Drives the static demo build with Playwright, speaks each step with the
+ * Kokoro neural voice (natural female narration, `pip install kokoro-onnx`)
  * and muxes the screen recording with the generated voiceover using ffmpeg.
+ * Set WALKTHROUGH_TTS=espeak for the robotic espeak-ng fallback.
  *
  * Usage: npm run record:walkthrough
- * Requires: espeak-ng and ffmpeg on PATH.
+ * Requires: ffmpeg on PATH plus kokoro-onnx (or espeak-ng for the fallback).
  */
 import { spawn } from 'node:child_process'
 import { mkdir, readdir, rm, writeFile } from 'node:fs/promises'
@@ -16,12 +18,19 @@ import { chromium } from '@playwright/test'
 const frontendDir = path.resolve(fileURLToPath(new URL('..', import.meta.url)))
 const repoRoot = path.resolve(frontendDir, '..')
 const workDir = path.join(frontendDir, '.walkthrough')
+const modelDir = path.join(frontendDir, '.walkthrough-models')
 const outputFile = path.join(repoRoot, 'docs', 'videos', 'walkthrough.mp4')
 const baseUrl = 'http://localhost:4173/Agent-Chaos-Monkey/'
 const viewport = { width: 1280, height: 800 }
-const voice = process.env.WALKTHROUGH_VOICE ?? 'en-gb+f3'
+const engine = process.env.WALKTHROUGH_TTS ?? 'kokoro'
+const isEspeak = engine === 'espeak'
+const voice = process.env.WALKTHROUGH_VOICE ?? (isEspeak ? 'en-gb+f3' : 'bf_emma')
+const language = process.env.WALKTHROUGH_LANG ?? 'en-gb'
+const speed = process.env.WALKTHROUGH_SPEED ?? '0.95'
 const pitch = process.env.WALKTHROUGH_PITCH ?? '60'
 const wordsPerMinute = process.env.WALKTHROUGH_WPM ?? '125'
+const pythonCommand =
+  process.env.WALKTHROUGH_PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3')
 const gapSeconds = 1.2
 const leadSeconds = 1.5
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
@@ -102,6 +111,21 @@ function run(command, args, options = {}) {
   })
 }
 
+function runCapture(command, args, input) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio: ['pipe', 'pipe', 'inherit'] })
+    let out = ''
+    child.stdout.on('data', (chunk) => {
+      out += chunk
+    })
+    child.on('error', reject)
+    child.on('exit', (code) =>
+      code === 0 ? resolve(out) : reject(new Error(`${command} exited with ${code}`)),
+    )
+    child.stdin.end(input)
+  })
+}
+
 async function startPreviewServer() {
   const inUse = await fetch(baseUrl).then(
     () => true,
@@ -177,13 +201,44 @@ async function speak(text, file) {
   return probeDuration(file)
 }
 
-async function makeSilence(file, seconds) {
+/** Neural narration; the Python helper caches the Kokoro model between runs. */
+async function synthesizeNeural(texts) {
+  const output = await runCapture(
+    pythonCommand,
+    [
+      path.join(frontendDir, 'scripts', 'narrate_kokoro.py'),
+      '--out-dir',
+      workDir,
+      '--cache-dir',
+      modelDir,
+      '--voice',
+      voice,
+      '--lang',
+      language,
+      '--speed',
+      speed,
+    ],
+    JSON.stringify(texts),
+  )
+  return JSON.parse(output)
+}
+
+async function synthesizeEspeak(texts) {
+  const clips = []
+  for (const [index, text] of texts.entries()) {
+    const file = path.join(workDir, `narration-${String(index).padStart(2, '0')}.wav`)
+    clips.push({ file, duration: await speak(text, file) })
+  }
+  return { sampleRate: 22050, clips }
+}
+
+async function makeSilence(file, seconds, sampleRate) {
   await run('ffmpeg', [
     '-y',
     '-f',
     'lavfi',
     '-i',
-    'anullsrc=channel_layout=mono:sample_rate=22050',
+    `anullsrc=channel_layout=mono:sample_rate=${sampleRate}`,
     '-t',
     String(seconds),
     file,
@@ -196,16 +251,14 @@ async function main() {
   await mkdir(path.dirname(outputFile), { recursive: true })
 
   // Narration is generated first so every on-screen step lasts exactly as long as its line.
-  const clips = []
-  for (const [index, step] of steps.entries()) {
-    const file = path.join(workDir, `narration-${String(index).padStart(2, '0')}.wav`)
-    const duration = await speak(step.text, file)
-    clips.push({ file, duration })
-  }
+  const texts = steps.map((step) => step.text)
+  const { sampleRate, clips } = isEspeak
+    ? await synthesizeEspeak(texts)
+    : await synthesizeNeural(texts)
 
   const totalSeconds = clips.reduce((sum, clip) => sum + clip.duration + gapSeconds, leadSeconds)
-  console.log(`Narration length: ${totalSeconds.toFixed(1)}s`)
-  if (totalSeconds > 120) throw new Error('Walkthrough exceeds the two minute budget.')
+  console.log(`Narration voice: ${voice} (${engine}); length: ${totalSeconds.toFixed(1)}s`)
+  if (totalSeconds > 120) throw new Error('Narration exceeds the two minute budget.')
 
   const server = await startPreviewServer()
   const browser = await chromium.launch()
@@ -215,8 +268,15 @@ async function main() {
   })
   const page = await context.newPage()
 
+  // Each step's UI actions take real time, so the narration track is assembled
+  // from the offsets measured here instead of assuming a fixed cadence.
+  const startedAt = Date.now()
+  const offsets = []
+  let recordedSeconds = 0
+
   try {
     for (const [index, step] of steps.entries()) {
+      offsets.push((Date.now() - startedAt) / 1000)
       await step.run(page)
       // The narration track opens with `leadSeconds` of silence; hold the first
       // screen for the same time so speech and actions stay in sync.
@@ -224,24 +284,44 @@ async function main() {
       await page.waitForTimeout(hold * 1000)
     }
     await page.waitForTimeout(800)
+    recordedSeconds = (Date.now() - startedAt) / 1000
   } finally {
     await context.close()
     await browser.close()
     stopServer(server)
   }
 
+  console.log(`Recorded ${recordedSeconds.toFixed(1)}s of video.`)
+  if (recordedSeconds > 120) throw new Error('Walkthrough exceeds the two minute budget.')
+
   const videoDir = path.join(workDir, 'video')
   const [recorded] = (await readdir(videoDir)).filter((name) => name.endsWith('.webm'))
   if (!recorded) throw new Error('Playwright produced no video.')
 
-  // Rebuild the narration track with the same lead-in and gaps used while recording.
-  const silence = path.join(workDir, 'gap.wav')
-  const lead = path.join(workDir, 'lead.wav')
-  await makeSilence(silence, gapSeconds)
-  await makeSilence(lead, leadSeconds)
+  // Playwright stamps screencast frames at a fixed rate, so the capture plays
+  // back slower than it happened. Rescale it onto the measured wall clock,
+  // otherwise the narration drifts ahead of the screen by the end of the tour.
+  const capturedSeconds = await probeDuration(path.join(videoDir, recorded))
+  const timeScale = recordedSeconds / capturedSeconds
+  console.log(`Capture ${capturedSeconds.toFixed(1)}s; time scale ${timeScale.toFixed(3)}`)
+  if (timeScale < 0.5 || timeScale > 2)
+    throw new Error(`Implausible capture length: ${capturedSeconds.toFixed(1)}s.`)
 
-  const entries = [lead]
-  for (const clip of clips) entries.push(clip.file, silence)
+  // Pad each line so it starts exactly when its step appeared on screen.
+  const entries = []
+  let cursor = 0
+  for (const [index, clip] of clips.entries()) {
+    const start = offsets[index] + (index === 0 ? leadSeconds : 0)
+    const pad = Math.max(0, start - cursor)
+    if (pad > 0.01) {
+      const file = path.join(workDir, `pad-${String(index).padStart(2, '0')}.wav`)
+      await makeSilence(file, pad, sampleRate)
+      entries.push(file)
+      cursor += pad
+    }
+    entries.push(clip.file)
+    cursor += clip.duration
+  }
   const concatList = path.join(workDir, 'narration.txt')
   await writeFile(concatList, entries.map((file) => `file '${file}'`).join('\n'))
 
@@ -265,6 +345,8 @@ async function main() {
     path.join(videoDir, recorded),
     '-i',
     narration,
+    '-filter:v',
+    `setpts=PTS*${timeScale.toFixed(6)}`,
     '-c:v',
     'libx264',
     '-pix_fmt',
