@@ -8,7 +8,7 @@
 [![Coverage](https://github.com/charles2ke/Agent-Chaos-Monkey/actions/workflows/coverage.yml/badge.svg)](https://github.com/charles2ke/Agent-Chaos-Monkey/actions/workflows/coverage.yml)
 [![Backend coverage 100%](https://img.shields.io/badge/backend%20coverage-100%25-brightgreen)](.github/workflows/coverage.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](backend)
+[![.NET 11](https://img.shields.io/badge/.NET-11.0-512BD4?logo=dotnet&logoColor=white)](backend)
 [![React 19 + Vite](https://img.shields.io/badge/React-19%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](frontend)
 
 [Live demo](https://charles2ke.github.io/Agent-Chaos-Monkey/) · [Getting started](GETTING_STARTED.md) · [Evaluate in 3 minutes](docs/JUDGES.md) · [Quick start](#-quick-start) · [Leaderboard](docs/LEADERBOARD.md) · [Direct Line](docs/DIRECT_LINE.md) · [GitHub Action](docs/ACTION.md) · [Deploy to Azure](docs/DEPLOY.md) · [Resilience laboratory](#-resilience-laboratory)
@@ -44,7 +44,7 @@ Verdict (noUnsupportedSuccess): pass
   Response does not claim success and acknowledges non-completion.
 ```
 
-Same fault, same evidence, two different answers. **INC-1842 does not exist.** Needs .NET 10 and
+Same fault, same evidence, two different answers. **INC-1842 does not exist.** Needs .NET 11 and
 Node 20+; the first run builds the backend. `--url http://127.0.0.1:5249` reuses an API you already
 started, `--keep-api` leaves it running for the UI.
 
@@ -134,7 +134,7 @@ delivered.
 
 > New here? [**GETTING_STARTED.md**](GETTING_STARTED.md) walks through the first run end to end.
 
-> **Prerequisites:** [.NET 10 SDK](https://dotnet.microsoft.com/download) and [Node.js 20.19+ or 22.12+](https://nodejs.org) (required by Vite 8).
+> **Prerequisites:** [.NET 11 SDK](https://dotnet.microsoft.com/download) and [Node.js 20.19+ or 22.12+](https://nodejs.org) (required by Vite 8).
 
 ```bash
 # Backend → http://localhost:5249
@@ -249,16 +249,16 @@ All packages are kept on their latest stable releases.
 
 | Area | Package | Version |
 | --- | --- | --- |
-| Backend | .NET target framework | `net10.0` |
-| Backend | Microsoft.NET.Test.Sdk | `18.10.1` |
-| Backend | xunit / xunit.runner.visualstudio | `2.9.3` / `4.0.0` |
-| Backend | coverlet.collector | `10.0.1` |
+| Backend | .NET target framework | `net11.0` |
+| Backend | Microsoft.NET.Test.Sdk | `18.12.0` |
+| Backend | xunit / xunit.runner.visualstudio | `2.9.3` / `4.0.1` |
+| Backend | coverlet.collector | `10.1.1` |
 | Backend | Azure.Identity | `1.21.0` |
-| Frontend | react / react-dom | `19.3.0` |
-| Frontend | vite / @vitejs/plugin-react | `8.3.0` / `6.1.1` |
+| Frontend | react / react-dom | `19.3.1` |
+| Frontend | vite / @vitejs/plugin-react | `8.3.8` / `6.3.0` |
 | Frontend | typescript | `7.0.2` |
-| Frontend | oxlint | `1.83.0` |
-| Frontend | @playwright/test | `1.63.0` |
+| Frontend | oxlint | `1.94.0` |
+| Frontend | @playwright/test | `1.65.1` |
 
 ### API surface
 

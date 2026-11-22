@@ -42,7 +42,7 @@ on:
         description: 'Dotnet SDK version used to run the local API.'
         type: string
         required: false
-        default: '10.0.x'
+        default: '11.0.x'
       start-api:
         description: 'When "true", start the local ChaosMonkey.Api on api-url before running the suite.'
         type: string
