@@ -56,6 +56,45 @@ jobs:
             org.opencontainers.image.description=Chaos gateway and resilience API for AI agents
             org.opencontainers.image.licenses=MIT
 
+      # A successful build does not prove the image runs: a base image whose .NET major
+      # differs from the project's TargetFramework builds fine but cannot start. Run the
+      # image and probe it before anything is pushed.
+      - name: Build image for smoke test
+        uses: docker/build-push-action@v7
+        with:
+          context: backend
+          file: backend/ChaosMonkey.Api/Dockerfile
+          load: true
+          tags: agent-chaos-monkey-api:smoke
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test container
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --detach --name chaos-api-smoke --publish 127.0.0.1:8080:8080 agent-chaos-monkey-api:smoke > /dev/null
+          cleanup() {
+            status=$?
+            if [ "$status" -ne 0 ]; then docker logs chaos-api-smoke || true; fi
+            docker rm --force chaos-api-smoke > /dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          for _ in $(seq 1 30); do
+            if curl --fail --silent --connect-timeout 2 --max-time 5 http://127.0.0.1:8080/api/health > /dev/null; then
+              ready="$(curl --fail --silent --show-error --connect-timeout 2 --max-time 5 http://127.0.0.1:8080/api/health/ready)"
+              echo "Container is serving requests: ${ready}"
+              exit 0
+            fi
+            if [ "$(docker inspect --format '{{.State.Running}}' chaos-api-smoke)" != "true" ]; then
+              echo "::error::The API container exited before serving /api/health."
+              exit 1
+            fi
+            sleep 1
+          done
+          echo "::error::The API container did not serve /api/health within 30 seconds."
+          exit 1
+
       - name: Build and push
         id: build
         uses: docker/build-push-action@v7

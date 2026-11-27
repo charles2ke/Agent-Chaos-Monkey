@@ -9,7 +9,7 @@ harness in the browser, with no backend.
 
 | Tool | Version | Used by |
 | --- | --- | --- |
-| [.NET SDK](https://dotnet.microsoft.com/download) | 10.0 | Chaos API, evaluator, laboratory runner |
+| [.NET SDK](https://dotnet.microsoft.com/download) | 11.0 | Chaos API, evaluator, laboratory runner |
 | [Node.js](https://nodejs.org) | 20.19+ or 22.12+ | React UI (Vite 8), CLI and MCP server |
 
 An LLM API key is **optional**. Without one, a deterministic rule-based judge
